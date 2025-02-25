@@ -9,6 +9,10 @@ export class ActivityService {
     return ActivityDao.getActivityById(id);
   }
 
+  static getEnrolledUsersByActivityId(id: number) {
+    return ActivityDao.getEnrolledUsersByActivityId(id);
+  }
+
   static createActivity(activityData: any) {
     return ActivityDao.createActivity(activityData);
   }

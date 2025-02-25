@@ -18,6 +18,13 @@ export const getActivityById: RequestHandler = (req, res) => {
   res.json({ activity });
 };
 
+export const getActivityByName: RequestHandler = (req, res) => {
+  const { id } = req.params;
+  const users = ActivityService.getEnrolledUsersByActivityId(Number(id));
+
+  res.json({ users });
+};
+
 export const createActivity: RequestHandler = (req, res) => {
   const newActivity = req.body;
   const activity = ActivityService.createActivity(newActivity);

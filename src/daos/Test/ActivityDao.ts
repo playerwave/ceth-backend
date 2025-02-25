@@ -19,6 +19,10 @@ export class ActivityDao {
     },
   ];
 
+  private static enrolledUsers: Record<number, string[]> = {
+    1: ["user1", "user2"],
+  };
+
   static getAllActivities() {
     return this.activities;
   }
@@ -26,6 +30,11 @@ export class ActivityDao {
   static getActivityById(id: number) {
     return this.activities.find((activity) => activity.ac_id === id) || null;
   }
+
+  static getEnrolledUsersByActivityId(id: number): string[] {
+    return this.enrolledUsers[id] || [];
+  }
+  
 
   static createActivity(newActivity: any) {
     const newId = this.activities.length + 1;
