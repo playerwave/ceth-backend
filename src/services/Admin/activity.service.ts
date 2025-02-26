@@ -1,4 +1,4 @@
-import { ActivityDao } from "../../daos/Test/ActivityDao";
+import { ActivityDao } from "../../daos/Admin/activity.dao";
 
 export class ActivityService {
   static getAllActivities() {

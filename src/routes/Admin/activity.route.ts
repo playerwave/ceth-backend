@@ -6,7 +6,7 @@ import {
   createActivity,
   updateActivity,
   deleteActivity,
-} from "../../controllers/Test/activity.controller";
+} from "../../controllers/Admin/activity.controller";
 
 const router = express.Router();
 

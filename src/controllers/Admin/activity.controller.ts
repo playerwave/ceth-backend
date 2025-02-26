@@ -1,5 +1,5 @@
 import { Request, Response, RequestHandler } from "express";
-import { ActivityService } from "../../services/Test/ActivityService";
+import { ActivityService } from "../../services/Admin/activity.service";
 
 export const getAllActivities: RequestHandler = (req, res) => {
   const activities = ActivityService.getAllActivities();
