@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "activity_name": "Participating in cooperative education activities",
+    "activity_company_lecturer": "CDG",
+    "activity_description": "We are a full-service information technology provider specializing in designing solutions to meet the exact needs of various industries.",
+    "activity_type": "Software",
+    "activity_room": "3M-280",
+    "activity_seat": 50,
+    "activity_food": {
+      "1": "อาหาร 1",
+      "2": "อาหาร 2"
+    },
+    "activity_status": ["public", "private"],
+    "activity_start_time": "25-01-01 13:00:00",
+    "activity_end_time": "99-09-09 16:30:00",
+    "activity_create_date": "55-55-55 23:59:59",
+    "activity_last_update": "11-11-11 23:59:59",
+    "activity_end_enrolled_date": "01-02-01 23:59:59",
+    "activity_registered_count": 50,
+    "activity_attended_count": 48,
+    "activity_not_attended_count": 2,
+    "activity_date": "06-02-01 13:00:00",
+    "activity_image_url": "Activity_IMAGES01"
+  },
+  {
+    "id": 2,
+    "activity_name": "Participating in cooperative education activities",
+    "activity_company_lecturer": "CLICKNEXT",
+    "activity_description": "We are a full-service information technology provider specializing in designing solutions to meet the exact needs of various industries.",
+    "activity_type": "Software",
+    "activity_room": "3M-280",
+    "activity_seat": 50,
+    "activity_food": {
+      "1": "อาหาร 1",
+      "2": "อาหาร 2"
+    },
+    "activity_status": ["public", "private"],
+    "activity_start_time": "25-01-01 13:00:00",
+    "activity_end_time": "99-09-09 16:30:00",
+    "activity_create_date": "55-55-55 23:59:59",
+    "activity_last_update": "11-11-11 23:59:59",
+    "activity_end_enrolled_date": "01-02-01 23:59:59",
+    "activity_registered_count": 50,
+    "activity_attended_count": 48,
+    "activity_not_attended_count": 2,
+    "activity_date": "06-02-01 13:00:00",
+    "activity_image_url": "Activity_IMAGES01"
+  }
+]

@@ -1,6 +1,8 @@
 import { createConnection } from "typeorm";
 import { User } from "../entity/User"; // ตัวอย่าง Entity
 import dotenv from "dotenv";
+import * as fs from "fs";
+import path from "path";
 
 dotenv.config();
 
@@ -22,5 +24,18 @@ export const connectDatabase = async () => {
   } catch (error) {
     console.error("Error connecting to the database", error);
     throw error;
+  }
+};
+
+export const loadActivityData = () => {
+  try {
+    const activityData = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "activities.json"), "utf-8")
+    );
+    console.log("Activity data loaded successfully");
+    return activityData; // ส่งคืนข้อมูลกิจกรรมที่โหลด
+  } catch (error) {
+    console.error("Error reading activity data", error);
+    throw new Error("Failed to load activity data.");
   }
 };

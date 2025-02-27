@@ -6,6 +6,7 @@ import "reflect-metadata";
 
 //import routes
 import userRoute from "./routes/Test/user.route";
+import activityRoute from "./routes/Test/activity.route"; // นำเข้า router ที่ export default
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.get("/", (req, res) => {
 
 //Test api
 app.use("/api/user", userRoute);
+app.use("/api/activity", activityRoute); // ผูก /api กับ activityRoute
 
 // เชื่อมต่อ database
 connectDatabase()
