@@ -5,8 +5,8 @@ import dotenv from "dotenv";
 import "reflect-metadata";
 
 //import routes
-import userRoute from "./routes/Test/user.route";
-import activityRoute from "./routes/Test/activity.route";
+// import userRoute from "./routes/Test/user.route";
+import activityRoute from "./routes/Admin/activity.route";
 dotenv.config();
 
 const app = express();
@@ -28,8 +28,8 @@ app.get("/", (req, res) => {
 });
 
 //Test api
-app.use("/api/user", userRoute);
-app.use("/api", activityRoute);
+// app.use("/api/user", userRoute);
+app.use("/api/activity", activityRoute);
 
 // เชื่อมต่อ database
 // connectDatabase()
