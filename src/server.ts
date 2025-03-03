@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-// import { connectDatabase } from "./db/database";
+import { connectDatabase } from "./db/database";
 import "reflect-metadata";
 
 //import routes
-// import userRoute from "./routes/Test/user.route";
+import userRoute from "./routes/Test/user.route";
 
 dotenv.config();
 
@@ -28,26 +28,16 @@ app.get("/", (req, res) => {
 });
 
 //Test api
-// app.use("/api/user", userRoute);
+app.use("/api/user", userRoute);
 
 // เชื่อมต่อ database
-// connectDatabase()
-//   .then(() => {
-//     const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
-//     app.listen(PORT, () => {
-//       console.log(`Server is running on http://localhost:${PORT}`);
-//     });
-//   })
-//   .catch((error) => {
-//     console.error("Failed to connect to the database", error);
-//   });
-
-//   const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
-//     app.listen(PORT, () => {
-//       console.log(`Server is running on http://localhost:${PORT}`);
-//     });
-
+connectDatabase()
+  .then(() => {
     const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });
+  })
+  .catch((error) => {
+    console.error("Failed to connect to the database", error);
+  });
