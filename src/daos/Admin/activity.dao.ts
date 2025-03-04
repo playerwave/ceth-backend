@@ -12,14 +12,15 @@ export class ActivityDao {
       })
       .catch((error) => {
         console.log(
-          "Error in Dao Database connection to Entity Activity(Admin) failed :"
+          "Error in ActivityDao(Admin) Database connection to Entity failed :",
+          error
         );
       });
   }
 
   async createActivityDao(activityData: Partial<Activity>): Promise<Activity> {
     if (!this.activityRepository) {
-      throw new Error("Database connection is not established");
+      throw new Error("Error in createActivityDao(Admin) Database connection is not established");
     }
 
     const activity = this.activityRepository.create(activityData);

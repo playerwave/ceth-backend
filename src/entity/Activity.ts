@@ -17,13 +17,13 @@ export class Activity {
   @Column({ type: "varchar", length: 100, nullable: false })
   ac_type!: string;
 
-  @Column({ type: "varchar", length: 100, nullable: true }) // ✅ Nullable ตามตาราง
+  @Column({ type: "varchar", length: 100, nullable: false })
   ac_room?: string;
 
   @Column({ type: "int", nullable: false })
   ac_seat!: number;
 
-  @Column({ type: "varchar", length: 100, nullable: true }) // ✅ Nullable ตามตาราง
+  @Column({ type: "varchar", length: 100, nullable: true })
   ac_food?: string;
 
   @Column({ type: "varchar", length: 50, nullable: false })
@@ -38,7 +38,7 @@ export class Activity {
   @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   ac_create_date!: Date;
 
-  @Column({ type: "timestamp", nullable: true, onUpdate: "CURRENT_TIMESTAMP" })
+  @Column({ type: "timestamp", nullable: false, onUpdate: "CURRENT_TIMESTAMP" })
   ac_last_update?: Date;
 
   @Column({ type: "int", nullable: false, default: 0 })

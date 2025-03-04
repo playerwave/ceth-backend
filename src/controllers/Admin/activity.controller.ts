@@ -41,9 +41,9 @@ export class ActivityController {
         !ac_image_url ||
         !ac_normal_register
       ) {
-        return res
-          .status(400)
-          .json({ message: "Invalid input data in createActivity controller" });
+        return res.status(400).json({
+          message: "Invalid input data in (Admin) createActivity controller",
+        });
       }
 
       const activity = await this.activityService.createActivityService({
@@ -69,7 +69,7 @@ export class ActivityController {
       return res.status(201).json(activity);
     } catch (error) {
       return res.status(500).json({
-        message: "Error in (admin) activity controller createActivity: ",
+        message: "Error in (Admin) activity controller createActivity: ",
         error: (error as Error).message, // ✅ แก้ให้ TypeScript เข้าใจว่า error เป็น Error
       });
     }
