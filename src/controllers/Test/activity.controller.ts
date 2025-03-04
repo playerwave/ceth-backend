@@ -1,56 +1,47 @@
 import { Request, Response } from "express";
 import { ActivityService } from "../../services/Test/activity.server";
+import { json } from "stream/consumers";
 
 export class ActivityController {
   private activityService = new ActivityService();
 
-  getAllActivitys = async (req: Request, res: Response): Promise<Response> => {
+  getAcitvities = async (req: Request, res: Response) => {
     try {
-      const activitys = await this.activityService.getAllActivitys();
-      return res.status(200).json(activitys);
+      const activity = await this.activityService.getAcitvities();
+      return res.status(200).json(activity)
     } catch (error) {
-      return res.status(500).json({ message: "Internal server error" });
+      res.status(500).send("Error to Resposne")
     }
-  };
+  }
 
-  getActivityById = async (req: Request, res: Response): Promise<Response> => {
-    const { id } = req.params;
+  searchActivity = async (req: Request, res: Response) => {
+    const { ac_name } = req.query
+    console.log(req.query.ac_name);
+
+    if (!ac_name) {
+      return res.status(400).send("You sent an invalid request.")
+    }
     try {
-      const activity = await this.activityService.getActivitiesById(Number(id));
-      if (activity) {
-        return res.status(200).json(activity);
+      const activityName = await this.activityService.searchActivity(String(ac_name));
+      if (activityName.length > 0) {
+        return res.status(200).json(activityName)
       } else {
-        return res.status(404).json({ message: "Activity not found" });
+        return res.status(404).send("No activities found.")
       }
     } catch (error) {
-      return res.status(500).json({ message: "Internal server error" });
+      res.status(500).send(`Error: ${error}`)
     }
-  };
+  }
 
-  searchActivitiesByName = async (
-    req: Request,
-    res: Response
-  ): Promise<Response> => {
-    const { searchName } = req.query; // เปลี่ยนจาก searchTerm เป็น searchName
-    console.log("Received searchName:", searchName); // ตรวจสอบคำค้นหาที่ได้รับจาก Postman
 
-    if (!searchName) {
-      return res.status(400).json({ message: "Search name is required" });
-    }
 
-    try {
-      const activities = await this.activityService.searchActivitiesByName(
-        String(searchName) // ใช้ searchName แทน searchTerm
-      );
-      console.log("Activities found:"); // ตรวจสอบผลลัพธ์ที่ได้จากการค้นหา
-      if (activities.length > 0) {
-        return res.status(200).json(activities);
-      } else {
-        return res.status(404).json({ message: "Activity not found" });
-      }
-    } catch (error) {
-      console.error("Error during search:", error); // เพิ่มการตรวจสอบข้อผิดพลาด
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  };
+
+  // getTest = async (req: Request, res: Response) => {
+  //   try {
+  //     const test = await this.activityService.getTests();
+  //     return res.status(200).json(test);
+  //   } catch (error) {
+  //     res.status(500).send("No activities found.")
+  //   }
+  // }
 }

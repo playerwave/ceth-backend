@@ -3,15 +3,17 @@ import { Activity } from "../../entity/Activity";
 export class ActivityService {
   private activityDao = new ActivityDao();
 
-  async getAllActivitys(): Promise<Activity[]> {
-    return await this.activityDao.getAllActivities();
+  async getAcitvities(): Promise<Activity[]> {
+    return await this.activityDao.getAcitvities();
   }
 
-  async getActivitiesById(id: number): Promise<Activity | null> {
-    return await this.activityDao.getActivityById(id);
+  async searchActivity(ac_name: string): Promise<Activity[]> {
+    return await this.activityDao.searchActivity(ac_name);
   }
 
-  async searchActivitiesByName(searchTerm: string): Promise<Activity[]> {
-    return await this.activityDao.searchActivitiesByName(searchTerm); // เรียกใช้ searchActivitiesByName จาก ActivityDao
-  }
+
+
+  // async getTests(): Promise<Activity[]> {
+  //   return await this.activityDao.getTest();
+  // }
 }

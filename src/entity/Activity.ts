@@ -1,61 +1,61 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-@Entity()
+@Entity('activity')
 export class Activity {
   @PrimaryGeneratedColumn()
-  id!: number;
+  ac_id!: number;
 
-  @Column()
-  activity_name!: string;
+  @Column({ type: 'varchar', length: 255 })
+  ac_name!: string;
 
-  @Column()
-  activity_company_lecturer!: string;
+  @Column({ type: 'varchar', length: 255 })
+  ac_company_lecturer!: string;
 
-  @Column()
-  activity_description!: string;
+  @Column({ type: 'text' })
+  ac_description!: string;
 
-  @Column()
-  activity_type!: string;
+  @Column({ type: 'varchar', length: 100 })
+  ac_type!: string;
 
-  @Column()
-  activity_room!: string;
+  @Column({ type: 'varchar', length: 100 })
+  ac_room!: string;
 
-  @Column()
-  activity_seat!: number;
+  @Column({ type: 'integer' })
+  ac_seat!: number;
 
-  @Column("jsonb")
-  activity_food!: { [key: string]: string };
+  @Column({ type: 'varchar', length: 100 })
+  ac_food!: string;
 
-  @Column("text", { array: true })
-  activity_status!: string[];
+  @Column({ type: 'varchar', length: 50 })
+  ac_status!: string;
 
-  @Column()
-  activity_start_time!: string;
+  @Column({ type: 'timestamp', nullable: true })
+  ac_start_register!: Date;
 
-  @Column()
-  activity_end_time!: string;
+  @Column({ type: 'timestamp', nullable: true })
+  ac_end_register!: Date;
 
-  @Column()
-  activity_create_date!: string;
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  ac_create_date!: Date;
 
-  @Column()
-  activity_last_update!: string;
+  @Column({ type: 'timestamp', nullable: true })
+  ac_last_update!: Date;
 
-  @Column()
-  activity_end_enrolled_date!: string;
+  @Column({ type: 'integer' })
+  ac_registered_count!: number;
 
-  @Column()
-  activity_registered_count!: number;
+  @Column({ type: 'integer' })
+  ac_attended_count!: number;
 
-  @Column()
-  activity_attended_count!: number;
+  @Column({ type: 'integer' })
+  ac_not_attended_count!: number;
 
-  @Column()
-  activity_not_attended_count!: number;
+  @Column({ type: 'timestamp', nullable: true })
+  ac_start_time!: Date;
 
-  @Column()
-  activity_date!: string;
+  @Column({ type: 'timestamp', nullable: true })
+  ac_end_time!: Date;
 
-  @Column()
-  activity_image_url!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  ac_image_url!: string;
 }
