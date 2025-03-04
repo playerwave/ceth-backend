@@ -1,5 +1,12 @@
+// import entity
 import { Activity } from "../../entity/Activity";
+
+// import dao
 import { ActivityDao } from "../../daos/Admin/activity.dao";
+
+// import mailer
+import { sendMail } from "../../mailer/email";
+
 
 export class ActivityService {
   private activityDao = new ActivityDao();
@@ -10,6 +17,9 @@ export class ActivityService {
       newEndRegister.setDate(newEndRegister.getDate() + 7);
       activityData.ac_end_register = newEndRegister;
     }
+
+    //send email to student
+    sendMail("65160169@go.buu.ac.th", "Test Email", "whatsup bro");
 
     return await this.activityDao.createActivityDao({
       ...activityData,

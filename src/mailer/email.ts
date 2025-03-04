@@ -1,19 +1,20 @@
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  secure: true,
-  host: "stmp.gmail.com",
+  host: "smtp.gmail.com",
   port: 465,
+  secure: true,
   auth: {
     user: "unizalgroup@gmail.com",
-    password: "unizal_4o1",
+    pass: "rwsg vgwh bzzj ryyr",
   },
 });
 
-function sendMail(to, sub, msg) {
-    transporter.sendMail({
-        to: to,
-        subject: sub,
-        html: msg
-    })
-}
+export const sendMail = async (to: string, sub: string, msg: string) => {
+  await transporter.sendMail({
+    from: `"Unizal Group" <unizalgroup@gmail.com>`, // ✅ เพิ่ม from
+    to: to,
+    subject: sub,
+    html: msg,
+  });
+};
