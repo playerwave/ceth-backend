@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToMany,
+  JoinTable,
+} from "typeorm";
+import { Assessment } from "./Assesment";
 
 @Entity("activity")
 export class Activity {
@@ -17,7 +24,7 @@ export class Activity {
   @Column({ type: "varchar", length: 100, nullable: false })
   ac_type!: string;
 
-  @Column({ type: "varchar", length: 100, nullable: false })
+  @Column({ type: "varchar", length: 100, nullable: true })
   ac_room?: string;
 
   @Column({ type: "int", nullable: false })
@@ -26,8 +33,11 @@ export class Activity {
   @Column({ type: "varchar", length: 100, nullable: true })
   ac_food?: string;
 
-  @Column({ type: "varchar", length: 50, nullable: false })
+  @Column({ type: "varchar", length: 50, nullable: false, default: "private" })
   ac_status!: string;
+
+  @Column({ type: "varchar", length: 10, nullable: false })
+  ac_location_type!: string; // Online / Offline
 
   @Column({ type: "timestamp", nullable: false })
   ac_start_register!: Date;
@@ -38,7 +48,7 @@ export class Activity {
   @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   ac_create_date!: Date;
 
-  @Column({ type: "timestamp", nullable: false, onUpdate: "CURRENT_TIMESTAMP" })
+  @Column({ type: "timestamp", nullable: true, onUpdate: "CURRENT_TIMESTAMP" })
   ac_last_update?: Date;
 
   @Column({ type: "int", nullable: false, default: 0 })
@@ -61,4 +71,16 @@ export class Activity {
 
   @Column({ type: "timestamp", nullable: false })
   ac_normal_register!: Date;
+
+  // Many-to-Many Relationship กับ Assessment
+  @ManyToMany(
+    () => Assessment,
+    (assessment: Assessment) => assessment.activities
+  )
+  @JoinTable({
+    name: "activity_assessment",
+    joinColumn: { name: "ac_id", referencedColumnName: "ac_id" },
+    inverseJoinColumn: { name: "as_id", referencedColumnName: "as_id" },
+  })
+  assessments!: Assessment[];
 }

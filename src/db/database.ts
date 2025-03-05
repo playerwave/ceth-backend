@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 //import Entity
 import { User } from "../entity/User";
 import { Activity } from "../entity/Activity";
+import { Assessment } from "../entity/Assesment";
 
 dotenv.config();
 
@@ -16,7 +17,7 @@ export const connectDatabase = async () => {
       username: process.env.NAME, // ชื่อผู้ใช้ที่ใช้ใน Docker Compose
       password: process.env.PASSWORD, // รหัสผ่านที่ตั้งใน Docker Compose
       database: process.env.DATABASENAME, // ชื่อฐานข้อมูลที่ตั้งใน Docker Compose
-      entities: [User, Activity], // กำหนด Entity ที่ใช้
+      entities: [User, Activity, Assessment], // กำหนด Entity ที่ใช้
       synchronize: true, // สร้างตารางจาก Entity โดยอัตโนมัติ
       logging: false, // เปิด log การเชื่อมต่อ
     });
