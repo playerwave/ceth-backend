@@ -11,8 +11,9 @@ export class ActivityService {
     return await this.activityDao.searchActivity(ac_name);
   }
 
-
-
+  async adjustStatusActivity(ac_id: number, ac_status:string): Promise<Activity | null>{
+    return await this.activityDao.adjustStatusActivity(ac_id, ac_status)
+  }
   // async getTests(): Promise<Activity[]> {
   //   return await this.activityDao.getTest();
   // }

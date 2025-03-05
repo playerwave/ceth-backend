@@ -10,6 +10,7 @@ export class ActivityController {
       const activity = await this.activityService.getAcitvities();
       return res.status(200).json(activity)
     } catch (error) {
+      console.log(`Error From activity Service: ${error}`)
       res.status(500).send("Error to Resposne")
     }
   }
@@ -29,9 +30,28 @@ export class ActivityController {
         return res.status(404).send("No activities found.")
       }
     } catch (error) {
+      console.log(`Error From activity Service: ${error}`)
       res.status(500).send(`Error: ${error}`)
     }
   }
+
+  adjustStatusActivity = async (req: Request, res: Response) => {
+    const { ac_status } = req.body
+    const { id } = req.params
+
+    if (!ac_status || !id || id == null || id == undefined) {
+      return res.status(400).send("You sent an invalid request.")
+    }
+    try {
+      const statusActivity = await this.activityService.adjustStatusActivity(Number(id), String(ac_status));
+      return res.status(200).json(statusActivity)
+    } catch (error) {
+      console.log(`Error From activity Service: ${error}`)
+      res.status(500).send(`Error: ${error}`)
+    }
+  }
+
+
 
 
 
