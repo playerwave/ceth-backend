@@ -3,9 +3,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { connectDatabase } from "./db/database";
 import "reflect-metadata";
+import activityRoute from "./routes/Test/activity.route"
 
 //import routes
-import userRoute from "./routes/Test/user.route";
+// import userRoute from "./routes/Test/user.route";
 
 dotenv.config();
 
@@ -27,8 +28,7 @@ app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
 
-//Test api
-app.use("/api/user", userRoute);
+app.use("/student", activityRoute)
 
 // เชื่อมต่อ database
 connectDatabase()
