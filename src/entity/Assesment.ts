@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
 import { Activity } from "./Activity";
 
 @Entity("assessment")
@@ -24,7 +24,7 @@ export class Assessment {
   @Column({ type: "timestamp", nullable: true, onUpdate: "CURRENT_TIMESTAMP" })
   as_last_update?: Date;
 
-  // Many-to-Many Relationship กับ Activity
-  @ManyToMany(() => Activity, (activity) => activity.assessments)
+  // ✅ เปลี่ยนจาก ManyToMany เป็น OneToMany
+  @OneToMany(() => Activity, (activity) => activity.assessment)
   activities!: Activity[];
 }

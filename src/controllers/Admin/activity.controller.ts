@@ -176,4 +176,30 @@ export class ActivityController {
       });
     }
   };
+
+  deleteActivityController = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        console.error("❌ Invalid activity ID:", req.params.id);
+        return res.status(400).json({ message: "Invalid activity ID" });
+      }
+
+      console.log("✅ Deleting activity with ID:", id);
+      await this.activityService.deleteActivityService(id);
+
+      return res.status(204).send();
+    } catch (error) {
+      console.error("❌ Error deleting activity:", error);
+
+      if ((error as Error).message.includes("not found")) {
+        return res.status(404).json({ message: "Activity not found" });
+      }
+
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  };
 }

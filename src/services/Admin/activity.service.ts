@@ -14,36 +14,23 @@ export class ActivityService {
     console.log(
       "Received activityData in createActivityService:",
       activityData
-    ); // ✅ Log ข้อมูลที่เข้ามา
+    );
 
-    try {
-      let selectedAssessment: Assessment | null = null;
-      if (activityData.assessment_id) {
-        // ✅ ตรวจสอบว่ามี assessment_id ไหม
-        console.log("Fetching assessment with ID:", activityData.assessment_id);
-        selectedAssessment = await this.assessmentDao.getAssessmentById(
+    let selectedAssessment: Assessment | null = null; // ✅ กำหนดค่าเริ่มต้นเป็น `null`
+    if (activityData.assessment_id) {
+      console.log("Fetching assessment with ID:", activityData.assessment_id);
+      selectedAssessment =
+        (await this.assessmentDao.getAssessmentById(
           activityData.assessment_id
-        );
-        console.log("Fetched assessment:", selectedAssessment);
-      } else {
-        console.log("No assessment_id provided.");
-      }
-
-      sendMailCreateActivity(
-        "65160169@go.buu.ac.th",
-        "Test send Mail",
-        "สวัสดีครับ"
-      );
-
-      return await this.activityDao.createActivityDao({
-        ...activityData,
-        assessments: selectedAssessment ? [selectedAssessment] : [], // ✅ บันทึก Assessment ถ้ามี
-        ac_create_date: new Date(),
-        ac_last_update: new Date(),
-      });
-    } catch (error) {
-      throw Error("Error in createActivityService: " + error);
+        )) ?? null; // ✅ ใช้ `?? null` เพื่อกัน `undefined`
     }
+
+    return await this.activityDao.createActivityDao({
+      ...activityData,
+      assessment: selectedAssessment, // ✅ กำหนดค่า `null` ถ้าไม่มี assessment
+      ac_create_date: new Date(),
+      ac_last_update: new Date(),
+    });
   }
 
   async updateActivityService(
@@ -56,6 +43,7 @@ export class ActivityService {
     );
 
     try {
+      // ✅ 1. ตรวจสอบว่า Activity มีอยู่จริงหรือไม่
       const existingActivity = await this.activityDao.getActivityByIdDao(
         activityId
       );
@@ -64,29 +52,48 @@ export class ActivityService {
         return null;
       }
 
-      let selectedAssessment: Assessment | null = null;
+      // ✅ 2. ตรวจสอบว่า assessment_id ถูกต้องหรือไม่
+      let selectedAssessment: Assessment | null = null; // ✅ กำหนดค่าเริ่มต้นเป็น `null`
       if (activityData.assessment_id) {
         console.log("Fetching assessment with ID:", activityData.assessment_id);
-        selectedAssessment = await this.assessmentDao.getAssessmentById(
-          activityData.assessment_id
-        );
-        if (!selectedAssessment) {
-          console.error(
-            `❌ Assessment with ID ${activityData.assessment_id} not found.`
-          );
-          throw new Error("Assessment not found.");
-        }
+        selectedAssessment =
+          (await this.assessmentDao.getAssessmentById(
+            activityData.assessment_id
+          )) ?? null; // ✅ ใช้ `?? null` เพื่อป้องกัน `undefined`
+      } else {
+        selectedAssessment = existingActivity.assessment ?? null; // ✅ ใช้ `null` แทน `undefined`
       }
 
-      return await this.activityDao.updateActivityDao(activityId, {
-        ...activityData,
-        assessments: selectedAssessment
-          ? [selectedAssessment]
-          : existingActivity.assessments,
-        ac_last_update: new Date(),
-      });
+      // ✅ 3. อัปเดต Activity โดยใช้ `assessment` แทน `assessments`
+      const updatedActivity = await this.activityDao.updateActivityDao(
+        activityId,
+        {
+          ...activityData,
+          assessment: selectedAssessment, // ✅ ใช้ `assessment` ไม่ใช่ `assessments`
+          ac_last_update: new Date(),
+        }
+      );
+
+      console.log(`✅ Activity with ID ${activityId} updated successfully.`);
+      return updatedActivity;
     } catch (error) {
+      console.error("❌ Error in updateActivityService:", error);
       throw new Error("Error in updateActivityService: " + error);
     }
+  }
+
+  async deleteActivityService(activityId: number): Promise<void> {
+    console.log("Received request to delete activity with ID:", activityId);
+
+    const existingActivity = await this.activityDao.getActivityByIdDao(
+      activityId
+    );
+    if (!existingActivity) {
+      console.error(`❌ Activity with ID ${activityId} not found.`);
+      throw new Error(`Activity with ID ${activityId} not found`);
+    }
+
+    console.log("✅ Activity found, proceeding to delete.");
+    await this.activityDao.deleteActivityDao(activityId);
   }
 }

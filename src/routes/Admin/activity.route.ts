@@ -12,8 +12,8 @@ router.put("/update-activity/:id", async (req: Request, res: Response) => {
   await activityController.updateActivityController(req, res);
 });
 
-// router.delete("/delete-activity/:id", async (req: Request, res: Response) => {
-//   await activityController.deleteActivity(req, res);
-// });
+router.delete("/delete-activity/:id", async (req: Request, res: Response) => {
+  await activityController.deleteActivityController(req, res);
+});
 
 export default router;

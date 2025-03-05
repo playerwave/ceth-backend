@@ -34,17 +34,18 @@ export class ActivityDao {
     activityData: Partial<Activity>
   ): Promise<Activity> {
     if (!this.activityRepository) {
-      throw new Error("❌ Database connection is not established");
+      throw new Error("Database connection is not established");
     }
 
+    console.log("🔄 Updating activity with ID:", activityId);
     const existingActivity = await this.activityRepository.findOne({
       where: { ac_id: activityId },
     });
+
     if (!existingActivity) {
-      throw new Error(`❌ Activity with ID ${activityId} not found`);
+      throw new Error(`Activity with ID ${activityId} not found`);
     }
 
-    console.log("✅ Updating activity with data:", activityData);
     Object.assign(existingActivity, activityData);
     return await this.activityRepository.save(existingActivity);
   }
@@ -58,7 +59,27 @@ export class ActivityDao {
 
     return await this.activityRepository.findOne({
       where: { ac_id: activityId },
-      relations: ["assessments"],
+      relations: ["assessment"], // ✅ เปลี่ยนจาก "assessments" เป็น "assessment"
     });
+  }
+
+  async deleteActivityDao(activityId: number): Promise<void> {
+    if (!this.activityRepository) {
+      throw new Error("Database connection is not established");
+    }
+
+    console.log("🔄 Attempting to delete activity with ID:", activityId);
+    const deleteResult = await this.activityRepository.delete(activityId);
+
+    if (deleteResult.affected === 0) {
+      console.error(
+        `❌ Activity with ID ${activityId} not found or could not be deleted.`
+      );
+      throw new Error(
+        `Activity with ID ${activityId} not found or could not be deleted.`
+      );
+    }
+
+    console.log(`✅ Activity with ID ${activityId} deleted successfully.`);
   }
 }

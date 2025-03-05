@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToMany,
-  JoinTable,
-} from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
 import { Assessment } from "./Assesment";
 
 @Entity("activity")
@@ -80,15 +74,10 @@ export class Activity {
   @Column({ type: "timestamp", nullable: false })
   ac_normal_register!: Date;
 
-  // Many-to-Many Relationship กับ Assessment
-  @ManyToMany(
-    () => Assessment,
-    (assessment: Assessment) => assessment.activities
-  )
-  @JoinTable({
-    name: "activity_assessment",
-    joinColumn: { name: "ac_id", referencedColumnName: "ac_id" },
-    inverseJoinColumn: { name: "as_id", referencedColumnName: "as_id" },
+  // ✅ แก้ให้ assessment รองรับ undefined ได้ และกำหนด `nullable: true`
+  @ManyToOne(() => Assessment, (assessment) => assessment.activities, {
+    nullable: true,
+    onDelete: "SET NULL",
   })
-  assessments!: Assessment[];
+  assessment!: Assessment | null; // ✅ เปลี่ยนจาก `assessment?` เป็น `assessment!: Assessment | null`
 }
