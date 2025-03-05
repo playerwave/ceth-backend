@@ -59,3 +59,42 @@ export const sendMailCreateActivity = async (
     console.error("❌ Error sending email:", error);
   }
 };
+
+
+export const sendMailUpdateActivity = async (
+  to: string,
+  sub: string,
+  msg: string
+) => {
+  try {
+    // ✅ ใช้ __dirname เพื่อหาพาธของไฟล์ EJS อย่างถูกต้อง
+    const templatePath = path.join(
+      __dirname,
+      "../mailer/template/updateActivityTemplate.ejs"
+    );
+
+    // ✅ เช็คว่าไฟล์มีอยู่จริงก่อนอ่าน
+    if (!fs.existsSync(templatePath)) {
+      console.error("❌ EJS Template file not found at:", templatePath);
+      return;
+    }
+
+    // ✅ อ่านไฟล์ EJS แล้วแปลงเป็น HTML
+    const emailHtml = ejs.render(fs.readFileSync(templatePath, "utf-8"), {
+      name: "John Doe",
+      message: msg, // ✅ เพิ่ม message เข้าไป
+    });
+
+    // ✅ ส่งอีเมล
+    await transporter.sendMail({
+      from: `"Unizal Group" <${process.env.EMAIL_SENDER}>`, // ✅ ปลอดภัยขึ้น
+      to: to,
+      subject: sub,
+      html: emailHtml, // ✅ ใช้ emailHtml ที่ render มาแล้ว
+    });
+
+    console.log("✅ Email sent successfully to", to);
+  } catch (error) {
+    console.error("❌ Error sending email:", error);
+  }
+};

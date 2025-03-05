@@ -37,7 +37,15 @@ export class Activity {
   ac_status!: string;
 
   @Column({ type: "varchar", length: 10, nullable: false })
-  ac_location_type!: string; // Online / Offline
+  ac_location_type!: string;
+
+  @Column({
+    type: "varchar",
+    length: 20,
+    nullable: false,
+    default: "Not Start",
+  })
+  ac_state!: string;
 
   @Column({ type: "timestamp", nullable: false })
   ac_start_register!: Date;

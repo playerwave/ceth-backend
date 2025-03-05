@@ -8,9 +8,9 @@ router.post("/create-activity", async (req: Request, res: Response) => {
   await activityController.createActivityController(req, res);
 });
 
-// router.get("/activities", async (req: Request, res: Response) => {
-//   await activityController.getAllActivities(req, res);
-// });
+router.put("/update-activity/:id", async (req: Request, res: Response) => {
+  await activityController.updateActivityController(req, res);
+});
 
 // router.delete("/delete-activity/:id", async (req: Request, res: Response) => {
 //   await activityController.deleteActivity(req, res);
