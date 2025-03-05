@@ -1,57 +1,77 @@
-import { Request, Response, RequestHandler } from "express";
+import { Request, Response } from "express";
 import { ActivityService } from "../../services/Admin/activity.service";
 
-export const getAllActivities: RequestHandler = (req, res) => {
-  const activities = ActivityService.getAllActivities();
-  res.json({ activities });
-};
 
-export const getActivityById: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const activity = ActivityService.getActivityById(Number(id));
+export class ActivityController {
+  private activityService = new ActivityService();
 
-  if (!activity) {
-    res.status(404).json({ message: "Activity not found" });
-    return;
-  }
+  getAllActivities = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const activities = await this.activityService.getAllActivities();
+      return res.status(200).json(activities);
+    } catch (error) {
+      console.error("❌ Error in getAllActivities:", error); // ✅ Log the error
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  };
 
-  res.json({ activity });
-};
+  getActivityById = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid activity ID" });
+      }
+      const activity = await this.activityService.getActivityById(id);
+      return activity
+        ? res.status(200).json(activity)
+        : res.status(404).json({ message: "Activity not found" });
+    } catch (error) {
+      console.error("❌ Error in getActivityById:", error); // ✅ Log the error
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  };
 
-export const getActivityByName: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const users = ActivityService.getEnrolledUsersByActivityId(Number(id));
+  createActivity = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const newActivity = req.body;
+      const activity = await this.activityService.createActivity(newActivity);
+      return res.status(201).json({ message: "Activity created successfully", activity });
+    } catch (error) {
+      console.error("❌ Error in createActivity:", error); // ✅ Log the error
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  };
 
-  res.json({ users });
-};
+  updateActivity = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const updatedData = req.body;
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid activity ID" });
+      }
+      const updatedActivity = await this.activityService.updateActivity(id, updatedData);
+      return updatedActivity
+        ? res.status(200).json({ message: "Activity updated successfully", updatedActivity })
+        : res.status(404).json({ message: "Activity not found" });
+    } catch (error) {
+      console.error("❌ Error in updateActivity:", error); // ✅ Log the error
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  };
 
-export const createActivity: RequestHandler = (req, res) => {
-  const newActivity = req.body;
-  const activity = ActivityService.createActivity(newActivity);
-  res.status(201).json({ message: "Activity created successfully", activity });
-};
-
-export const updateActivity: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const updatedData = req.body;
-  const updatedActivity = ActivityService.updateActivity(Number(id), updatedData);
-
-  if (!updatedActivity) {
-    res.status(404).json({ message: "Activity not found" });
-    return;
-  }
-
-  res.json({ message: "Activity updated successfully", updatedActivity });
-};
-
-export const deleteActivity: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const success = ActivityService.deleteActivity(Number(id));
-
-  if (!success) {
-    res.status(404).json({ message: "Activity not found" });
-    return;
-  }
-
-  res.json({ message: "Activity deleted successfully" });
-};
+  deleteActivity = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid activity ID" });
+      }
+      const success = await this.activityService.deleteActivity(id);
+      return success
+        ? res.status(204).send()
+        : res.status(404).json({ message: "Activity not found" });
+    } catch (error) {
+      console.error("❌ Error in deleteActivity:", error); // ✅ Log the error
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  };
+}

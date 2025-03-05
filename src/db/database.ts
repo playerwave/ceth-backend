@@ -1,26 +1,29 @@
-// import { createConnection } from "typeorm";
-// import { User } from "../entity/User"; // ตัวอย่าง Entity
-// import dotenv from "dotenv";
+import { DataSource } from "typeorm";
+import dotenv from "dotenv";
+import { User } from "../entity/User";
+import { Activity } from "../entity/Activity"; 
 
-// dotenv.config();
+dotenv.config();
 
-// export const connectDatabase = async () => {
-//   try {
-//     const connection = await createConnection({
-//       type: "postgres", // ใช้ PostgreSQL
-//       host: process.env.HOST, // ที่อยู่ของ PostgreSQL container (เชื่อมต่อที่ localhost)
-//       port: process.env.PG_PORT ? parseInt(process.env.PG_PORT) : 5432, // พอร์ตที่ใช้สำหรับ PostgreSQL
-//       username: process.env.NAME, // ชื่อผู้ใช้ที่ใช้ใน Docker Compose
-//       password: process.env.PASSWORD, // รหัสผ่านที่ตั้งใน Docker Compose
-//       database: process.env.DATABASENAME, // ชื่อฐานข้อมูลที่ตั้งใน Docker Compose
-//       entities: [User], // กำหนด Entity ที่ใช้
-//       synchronize: true, // สร้างตารางจาก Entity โดยอัตโนมัติ
-//       logging: false, // เปิด log การเชื่อมต่อ
-//     });
-//     console.log("Database connected successfully");
-//     return connection;
-//   } catch (error) {
-//     console.error("Error connecting to the database", error);
-//     throw error;
-//   }
-// };
+export const AppDataSource = new DataSource({
+  type: "postgres", // ✅ ใช้ PostgreSQL เป็นฐานข้อมูล
+  host: process.env.HOST, // ✅ ที่อยู่ของฐานข้อมูล (อ่านจาก .env)
+  port: Number(process.env.PG_PORT), // ✅ กำหนดพอร์ตจาก .env
+  username: process.env.NAME, // ✅ ชื่อผู้ใช้ฐานข้อมูล
+  password: process.env.PASSWORD, // ✅ รหัสผ่านฐานข้อมูล
+  database: process.env.DATABASENAME, // ✅ ชื่อฐานข้อมูล
+  synchronize: true, // ✅ สร้าง/อัปเดตโครงสร้างฐานข้อมูลอัตโนมัติ (ควรปิดใน production)
+  logging: true, // ✅ เปิด logging ของ TypeORM
+  entities: [User,Activity], // ✅ กำหนด entity ที่ต้องการให้ TypeORM ใช้งาน
+});
+
+// ✅ ฟังก์ชันเชื่อมต่อฐานข้อมูล
+export const connectDatabase = async () => {
+  try {
+    await AppDataSource.initialize(); // ✅ เชื่อมต่อฐานข้อมูล
+    console.log("✅ Database connected successfully!"); // ✅ แสดงข้อความเมื่อเชื่อมต่อสำเร็จ
+  } catch (error) {
+    console.error("❌ Error connecting to database:", error); // ❌ แสดง error ถ้าการเชื่อมต่อล้มเหลว
+    process.exit(1); // ❌ ปิดโปรแกรมถ้าการเชื่อมต่อล้มเหลว
+  }
+};

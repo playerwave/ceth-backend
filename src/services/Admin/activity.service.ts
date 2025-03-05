@@ -1,27 +1,24 @@
 import { ActivityDao } from "../../daos/Admin/activity.dao";
+import { Activity } from "../../entity/Activity";
 
 export class ActivityService {
-  static getAllActivities() {
-    return ActivityDao.getAllActivities();
+  async getAllActivities(): Promise<Activity[]> {
+    return await ActivityDao.getAllActivities();
   }
 
-  static getActivityById(id: number) {
-    return ActivityDao.getActivityById(id);
+  async getActivityById(id: number): Promise<Activity | null> {
+    return await ActivityDao.getActivityById(id);
   }
 
-  static getEnrolledUsersByActivityId(id: number) {
-    return ActivityDao.getEnrolledUsersByActivityId(id);
+  async createActivity(activityData: Partial<Activity>): Promise<Activity> {
+    return await ActivityDao.createActivity(activityData);
   }
 
-  static createActivity(activityData: any) {
-    return ActivityDao.createActivity(activityData);
+  async updateActivity(id: number, updatedData: Partial<Activity>): Promise<Activity | null> {
+    return await ActivityDao.updateActivity(id, updatedData);
   }
 
-  static updateActivity(id: number, updatedData: any) {
-    return ActivityDao.updateActivity(id, updatedData);
-  }
-
-  static deleteActivity(id: number) {
-    return ActivityDao.deleteActivity(id);
+  async deleteActivity(id: number): Promise<boolean> {
+    return await ActivityDao.deleteActivity(id);
   }
 }

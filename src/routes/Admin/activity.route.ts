@@ -1,20 +1,27 @@
-import express from "express";
-import {
-  getAllActivities,
-  getActivityById,
-  getActivityByName,
-  createActivity,
-  updateActivity,
-  deleteActivity,
-} from "../../controllers/Admin/activity.controller";
+import { Router, Request, Response } from "express";
+import { ActivityController } from "../../controllers/Admin/activity.controller";
 
-const router = express.Router();
+const activityController = new ActivityController();
+const router = Router();
 
-router.get("/get-activities", getAllActivities);
-router.get("/get-activity/:id", getActivityById);
-router.get("/get-enrolled/:id", getActivityByName);
-router.post("/create-activity", createActivity);
-router.put("/update-activity/:id", updateActivity);
-router.delete("/delete-activity/:id", deleteActivity);
+router.get("/get-activities", async (req: Request, res: Response) => {
+  await activityController.getAllActivities(req, res);
+});
+
+router.get("/get-activity/:id", async (req: Request, res: Response) => {
+  await activityController.getActivityById(req, res);
+});
+
+router.post("/create-activity", async (req: Request, res: Response) => {
+  await activityController.createActivity(req, res);
+});
+
+router.put("/update-activity/:id", async (req: Request, res: Response) => {
+  await activityController.updateActivity(req, res);
+});
+
+router.delete("/delete-activity/:id", async (req: Request, res: Response) => {
+  await activityController.deleteActivity(req, res);
+});
 
 export default router;
