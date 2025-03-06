@@ -1,13 +1,12 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-// import { connectDatabase } from "./db/database";
+import { connectDatabase } from "./db/database";
 import "reflect-metadata";
 
 //import routes
 // import userRoute from "./routes/Test/user.route";
-import activityRoute from "./routes/Test/activity.route"; // นำเข้า router ที่ export default
-
+import activityRoute from "./routes/Admin/activity.route";
 dotenv.config();
 
 const app = express();
@@ -33,18 +32,13 @@ app.get("/", (req, res) => {
 app.use("/api/activity", activityRoute); // ผูก /api กับ activityRoute
 
 // เชื่อมต่อ database
-// connectDatabase();
-// .then(() => {
-//   const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
-//   app.listen(PORT, () => {
-//     console.log(`Server is running on http://localhost:${PORT}`);
-//   });
-// })
-// .catch((error) => {
-//   console.error("Failed to connect to the database", error);
-// });
-
-const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+connectDatabase()
+  .then(() => {
+    const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Failed to connect to the database", error);
+  });
