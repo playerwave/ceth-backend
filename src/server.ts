@@ -6,6 +6,7 @@ import "reflect-metadata";
 
 //import routes
 import userRoute from "./routes/Test/user.route";
+import activityRoute from "./routes/Admin/activity.route";
 
 dotenv.config();
 
@@ -27,8 +28,9 @@ app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
 
-//Test api
+//api
 app.use("/api/user", userRoute);
+app.use("/api/activity", activityRoute);
 
 // เชื่อมต่อ database
 connectDatabase()

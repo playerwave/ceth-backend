@@ -29,7 +29,10 @@ export class UserService {
     return await this.userDao.updateUser(id, firstName, lastName, age);
   }
 
-  patchUser = async (id: number, userData: Partial<User>): Promise<User | null> => {
+  patchUser = async (
+    id: number,
+    userData: Partial<User>
+  ): Promise<User | null> => {
     return await this.userDao.patchUser(id, userData);
   };
 
