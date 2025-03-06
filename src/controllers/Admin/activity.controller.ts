@@ -34,12 +34,9 @@ export class ActivityController {
         ac_image_url,
         ac_normal_register,
         assessment_id,
-        ac_state, // ✅ เพิ่ม ac_state ที่นี่
+        ac_state,
       } = req.body;
 
-      console.log("Extracted assessment_id:", assessment_id);
-
-      // ✅ ตรวจสอบว่าค่าที่จำเป็นมีครบ
       if (
         !ac_name ||
         !ac_company_lecturer ||
@@ -64,7 +61,6 @@ export class ActivityController {
         });
       }
 
-      // ✅ กำหนดค่าเริ่มต้นให้ ac_state ถ้าไม่มี
       const activityState = ac_state || "Not Start";
 
       const activity = await this.activityService.createActivityService({
@@ -86,14 +82,14 @@ export class ActivityController {
         ac_end_time: new Date(ac_end_time),
         ac_image_url,
         ac_normal_register: new Date(ac_normal_register),
-        ac_state: activityState, // ✅ ใช้ ac_state ที่ถูกต้อง
+        ac_state: activityState,
         assessment_id,
       });
 
       return res.status(201).json(activity);
     } catch (error) {
       return res.status(500).json({
-        message: "Error in (Admin) activity controller createActivity: ",
+        message: "Error in (Admin) activity controller createActivity",
         error: (error as Error).message,
       });
     }
@@ -109,66 +105,23 @@ export class ActivityController {
         req.body
       );
 
-      // ✅ ดึง activityId จาก URL params และตรวจสอบว่าเป็นตัวเลข
       const activityId = parseInt(req.params.id, 10);
-      if (!activityId) {
+      if (isNaN(activityId)) {
         return res
           .status(400)
           .json({ message: "Invalid activityId in request params" });
       }
 
-      const {
-        ac_name,
-        ac_company_lecturer,
-        ac_description,
-        ac_type,
-        ac_room,
-        ac_seat,
-        ac_food,
-        ac_status,
-        ac_location_type,
-        ac_start_register,
-        ac_end_register,
-        ac_registered_count,
-        ac_attended_count,
-        ac_not_attended_count,
-        ac_start_time,
-        ac_end_time,
-        ac_image_url,
-        ac_normal_register,
-        assessment_id,
-      } = req.body;
-
-      const activity = await this.activityService.updateActivityService(
+      const updatedActivity = await this.activityService.updateActivityService(
         activityId,
-        {
-          ac_name,
-          ac_company_lecturer,
-          ac_description,
-          ac_type,
-          ac_room,
-          ac_seat,
-          ac_food,
-          ac_status,
-          ac_location_type,
-          ac_start_register,
-          ac_end_register,
-          ac_registered_count,
-          ac_attended_count,
-          ac_not_attended_count,
-          ac_start_time,
-          ac_end_time,
-          ac_image_url,
-          ac_normal_register,
-          assessment_id,
-        }
+        req.body
       );
 
-      if (!activity) {
+      if (!updatedActivity) {
         return res.status(404).json({ message: "Activity not found" });
       }
 
-      return res.status(200).json(activity);
+      return res.status(200).json(updatedActivity);
     } catch (error) {
       return res.status(500).json({
         message: "Error in (Admin) activity controller updateActivity",
@@ -200,6 +153,32 @@ export class ActivityController {
       }
 
       return res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
+  getAllActivitiesController = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const activities = await this.activityService.getAllActivitiesService();
+      return res.status(200).json(activities);
+    } catch (error) {
+      console.error("❌ Error in getAllActivities:", error);
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  };
+
+  getActivityByIdController = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid activity ID" });
+      }
+      const activity = await this.activityService.getActivityByIdService(id);
+      return activity
+        ? res.status(200).json(activity)
+        : res.status(404).json({ message: "Activity not found" });
+    } catch (error) {
+      console.error("❌ Error in getActivityById:", error);
+      return res.status(500).json({ message: "Internal server error", error });
     }
   };
 }

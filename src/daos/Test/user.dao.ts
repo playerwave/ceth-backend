@@ -92,3 +92,4 @@ export class UserDao {
     await this.userRepository.delete(id);
   }
 }
+

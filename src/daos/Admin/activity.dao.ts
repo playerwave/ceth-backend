@@ -82,4 +82,29 @@ export class ActivityDao {
 
     console.log(`✅ Activity with ID ${activityId} deleted successfully.`);
   }
+
+  async getAllActivities(): Promise<Activity[]> {
+    if (!this.activityRepository) {
+      throw new Error(
+        "Error in getAllActivities Database connection is not established"
+      );
+    }
+
+    console.log("📌 Fetching all activities");
+    return await this.activityRepository.find();
+  }
+
+  async getActivityById(id: number): Promise<Activity | null> {
+    if (!this.activityRepository) {
+      throw new Error(
+        "Error in getActivityById Database connection is not established"
+      );
+    }
+
+    console.log("🔍 Fetching activity with ID:", id);
+    return await this.activityRepository.findOne({
+      where: { ac_id: id },
+      relations: ["assessment"],
+    });
+  }
 }

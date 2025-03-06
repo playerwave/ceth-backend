@@ -96,4 +96,12 @@ export class ActivityService {
     console.log("✅ Activity found, proceeding to delete.");
     await this.activityDao.deleteActivityDao(activityId);
   }
+
+  async getAllActivitiesService(): Promise<Activity[]> {
+    return await this.activityDao.getAllActivities();
+  }
+
+  async getActivityByIdService(id: number): Promise<Activity | null> {
+    return await this.activityDao.getActivityById(id);
+  }
 }
