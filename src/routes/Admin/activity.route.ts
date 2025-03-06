@@ -24,4 +24,12 @@ router.get("/get-activity/:id", async (req: Request, res: Response) => {
   await activityController.getActivityByIdController(req, res);
 });
 
+router.get("/searchActivity", async (req: Request, res: Response) => {
+  await activityController.searchActivity(req, res)
+})
+
+router.patch("/adjustActivity/:id", async (req: Request, res: Response) => {
+  await activityController.adjustStatusActivity(req, res)
+})
+
 export default router;

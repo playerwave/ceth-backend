@@ -130,6 +130,49 @@ export class ActivityController {
     }
   };
 
+  searchActivity = async (req: Request, res: Response) => {
+    const { ac_name } = req.body; // ✅ อ่านจาก Body แทน Query
+
+    console.log(req.body.ac_name);
+
+    if (!ac_name) {
+      return res.status(400).send("You sent an invalid request.");
+    }
+
+    try {
+      const activityName = await this.activityService.searchActivity(
+        String(ac_name)
+      );
+      if (activityName.length > 0) {
+        return res.status(200).json(activityName);
+      } else {
+        return res.status(404).send("No activities found.");
+      }
+    } catch (error) {
+      console.log(`Error From activity Service: ${error}`);
+      res.status(500).send(`Error: ${error}`);
+    }
+  };
+
+  adjustStatusActivity = async (req: Request, res: Response) => {
+    const { ac_status } = req.body;
+    const { id } = req.params;
+
+    if (!ac_status || !id || id == null || id == undefined) {
+      return res.status(400).send("You sent an invalid request.");
+    }
+    try {
+      const statusActivity = await this.activityService.adjustStatusActivity(
+        Number(id),
+        String(ac_status)
+      );
+      return res.status(200).json(statusActivity);
+    } catch (error) {
+      console.log(`Error From activity Service: ${error}`);
+      res.status(500).send(`Error: ${error}`);
+    }
+  };
+
   deleteActivityController = async (
     req: Request,
     res: Response
@@ -156,7 +199,10 @@ export class ActivityController {
     }
   };
 
-  getAllActivitiesController = async (req: Request, res: Response): Promise<Response> => {
+  getAllActivitiesController = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     try {
       const activities = await this.activityService.getAllActivitiesService();
       return res.status(200).json(activities);
@@ -166,7 +212,10 @@ export class ActivityController {
     }
   };
 
-  getActivityByIdController = async (req: Request, res: Response): Promise<Response> => {
+  getActivityByIdController = async (
+    req: Request,
+    res: Response
+  ): Promise<Response> => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {
