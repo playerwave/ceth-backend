@@ -59,7 +59,15 @@ export class ActivityDao {
 
     return await this.activityRepository.findOne({
       where: { ac_id: activityId },
-      relations: ["assessment"], // ✅ เปลี่ยนจาก "assessments" เป็น "assessment"
+      relations: ["assessment"], // ✅ ตรวจสอบ relations ให้ถูกต้อง
+      select: [
+        "ac_id",
+        "ac_name",
+        "ac_description",
+        "ac_image_data", // ✅ ต้องแน่ใจว่าเราดึงค่า image
+        "ac_start_time",
+        "ac_end_time",
+      ],
     });
   }
 

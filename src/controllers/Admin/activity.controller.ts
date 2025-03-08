@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { ActivityService } from "../../services/Admin/activity.service";
+import { Buffer } from "buffer";
 
 export class ActivityController {
   private activityService = new ActivityService();
@@ -247,10 +248,25 @@ export class ActivityController {
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid activity ID" });
       }
+
       const activity = await this.activityService.getActivityByIdService(id);
-      return activity
-        ? res.status(200).json(activity)
-        : res.status(404).json({ message: "Activity not found" });
+
+      if (!activity) {
+        return res.status(404).json({ message: "Activity not found" });
+      }
+
+      // ✅ สร้าง Object ใหม่เพื่อแปลงรูปภาพ
+      const responseActivity = {
+        ...activity, // ✅ คัดลอกข้อมูลเดิมทั้งหมด
+        ac_image_data:
+          activity.ac_image_data instanceof Buffer
+            ? `data:image/png;base64,${activity.ac_image_data.toString(
+                "base64"
+              )}`
+            : "/img/default.png", // ✅ ถ้าไม่มี ให้ใช้ Default
+      };
+
+      return res.status(200).json(responseActivity);
     } catch (error) {
       console.error("❌ Error in getActivityById:", error);
       return res.status(500).json({ message: "Internal server error", error });
