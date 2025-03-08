@@ -24,8 +24,8 @@ export class Activity {
   @Column({ type: "int", nullable: false })
   ac_seat!: number;
 
-  @Column({ type: "varchar", length: 100, nullable: true })
-  ac_food?: string;
+  @Column({ type: "text", nullable: true }) // ✅ แก้เป็น text เพื่อรองรับ JSON
+  ac_food?: string; // ต้องใช้ JSON.stringify ก่อนบันทึก
 
   @Column({ type: "varchar", length: 50, nullable: false, default: "private" })
   ac_status!: string;
@@ -41,8 +41,8 @@ export class Activity {
   })
   ac_state!: string;
 
-  @Column({ type: "timestamp", nullable: false })
-  ac_start_register!: Date;
+  @Column({ type: "timestamp", nullable: true })
+  ac_start_register?: Date | null;
 
   @Column({ type: "timestamp", nullable: false })
   ac_end_register!: Date;
@@ -62,22 +62,21 @@ export class Activity {
   @Column({ type: "int", nullable: false, default: 0 })
   ac_not_attended_count!: number;
 
-  @Column({ type: "timestamp", nullable: false })
+  @Column({ type: "timestamp", nullable: false }) // ✅ ต้องเป็น timestamp ไม่ใช่ string
   ac_start_time!: Date;
 
-  @Column({ type: "timestamp", nullable: false })
+  @Column({ type: "timestamp", nullable: false }) // ✅ ต้องเป็น timestamp ไม่ใช่ string
   ac_end_time!: Date;
 
-  @Column({ type: "varchar", length: 255, nullable: false })
-  ac_image_url!: string;
+  @Column({ type: "bytea", nullable: true }) // ✅ เก็บเป็น binary (Base64)
+  ac_image_data!: Buffer;
 
-  @Column({ type: "timestamp", nullable: false })
+  @Column({ type: "timestamp", nullable: false }) // ✅ ต้องเป็น timestamp
   ac_normal_register!: Date;
 
-  // ✅ แก้ให้ assessment รองรับ undefined ได้ และกำหนด `nullable: true`
   @ManyToOne(() => Assessment, (assessment) => assessment.activities, {
     nullable: true,
     onDelete: "SET NULL",
   })
-  assessment!: Assessment | null; // ✅ เปลี่ยนจาก `assessment?` เป็น `assessment!: Assessment | null`
+  assessment!: Assessment | null;
 }

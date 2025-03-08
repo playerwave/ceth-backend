@@ -10,7 +10,7 @@ export class ActivityController {
   ): Promise<Response> => {
     try {
       console.log(
-        "Received request body in createActivityController:",
+        "✅ Received request body in createActivityController:",
         req.body
       );
 
@@ -31,35 +31,58 @@ export class ActivityController {
         ac_not_attended_count,
         ac_start_time,
         ac_end_time,
-        ac_image_url,
+        ac_image_data,
         ac_normal_register,
         assessment_id,
         ac_state,
       } = req.body;
 
+      console.log("🔎 Debugging request data:");
+      console.log({
+        ac_name,
+        ac_company_lecturer,
+        ac_type,
+        ac_seat,
+        ac_status,
+        ac_start_register,
+        ac_end_register,
+        ac_registered_count,
+        ac_attended_count,
+        ac_not_attended_count,
+        ac_start_time,
+        ac_end_time,
+        ac_image_data: ac_image_data ? "✅ มีรูปภาพ" : "❌ ไม่มีรูปภาพ",
+        ac_normal_register,
+        ac_location_type,
+        assessment_id,
+      });
+
       if (
         !ac_name ||
         !ac_company_lecturer ||
         !ac_type ||
-        typeof ac_seat !== "number" ||
+        ac_seat == null ||
         !ac_status ||
-        !ac_start_register ||
         !ac_end_register ||
-        typeof ac_registered_count !== "number" ||
-        typeof ac_attended_count !== "number" ||
-        typeof ac_not_attended_count !== "number" ||
+        ac_registered_count == null ||
+        ac_attended_count == null ||
+        ac_not_attended_count == null ||
         !ac_start_time ||
         !ac_end_time ||
-        !ac_image_url ||
+        !ac_image_data ||
         !ac_normal_register ||
         !ac_location_type ||
-        typeof assessment_id !== "number"
+        assessment_id == null
       ) {
         console.error("❌ Some required fields are missing or invalid.");
         return res.status(400).json({
           message: "Invalid input data in (Admin) createActivity controller",
         });
       }
+
+      const imageBuffer = ac_image_data
+        ? Buffer.from(ac_image_data, "base64")
+        : undefined;
 
       const activityState = ac_state || "Not Start";
 
@@ -70,17 +93,19 @@ export class ActivityController {
         ac_type,
         ac_room,
         ac_seat,
-        ac_food,
+        ac_food: ac_food ? JSON.stringify(ac_food) : "[]",
         ac_status,
         ac_location_type,
-        ac_start_register: new Date(ac_start_register),
+        ac_start_register: ac_start_register
+          ? new Date(ac_start_register)
+          : undefined, // ✅ เปลี่ยนจาก null เป็น undefined
         ac_end_register: new Date(ac_end_register),
         ac_registered_count,
         ac_attended_count,
         ac_not_attended_count,
         ac_start_time: new Date(ac_start_time),
         ac_end_time: new Date(ac_end_time),
-        ac_image_url,
+        ac_image_data: imageBuffer,
         ac_normal_register: new Date(ac_normal_register),
         ac_state: activityState,
         assessment_id,
@@ -88,6 +113,7 @@ export class ActivityController {
 
       return res.status(201).json(activity);
     } catch (error) {
+      console.error("❌ Error in createActivityController:", error);
       return res.status(500).json({
         message: "Error in (Admin) activity controller createActivity",
         error: (error as Error).message,

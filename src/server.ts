@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDatabase } from "./db/database";
+import bodyParser from "body-parser";
 import "reflect-metadata";
 
 //import routes
@@ -11,6 +12,9 @@ import activityRoute from "./routes/Admin/activity.route";
 dotenv.config();
 
 const app = express();
+
+app.use(bodyParser.json({ limit: "5mb" }));
+app.use(bodyParser.urlencoded({ limit: "5mb", extended: true }));
 
 // ใช้ CORS
 app.use(
