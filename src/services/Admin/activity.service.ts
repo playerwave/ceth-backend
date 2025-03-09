@@ -35,7 +35,7 @@ export class ActivityService {
 
   async updateActivityService(
     activityId: number,
-    activityData: Partial<Activity> & { assessment_id?: number }
+    activityData: Partial<Activity>
   ): Promise<Activity | null> {
     console.log(
       "Received activityData in updateActivityService:",
@@ -43,7 +43,6 @@ export class ActivityService {
     );
 
     try {
-      // ✅ 1. ตรวจสอบว่า Activity มีอยู่จริงหรือไม่
       const existingActivity = await this.activityDao.getActivityByIdDao(
         activityId
       );
@@ -52,24 +51,15 @@ export class ActivityService {
         return null;
       }
 
-      // ✅ 2. ตรวจสอบว่า assessment_id ถูกต้องหรือไม่
-      let selectedAssessment: Assessment | null = null; // ✅ กำหนดค่าเริ่มต้นเป็น `null`
-      if (activityData.assessment_id) {
-        console.log("Fetching assessment with ID:", activityData.assessment_id);
-        selectedAssessment =
-          (await this.assessmentDao.getAssessmentById(
-            activityData.assessment_id
-          )) ?? null; // ✅ ใช้ `?? null` เพื่อป้องกัน `undefined`
-      } else {
-        selectedAssessment = existingActivity.assessment ?? null; // ✅ ใช้ `null` แทน `undefined`
+      if (activityData.ac_image_data) {
+        console.log("📸 New image detected, updating image...");
       }
 
-      // ✅ 3. อัปเดต Activity โดยใช้ `assessment` แทน `assessments`
+      // ✅ อัปเดต Activity
       const updatedActivity = await this.activityDao.updateActivityDao(
         activityId,
         {
           ...activityData,
-          assessment: selectedAssessment, // ✅ ใช้ `assessment` ไม่ใช่ `assessments`
           ac_last_update: new Date(),
         }
       );

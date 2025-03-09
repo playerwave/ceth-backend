@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { ActivityService } from "../../services/Admin/activity.service";
 import { Buffer } from "buffer";
+import fs from "fs";
+import path from "path";
+import { Activity } from "../../entity/Activity";
 
 export class ActivityController {
   private activityService = new ActivityService();
@@ -128,7 +131,7 @@ export class ActivityController {
   ): Promise<Response> => {
     try {
       console.log(
-        "Received request body in updateActivityController:",
+        "📩 Received request body in updateActivityController:",
         req.body
       );
 
@@ -136,24 +139,50 @@ export class ActivityController {
       if (isNaN(activityId)) {
         return res
           .status(400)
-          .json({ message: "Invalid activityId in request params" });
+          .json({ message: "❌ Invalid activityId in request params" });
       }
+
+      let imageBuffer = null;
+      if (
+        req.body.ac_image_data &&
+        req.body.ac_image_data.startsWith("data:image")
+      ) {
+        console.log("📸 Processing Base64 image...");
+
+        // แปลง Base64 เป็น Buffer
+        const base64Data = req.body.ac_image_data.split(",")[1];
+        imageBuffer = Buffer.from(base64Data, "base64");
+      }
+
+      // ✅ รวมข้อมูลที่ต้องอัปเดต
+      const updateData: Partial<Activity> = {
+        ac_name: req.body.ac_name,
+        ac_company_lecturer: req.body.ac_company_lecturer,
+        ac_description: req.body.ac_description,
+        ac_type: req.body.ac_type,
+        ac_room: req.body.ac_room || "Unknown",
+        ac_seat: req.body.ac_seat ? parseInt(req.body.ac_seat, 10) : 0,
+        ac_status: req.body.ac_status,
+        ac_location_type: req.body.ac_location_type,
+        ac_last_update: new Date(),
+        ac_image_data: imageBuffer || req.body.ac_image_data, // ✅ ใช้ภาพใหม่ถ้ามี
+      };
+
+      console.log("📝 Updating activity with:", updateData);
 
       const updatedActivity = await this.activityService.updateActivityService(
         activityId,
-        req.body
+        updateData
       );
 
       if (!updatedActivity) {
-        return res.status(404).json({ message: "Activity not found" });
+        return res.status(404).json({ message: "❌ Activity not found" });
       }
 
       return res.status(200).json(updatedActivity);
     } catch (error) {
-      return res.status(500).json({
-        message: "Error in (Admin) activity controller updateActivity",
-        error: (error as Error).message,
-      });
+      console.error("❌ Error in updateActivityController:", error);
+      return res.status(500).json({ message: "❌ Internal Server Error" });
     }
   };
 

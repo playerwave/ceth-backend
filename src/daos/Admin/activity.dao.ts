@@ -46,6 +46,10 @@ export class ActivityDao {
       throw new Error(`Activity with ID ${activityId} not found`);
     }
 
+    if (activityData.ac_image_data) {
+      console.log("📸 Updating image in database...");
+    }
+
     Object.assign(existingActivity, activityData);
     return await this.activityRepository.save(existingActivity);
   }
