@@ -187,9 +187,8 @@ export class ActivityController {
   };
 
   searchActivity = async (req: Request, res: Response) => {
-    const { ac_name } = req.body; // ✅ อ่านจาก Body แทน Query
-
-    console.log(req.body.ac_name);
+    const { ac_name } = req.query;
+    console.log(req.query.ac_name);
 
     if (!ac_name) {
       return res.status(400).send("You sent an invalid request.");
