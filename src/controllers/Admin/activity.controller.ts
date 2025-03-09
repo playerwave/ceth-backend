@@ -45,9 +45,13 @@ export class ActivityController {
       console.log({
         ac_name,
         ac_company_lecturer,
+        ac_description,
         ac_type,
+        ac_room,
         ac_seat,
+        ac_food,
         ac_status,
+        ac_location_type,
         ac_start_register,
         ac_end_register,
         ac_registered_count,
@@ -57,8 +61,8 @@ export class ActivityController {
         ac_end_time,
         ac_image_data: ac_image_data ? "✅ มีรูปภาพ" : "❌ ไม่มีรูปภาพ",
         ac_normal_register,
-        ac_location_type,
         assessment_id,
+        ac_state,
       });
 
       if (

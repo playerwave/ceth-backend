@@ -26,6 +26,9 @@ export class ActivityDao {
     }
 
     const activity = this.activityRepository.create(activityData);
+
+    console.log("log createActivity in dao: ", activityData);
+
     return await this.activityRepository.save(activity);
   }
 
@@ -68,9 +71,24 @@ export class ActivityDao {
         "ac_id",
         "ac_name",
         "ac_description",
-        "ac_image_data", // ✅ ต้องแน่ใจว่าเราดึงค่า image
+        "ac_type",
+        "ac_room",
+        "ac_seat",
+        "ac_food",
+        "ac_status",
+        "ac_location_type",
+        "ac_state",
+        "ac_start_register",
+        "ac_end_register",
+        "ac_create_date",
+        "ac_last_update",
+        "ac_registered_count",
+        "ac_attended_count",
+        "ac_not_attended_count",
         "ac_start_time",
         "ac_end_time",
+        "ac_image_data",
+        "ac_normal_register",
       ],
     });
   }
