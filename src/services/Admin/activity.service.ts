@@ -67,8 +67,8 @@ export class ActivityService {
       console.log(`✅ Activity with ID ${activityId} updated successfully.`);
       return updatedActivity;
     } catch (error) {
-      console.error("❌ Error in updateActivityService:", error);
-      throw new Error("Error in updateActivityService: " + error);
+      console.error("❌ Error in updateActivityService(Admin):", error);
+      throw new Error("Error in updateActivityService(Admin): " + error);
     }
   }
 
@@ -102,7 +102,7 @@ export class ActivityService {
   
     return { activities, total, totalPages };
   }
-  
+
   async getActivityByIdService(id: number): Promise<Activity | null> {
     return await this.activityDao.getActivityById(id);
   }

@@ -121,9 +121,9 @@ export class ActivityController {
 
       return res.status(201).json(activity);
     } catch (error) {
-      console.error("❌ Error in createActivityController:", error);
+      console.error("❌ Error in createActivityController(Admin):", error);
       return res.status(500).json({
-        message: "Error in (Admin) activity controller createActivity",
+        message: "❌ Error in createActivityController(Admin)",
         error: (error as Error).message,
       });
     }
@@ -135,7 +135,7 @@ export class ActivityController {
   ): Promise<Response> => {
     try {
       console.log(
-        "📩 Received request body in updateActivityController:",
+        "📩 Received request body in updateActivityController(Admin):",
         req.body
       );
 
@@ -185,7 +185,7 @@ export class ActivityController {
 
       return res.status(200).json(updatedActivity);
     } catch (error) {
-      console.error("❌ Error in updateActivityController:", error);
+      console.error("❌ Error in updateActivityController(Admin):", error);
       return res.status(500).json({ message: "❌ Internal Server Error" });
     }
   };
@@ -211,8 +211,8 @@ export class ActivityController {
         return res.status(404).send("No activities found.");
       }
     } catch (error) {
-      console.log(`Error From activity Service: ${error}`);
-      res.status(500).send(`Error: ${error}`);
+      console.log(`Error in searchActivityController(Admin): ${error}`);
+      return res.status(500).send(`Error: ${error}`);
     }
   };
 
@@ -231,7 +231,7 @@ export class ActivityController {
       return res.status(200).json(statusActivity);
     } catch (error) {
       console.log(`Error From activity Service: ${error}`);
-      res.status(500).send(`Error: ${error}`);
+      return res.status(500).send(`Error: ${error}`);
     }
   };
 
@@ -255,7 +255,7 @@ export class ActivityController {
 
       return res.status(204).send();
     } catch (error) {
-      console.error("❌ Error deleting activity:", error);
+      console.error("❌ Error in deleteActivityController(Admin):", error);
 
       if ((error as Error).message.includes("not found")) {
         return res.status(404).json({ message: "Activity not found" });
@@ -282,7 +282,7 @@ export class ActivityController {
         .status(200)
         .json({ page, limit, total, totalPages, activities });
     } catch (error) {
-      console.error("❌ Error in getAllActivities:", error);
+      console.error("❌ Error in getAllActivitiesController(Admin):", error);
       return res.status(500).json({ message: "Internal server error", error });
     }
   };
@@ -316,7 +316,7 @@ export class ActivityController {
 
       return res.status(200).json(responseActivity);
     } catch (error) {
-      console.error("❌ Error in getActivityById:", error);
+      console.error("❌ Error in getActivityById(Admin):", error);
       return res.status(500).json({ message: "Internal server error", error });
     }
   };

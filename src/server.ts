@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectDatabase } from "./db/database";
 import bodyParser from "body-parser";
 import "reflect-metadata";
+import { requestLogger, errorLogger } from "./middleware/logger";
 
 //import routes
 import userRoute from "./routes/Test/user.route";
@@ -35,6 +36,10 @@ app.get("/", (req, res) => {
 //api
 app.use("/api/user", userRoute);
 app.use("/api/activity", activityRoute);
+
+
+app.use(requestLogger); // ใช้ Middleware สำหรับ Log Request
+app.use(errorLogger); // ใช้ Middleware จับ Error และ Log
 
 // เชื่อมต่อ database
 connectDatabase()
