@@ -10,7 +10,7 @@ export class ActivityController {
     try {
       const activityData = req.body;
 
-      // ✅ ตรวจสอบ `assessment_id` ก่อนส่งให้ Service
+      // ✅ ตรวจสอบ assessment_id ก่อนส่งให้ Service
       if (
         activityData.assessment_id &&
         isNaN(Number(activityData.assessment_id))

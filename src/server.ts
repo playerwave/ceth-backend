@@ -1,10 +1,11 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDatabase } from "./db/database";
 import bodyParser from "body-parser";
 import "reflect-metadata";
 import { httpLogger, requestLogger, errorLogger } from "./middleware/logger";
+import { validationResult } from "express-validator";
 
 //import routes
 import userRoute from "./routes/Test/user.route";
@@ -35,6 +36,17 @@ app.get("/", (req, res) => {
 
 app.use(httpLogger); // ใช้ HTTP Logger จาก Morgan
 app.use(requestLogger); // Log รายละเอียด Request (Params, Query, Body)
+
+const requestValidator = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ใช้เป็น Middleware ที่ถูกต้อง
+app.use(requestValidator);
 
 //api
 app.use("/api/user", userRoute);
