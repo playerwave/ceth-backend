@@ -44,7 +44,7 @@ export class ActivityService {
 
       return newActivity;
     } catch (error) {
-      logger.error("❌ Error in createActivityService", { error });
+      logger.error("❌ Error in createActivityService(Admin)", { error });
       throw error;
     }
   }
@@ -87,7 +87,7 @@ export class ActivityService {
       });
       return updatedActivity;
     } catch (error) {
-      logger.error("❌ Error in updateActivityService", { error });
+      logger.error("❌ Error in updateActivityService(Admin)", { error });
       throw error;
     }
   }
@@ -113,7 +113,7 @@ export class ActivityService {
 
       return true;
     } catch (error) {
-      logger.error("❌ Error in deleteActivityService", { error });
+      logger.error("❌ Error in deleteActivityService(Admin)", { error });
       throw error;
     }
   }
@@ -128,7 +128,7 @@ export class ActivityService {
       const offset = (page - 1) * limit;
 
       // ✅ ดึงข้อมูลจาก DAO
-      const [activities, total] = await this.activityDao.getAllActivities(
+      const [activities, total] = await this.activityDao.getAllActivitiesDao(
         offset,
         limit
       );
@@ -145,7 +145,7 @@ export class ActivityService {
 
       return { activities, total, totalPages };
     } catch (error) {
-      logger.error("❌ Error in getAllActivitiesService", { error });
+      logger.error("❌ Error in getAllActivitiesService(Admin)", { error });
       throw error;
     }
   }
@@ -161,15 +161,15 @@ export class ActivityService {
       const activity = await this.activityDao.getActivityByIdDao(id);
       return activity;
     } catch (error) {
-      logger.error("❌ Error in getActivityByIdService", { error });
+      logger.error("❌ Error in getActivityByIdService(Admin)", { error });
       throw error;
     }
   }
 
   // ✅ ค้นหากิจกรรม
-  async searchActivity(ac_name: string): Promise<Activity[]> {
+  async searchActivityService(ac_name: string): Promise<Activity[]> {
     try {
-      const activities = await this.activityDao.searchActivity(ac_name);
+      const activities = await this.activityDao.searchActivityDao(ac_name);
       logger.info("✅ Fetched activities by search", {
         ac_name,
         count: activities.length,
@@ -177,13 +177,13 @@ export class ActivityService {
 
       return activities;
     } catch (error) {
-      logger.error("❌ Error in searchActivity", { error });
+      logger.error("❌ Error in searchActivity(Admin)", { error });
       throw error;
     }
   }
 
   // ✅ ปรับสถานะกิจกรรม
-  async adjustStatusActivity(
+  async adjustStatusActivityService(
     ac_id: string,
     ac_status: string
   ): Promise<Activity | null> {
@@ -193,7 +193,7 @@ export class ActivityService {
         throw new Error("Invalid activity ID format");
       }
 
-      const updatedActivity = await this.activityDao.adjustStatusActivity(
+      const updatedActivity = await this.activityDao.adjustStatusActivityDao(
         id,
         ac_status
       );
@@ -201,7 +201,7 @@ export class ActivityService {
 
       return updatedActivity;
     } catch (error) {
-      logger.error("❌ Error in adjustStatusActivity", { error });
+      logger.error("❌ Error in adjustStatusActivity(Admin)", { error });
       throw error;
     }
   }

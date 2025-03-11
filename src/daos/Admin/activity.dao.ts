@@ -1,6 +1,7 @@
 import { Repository } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { Activity } from "../../entity/Activity";
+import logger from "../../middleware/logger";
 
 export class ActivityDao {
   private activityRepository: Repository<Activity> | null = null;
@@ -16,7 +17,7 @@ export class ActivityDao {
       this.activityRepository = connection.getRepository(Activity);
       console.log("✅ Activity Repository initialized");
     } catch (error) {
-      console.error("❌ Error initializing ActivityDao:", error);
+      console.error("❌ Error initializing ActivityDao(Admin):", error);
     }
   }
 
@@ -28,11 +29,15 @@ export class ActivityDao {
 
   async createActivityDao(activityData: Partial<Activity>): Promise<Activity> {
     this.checkRepository();
+    try {
+      const activity = this.activityRepository!.create(activityData);
+      logger.info("📌 Creating activity:", activityData);
 
-    const activity = this.activityRepository!.create(activityData);
-    console.log("📌 Creating activity:", activityData);
-
-    return await this.activityRepository!.save(activity);
+      return await this.activityRepository!.save(activity);
+    } catch (error) {
+      logger.error("❌ Error in createActivityDao(Admin):", error);
+      throw new Error("Failed to create activity");
+    }
   }
 
   async updateActivityDao(
@@ -41,17 +46,22 @@ export class ActivityDao {
   ): Promise<Activity> {
     this.checkRepository();
 
-    console.log("🔄 Updating activity with ID:", activityId);
-    const existingActivity = await this.activityRepository!.findOne({
-      where: { ac_id: activityId },
-    });
+    try {
+      logger.info("🔄 Updating activity with ID:", activityId);
+      const existingActivity = await this.activityRepository!.findOne({
+        where: { ac_id: activityId },
+      });
 
-    if (!existingActivity) {
-      throw new Error(`Activity with ID ${activityId} not found`);
+      if (!existingActivity) {
+        throw new Error(`Activity with ID ${activityId} not found`);
+      }
+
+      Object.assign(existingActivity, activityData);
+      return await this.activityRepository!.save(existingActivity);
+    } catch (error) {
+      logger.error("❌ Error in updateActivityDao(Admin):", error);
+      throw new Error("Failed to update activity");
     }
-
-    Object.assign(existingActivity, activityData);
-    return await this.activityRepository!.save(existingActivity);
   }
 
   async getActivityByIdDao(activityId: number): Promise<Activity | null> {
@@ -63,40 +73,53 @@ export class ActivityDao {
         relations: ["assessment"],
       });
     } catch (error) {
-      console.error(`❌ Error fetching activity with ID ${activityId}:`, error);
-      return null;
+      logger.error(
+        `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
+        error
+      );
+      throw new Error("Failed to get activity by id");
     }
   }
 
   async deleteActivityDao(activityId: number): Promise<boolean> {
     this.checkRepository();
 
-    console.log("🔄 Attempting to delete activity with ID:", activityId);
-    const deleteResult = await this.activityRepository!.delete(activityId);
+    try {
+      logger.info("🔄 Attempting to delete activity with ID:", activityId);
+      const deleteResult = await this.activityRepository!.delete(activityId);
 
-    if (deleteResult.affected === 0) {
-      console.warn(`⚠️ Activity with ID ${activityId} not found.`);
-      return false;
+      if (deleteResult.affected === 0) {
+        console.warn(`⚠️ Activity with ID ${activityId} not found.`);
+        return false;
+      }
+
+      logger.info(`✅ Activity with ID ${activityId} deleted successfully.`);
+      return true;
+    } catch (error) {
+      logger.error("❌ Error in updateActivityDao(Admin):", error);
+      throw new Error("Failed to update activity");
     }
-
-    console.log(`✅ Activity with ID ${activityId} deleted successfully.`);
-    return true;
   }
 
-  async getAllActivities(
+  async getAllActivitiesDao(
     offset: number,
     limit: number
   ): Promise<[Activity[], number]> {
     this.checkRepository();
 
-    console.log("📌 Fetching all activities with pagination");
-    return await this.activityRepository!.findAndCount({
-      skip: offset,
-      take: limit,
-    });
+    try {
+      logger.info("📌 Fetching all activities with pagination");
+      return await this.activityRepository!.findAndCount({
+        skip: offset,
+        take: limit,
+      });
+    } catch (error) {
+      logger.error("❌ Error in getAllActivities(Admin):", error);
+      throw new Error("Failed to get all activity");
+    }
   }
 
-  async searchActivity(ac_name: string): Promise<Activity[]> {
+  async searchActivityDao(ac_name: string): Promise<Activity[]> {
     this.checkRepository();
 
     try {
@@ -104,12 +127,12 @@ export class ActivityDao {
         "SELECT * FROM activity WHERE ac_name ILIKE '%' || $1 || '%' ORDER BY ac_id ASC";
       return await this.activityRepository!.query(query, [ac_name]);
     } catch (error) {
-      console.error(`❌ Error in searchActivity:`, error);
+      logger.error(`❌ Error in searchActivity:`, error);
       throw new Error(`Error fetching activities: ${error}`);
     }
   }
 
-  async adjustStatusActivity(
+  async adjustStatusActivityDao(
     ac_id: number,
     ac_status: string
   ): Promise<Activity | null> {

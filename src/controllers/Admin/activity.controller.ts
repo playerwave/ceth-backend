@@ -24,7 +24,7 @@ export class ActivityController {
       );
       res.status(201).json(activity);
     } catch (error) {
-      logger.error("❌ Error in createActivityController", { error });
+      logger.error("❌ Error in createActivityController(Admin)", { error });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
@@ -44,7 +44,7 @@ export class ActivityController {
       logger.info("✅ Activity updated successfully", { activity });
       res.status(200).json(activity);
     } catch (error) {
-      logger.error("❌ Error in updateActivityController", { error });
+      logger.error("❌ Error in updateActivityController(Admin)", { error });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
@@ -63,7 +63,7 @@ export class ActivityController {
       logger.info("✅ Activity deleted successfully", { id: req.params.id });
       res.status(200).json({ message: "Activity deleted successfully" });
     } catch (error) {
-      logger.error("❌ Error in deleteActivityController", { error });
+      logger.error("❌ Error in deleteActivityController(Admin)", { error });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
@@ -80,7 +80,7 @@ export class ActivityController {
 
       res.status(200).json(activities);
     } catch (error) {
-      logger.error("❌ Error in getAllActivitiesController", { error });
+      logger.error("❌ Error in getAllActivitiesController(Admin)", { error });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
@@ -98,7 +98,7 @@ export class ActivityController {
 
       res.status(200).json(activity);
     } catch (error) {
-      logger.error("❌ Error in getActivityByIdController", { error });
+      logger.error("❌ Error in getActivityByIdController(Admin)", { error });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
@@ -112,7 +112,7 @@ export class ActivityController {
         return;
       }
 
-      const activities = await this.activityService.searchActivity(
+      const activities = await this.activityService.searchActivityService(
         ac_name as string
       );
       if (activities.length === 0) {
@@ -122,7 +122,7 @@ export class ActivityController {
 
       res.status(200).json(activities);
     } catch (error) {
-      logger.error("❌ Error in searchActivityController", { error });
+      logger.error("❌ Error in searchActivityController(Admin)", { error });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
