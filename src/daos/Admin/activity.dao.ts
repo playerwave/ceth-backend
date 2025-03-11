@@ -113,15 +113,22 @@ export class ActivityDao {
     console.log(`✅ Activity with ID ${activityId} deleted successfully.`);
   }
 
-  async getAllActivities(): Promise<Activity[]> {
+  async getAllActivities(
+    offset: number,
+    limit: number
+  ): Promise<[Activity[], number]> {
     if (!this.activityRepository) {
       throw new Error(
         "Error in getAllActivities Database connection is not established"
       );
     }
 
-    console.log("📌 Fetching all activities");
-    return await this.activityRepository.find();
+    console.log("📌 Fetching all activities with pagination");
+
+    return await this.activityRepository.findAndCount({
+      skip: offset,
+      take: limit,
+    });
   }
 
   async getActivityById(id: number): Promise<Activity | null> {

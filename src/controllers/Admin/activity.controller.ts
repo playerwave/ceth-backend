@@ -14,7 +14,7 @@ export class ActivityController {
   ): Promise<Response> => {
     try {
       console.log(
-        "✅ Received request body in createActivityController:",
+        "📩 Received request body in createActivityController:",
         req.body
       );
 
@@ -41,7 +41,7 @@ export class ActivityController {
         ac_state,
       } = req.body;
 
-      console.log("🔎 Debugging request data:");
+      console.log("🔎 Debugging request data in createActivityController:");
       console.log({
         ac_name,
         ac_company_lecturer,
@@ -190,9 +190,12 @@ export class ActivityController {
     }
   };
 
-  searchActivity = async (req: Request, res: Response) => {
+  searchActivityController = async (req: Request, res: Response) => {
     const { ac_name } = req.query;
-    console.log(req.query.ac_name);
+    console.log(
+      "📩 Received request query in searchActivityController:",
+      req.query.ac_name
+    );
 
     if (!ac_name) {
       return res.status(400).send("You sent an invalid request.");
@@ -237,7 +240,11 @@ export class ActivityController {
     res: Response
   ): Promise<Response> => {
     try {
-      const id = parseInt(req.params.id, 10);
+      const id = parseInt(req.params.ac_id, 10);
+      console.log(
+        "📩 Received request params in deleteActivityController:",
+        req.params.ac_id
+      );
       if (isNaN(id)) {
         console.error("❌ Invalid activity ID:", req.params.id);
         return res.status(400).json({ message: "Invalid activity ID" });
@@ -263,8 +270,17 @@ export class ActivityController {
     res: Response
   ): Promise<Response> => {
     try {
-      const activities = await this.activityService.getAllActivitiesService();
-      return res.status(200).json(activities);
+      // ดึง query parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      // เรียก service พร้อม pagination
+      const { activities, total, totalPages } =
+        await this.activityService.getAllActivitiesService(page, limit);
+
+      return res
+        .status(200)
+        .json({ page, limit, total, totalPages, activities });
     } catch (error) {
       console.error("❌ Error in getAllActivities:", error);
       return res.status(500).json({ message: "Internal server error", error });

@@ -14,7 +14,7 @@ router.put("/update-activity/:id", async (req: Request, res: Response) => {
 
 router.delete("/delete-activity/:id", async (req: Request, res: Response) => {
   await activityController.deleteActivityController(req, res);
-})
+});
 
 router.get("/get-activities", async (req: Request, res: Response) => {
   await activityController.getAllActivitiesController(req, res);
@@ -25,11 +25,11 @@ router.get("/get-activity/:id", async (req: Request, res: Response) => {
 });
 
 router.get("/searchActivity", async (req: Request, res: Response) => {
-  await activityController.searchActivity(req, res)
-})
+  await activityController.searchActivityController(req, res);
+});
 
 router.patch("/adjustActivity/:id", async (req: Request, res: Response) => {
-  await activityController.adjustStatusActivity(req, res)
-})
+  await activityController.adjustStatusActivity(req, res);
+});
 
 export default router;

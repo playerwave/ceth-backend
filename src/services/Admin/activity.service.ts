@@ -87,10 +87,22 @@ export class ActivityService {
     await this.activityDao.deleteActivityDao(activityId);
   }
 
-  async getAllActivitiesService(): Promise<Activity[]> {
-    return await this.activityDao.getAllActivities();
+  async getAllActivitiesService(
+    page: number,
+    limit: number
+  ): Promise<{ activities: Activity[]; total: number; totalPages: number }> {
+    // คำนวณค่า offset
+    const offset = (page - 1) * limit;
+  
+    // ดึงข้อมูลจาก DAO
+    const [activities, total] = await this.activityDao.getAllActivities(offset, limit);
+  
+    // คำนวณจำนวนหน้าทั้งหมด
+    const totalPages = Math.ceil(total / limit);
+  
+    return { activities, total, totalPages };
   }
-
+  
   async getActivityByIdService(id: number): Promise<Activity | null> {
     return await this.activityDao.getActivityById(id);
   }
