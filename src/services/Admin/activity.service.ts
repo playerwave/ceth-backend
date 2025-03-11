@@ -3,118 +3,206 @@ import { Assessment } from "../../entity/Assesment";
 import { ActivityDao } from "../../daos/Admin/activity.dao";
 import { AssessmentDao } from "../../daos/Admin/assesment.dao";
 import { sendMailCreateActivity } from "../../mailer/email";
+import logger from "../../middleware/logger";
 
 export class ActivityService {
   private activityDao = new ActivityDao();
-  private assessmentDao = new AssessmentDao(); // ✅ ดึง AssessmentDao มาใช้
+  private assessmentDao = new AssessmentDao();
 
+  // ✅ สร้างกิจกรรมใหม่
   async createActivityService(
     activityData: Partial<Activity> & { assessment_id?: number }
   ): Promise<Activity> {
-    console.log(
-      "Received activityData in createActivityService:",
-      activityData
-    );
+    try {
+      logger.info("📩 Received data in createActivityService", {
+        activityData,
+      });
 
-    let selectedAssessment: Assessment | null = null; // ✅ กำหนดค่าเริ่มต้นเป็น `null`
-    if (activityData.assessment_id) {
-      console.log("Fetching assessment with ID:", activityData.assessment_id);
-      selectedAssessment =
-        (await this.assessmentDao.getAssessmentById(
-          activityData.assessment_id
-        )) ?? null; // ✅ ใช้ `?? null` เพื่อกัน `undefined`
+      let selectedAssessment: Assessment | null = null;
+
+      // ✅ ตรวจสอบ assessment_id และดึงข้อมูล Assessment
+      if (activityData.assessment_id) {
+        if (isNaN(Number(activityData.assessment_id))) {
+          throw new Error("Invalid assessment_id format");
+        }
+
+        selectedAssessment =
+          (await this.assessmentDao.getAssessmentById(
+            activityData.assessment_id
+          )) ?? null;
+      }
+
+      // ✅ สร้างกิจกรรมใหม่
+      const newActivity = await this.activityDao.createActivityDao({
+        ...activityData,
+        assessment: selectedAssessment,
+        ac_create_date: new Date(),
+        ac_last_update: new Date(),
+      });
+
+      logger.info("✅ Activity created successfully", { newActivity });
+
+      return newActivity;
+    } catch (error) {
+      logger.error("❌ Error in createActivityService", { error });
+      throw error;
     }
-
-    return await this.activityDao.createActivityDao({
-      ...activityData,
-      assessment: selectedAssessment, // ✅ กำหนดค่า `null` ถ้าไม่มี assessment
-      ac_create_date: new Date(),
-      ac_last_update: new Date(),
-    });
   }
 
+  // ✅ อัปเดตกิจกรรม
   async updateActivityService(
-    activityId: number,
+    activityId: string,
     activityData: Partial<Activity>
   ): Promise<Activity | null> {
-    console.log(
-      "Received activityData in updateActivityService:",
-      activityData
-    );
-
     try {
-      const existingActivity = await this.activityDao.getActivityByIdDao(
-        activityId
-      );
+      const id = parseInt(activityId, 10);
+      if (isNaN(id)) {
+        throw new Error("Invalid activity ID format");
+      }
+
+      logger.info("📩 Received data in updateActivityService", {
+        activityId: id,
+        activityData,
+      });
+
+      const existingActivity = await this.activityDao.getActivityByIdDao(id);
       if (!existingActivity) {
-        console.log("❌ Activity not found with ID:", activityId);
+        logger.warn("⚠️ Activity not found", { activityId: id });
         return null;
       }
 
       if (activityData.ac_image_data) {
-        console.log("📸 New image detected, updating image...");
+        logger.info("📸 New image detected, updating image...");
       }
 
       // ✅ อัปเดต Activity
-      const updatedActivity = await this.activityDao.updateActivityDao(
-        activityId,
-        {
-          ...activityData,
-          ac_last_update: new Date(),
-        }
-      );
+      const updatedActivity = await this.activityDao.updateActivityDao(id, {
+        ...activityData,
+        ac_last_update: new Date(),
+      });
 
-      console.log(`✅ Activity with ID ${activityId} updated successfully.`);
+      logger.info("✅ Activity updated successfully", {
+        activityId: id,
+        updatedActivity,
+      });
       return updatedActivity;
     } catch (error) {
-      console.error("❌ Error in updateActivityService(Admin):", error);
-      throw new Error("Error in updateActivityService(Admin): " + error);
+      logger.error("❌ Error in updateActivityService", { error });
+      throw error;
     }
   }
 
-  async deleteActivityService(activityId: number): Promise<void> {
-    console.log("Received request to delete activity with ID:", activityId);
+  // ✅ ลบกิจกรรม
+  async deleteActivityService(activityId: string): Promise<boolean> {
+    try {
+      const id = parseInt(activityId, 10);
+      if (isNaN(id)) {
+        throw new Error("Invalid activity ID format");
+      }
 
-    const existingActivity = await this.activityDao.getActivityByIdDao(
-      activityId
-    );
-    if (!existingActivity) {
-      console.error(`❌ Activity with ID ${activityId} not found.`);
-      throw new Error(`Activity with ID ${activityId} not found`);
+      logger.info("📩 Received request to delete activity", { activityId: id });
+
+      const existingActivity = await this.activityDao.getActivityByIdDao(id);
+      if (!existingActivity) {
+        logger.warn("⚠️ Activity not found", { activityId: id });
+        return false;
+      }
+
+      await this.activityDao.deleteActivityDao(id);
+      logger.info("✅ Activity deleted successfully", { activityId: id });
+
+      return true;
+    } catch (error) {
+      logger.error("❌ Error in deleteActivityService", { error });
+      throw error;
     }
-
-    console.log("✅ Activity found, proceeding to delete.");
-    await this.activityDao.deleteActivityDao(activityId);
   }
 
+  // ✅ ดึงรายการกิจกรรมทั้งหมด (รองรับ Pagination)
   async getAllActivitiesService(
     page: number,
     limit: number
   ): Promise<{ activities: Activity[]; total: number; totalPages: number }> {
-    // คำนวณค่า offset
-    const offset = (page - 1) * limit;
-  
-    // ดึงข้อมูลจาก DAO
-    const [activities, total] = await this.activityDao.getAllActivities(offset, limit);
-  
-    // คำนวณจำนวนหน้าทั้งหมด
-    const totalPages = Math.ceil(total / limit);
-  
-    return { activities, total, totalPages };
+    try {
+      // ✅ คำนวณค่า offset
+      const offset = (page - 1) * limit;
+
+      // ✅ ดึงข้อมูลจาก DAO
+      const [activities, total] = await this.activityDao.getAllActivities(
+        offset,
+        limit
+      );
+
+      // ✅ คำนวณจำนวนหน้าทั้งหมด
+      const totalPages = Math.ceil(total / limit);
+
+      logger.info("✅ Fetched all activities", {
+        page,
+        limit,
+        total,
+        totalPages,
+      });
+
+      return { activities, total, totalPages };
+    } catch (error) {
+      logger.error("❌ Error in getAllActivitiesService", { error });
+      throw error;
+    }
   }
 
-  async getActivityByIdService(id: number): Promise<Activity | null> {
-    return await this.activityDao.getActivityById(id);
+  // ✅ ดึงกิจกรรมตาม ID
+  async getActivityByIdService(activityId: string): Promise<Activity | null> {
+    try {
+      const id = parseInt(activityId, 10);
+      if (isNaN(id)) {
+        throw new Error("Invalid activity ID format");
+      }
+
+      const activity = await this.activityDao.getActivityByIdDao(id);
+      return activity;
+    } catch (error) {
+      logger.error("❌ Error in getActivityByIdService", { error });
+      throw error;
+    }
   }
 
+  // ✅ ค้นหากิจกรรม
   async searchActivity(ac_name: string): Promise<Activity[]> {
-    return await this.activityDao.searchActivity(ac_name);
+    try {
+      const activities = await this.activityDao.searchActivity(ac_name);
+      logger.info("✅ Fetched activities by search", {
+        ac_name,
+        count: activities.length,
+      });
+
+      return activities;
+    } catch (error) {
+      logger.error("❌ Error in searchActivity", { error });
+      throw error;
+    }
   }
 
+  // ✅ ปรับสถานะกิจกรรม
   async adjustStatusActivity(
-    ac_id: number,
+    ac_id: string,
     ac_status: string
   ): Promise<Activity | null> {
-    return await this.activityDao.adjustStatusActivity(ac_id, ac_status);
+    try {
+      const id = parseInt(ac_id, 10);
+      if (isNaN(id)) {
+        throw new Error("Invalid activity ID format");
+      }
+
+      const updatedActivity = await this.activityDao.adjustStatusActivity(
+        id,
+        ac_status
+      );
+      logger.info("✅ Activity status updated", { ac_id: id, ac_status });
+
+      return updatedActivity;
+    } catch (error) {
+      logger.error("❌ Error in adjustStatusActivity", { error });
+      throw error;
+    }
   }
 }

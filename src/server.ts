@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { connectDatabase } from "./db/database";
 import bodyParser from "body-parser";
 import "reflect-metadata";
-import { requestLogger, errorLogger } from "./middleware/logger";
+import { httpLogger, requestLogger, errorLogger } from "./middleware/logger";
 
 //import routes
 import userRoute from "./routes/Test/user.route";
@@ -33,13 +33,14 @@ app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
 
+app.use(httpLogger); // ใช้ HTTP Logger จาก Morgan
+app.use(requestLogger); // Log รายละเอียด Request (Params, Query, Body)
+
 //api
 app.use("/api/user", userRoute);
 app.use("/api/activity", activityRoute);
 
-
-app.use(requestLogger); // ใช้ Middleware สำหรับ Log Request
-app.use(errorLogger); // ใช้ Middleware จับ Error และ Log
+app.use(errorLogger); // ใช้ Error Logger
 
 // เชื่อมต่อ database
 connectDatabase()

@@ -6,42 +6,43 @@ export class ActivityDao {
   private activityRepository: Repository<Activity> | null = null;
 
   constructor() {
-    connectDatabase()
-      .then((connection) => {
-        this.activityRepository = connection.getRepository(Activity);
-      })
-      .catch((error) => {
-        console.log(
-          "Error in ActivityDao(Admin) Database connection to Entity failed :",
-          error
-        );
-      });
+    this.initializeRepository();
+  }
+
+  // ✅ ใช้ async function เพื่อรอการเชื่อมต่อฐานข้อมูล
+  private async initializeRepository(): Promise<void> {
+    try {
+      const connection = await connectDatabase();
+      this.activityRepository = connection.getRepository(Activity);
+      console.log("✅ Activity Repository initialized");
+    } catch (error) {
+      console.error("❌ Error initializing ActivityDao:", error);
+    }
+  }
+
+  private checkRepository(): void {
+    if (!this.activityRepository) {
+      throw new Error("Database connection is not established");
+    }
   }
 
   async createActivityDao(activityData: Partial<Activity>): Promise<Activity> {
-    if (!this.activityRepository) {
-      throw new Error(
-        "Error in createActivityDao(Admin) Database connection is not established"
-      );
-    }
+    this.checkRepository();
 
-    const activity = this.activityRepository.create(activityData);
+    const activity = this.activityRepository!.create(activityData);
+    console.log("📌 Creating activity:", activityData);
 
-    console.log("log createActivity in dao: ", activityData);
-
-    return await this.activityRepository.save(activity);
+    return await this.activityRepository!.save(activity);
   }
 
   async updateActivityDao(
     activityId: number,
     activityData: Partial<Activity>
   ): Promise<Activity> {
-    if (!this.activityRepository) {
-      throw new Error("Database connection is not established");
-    }
+    this.checkRepository();
 
     console.log("🔄 Updating activity with ID:", activityId);
-    const existingActivity = await this.activityRepository.findOne({
+    const existingActivity = await this.activityRepository!.findOne({
       where: { ac_id: activityId },
     });
 
@@ -49,114 +50,62 @@ export class ActivityDao {
       throw new Error(`Activity with ID ${activityId} not found`);
     }
 
-    if (activityData.ac_image_data) {
-      console.log("📸 Updating image in database...");
-    }
-
     Object.assign(existingActivity, activityData);
-    return await this.activityRepository.save(existingActivity);
+    return await this.activityRepository!.save(existingActivity);
   }
 
   async getActivityByIdDao(activityId: number): Promise<Activity | null> {
-    if (!this.activityRepository) {
-      throw new Error(
-        "Error in getActivityByIdDao(Admin) Database connection is not established"
-      );
-    }
+    this.checkRepository();
 
-    return await this.activityRepository.findOne({
-      where: { ac_id: activityId },
-      relations: ["assessment"], // ✅ ตรวจสอบ relations ให้ถูกต้อง
-      select: [
-        "ac_id",
-        "ac_name",
-        "ac_description",
-        "ac_type",
-        "ac_room",
-        "ac_seat",
-        "ac_food",
-        "ac_status",
-        "ac_location_type",
-        "ac_state",
-        "ac_start_register",
-        "ac_end_register",
-        "ac_create_date",
-        "ac_last_update",
-        "ac_registered_count",
-        "ac_attended_count",
-        "ac_not_attended_count",
-        "ac_start_time",
-        "ac_end_time",
-        "ac_image_data",
-        "ac_normal_register",
-      ],
-    });
+    try {
+      return await this.activityRepository!.findOneOrFail({
+        where: { ac_id: activityId },
+        relations: ["assessment"],
+      });
+    } catch (error) {
+      console.error(`❌ Error fetching activity with ID ${activityId}:`, error);
+      return null;
+    }
   }
 
-  async deleteActivityDao(activityId: number): Promise<void> {
-    if (!this.activityRepository) {
-      throw new Error("Database connection is not established");
-    }
+  async deleteActivityDao(activityId: number): Promise<boolean> {
+    this.checkRepository();
 
     console.log("🔄 Attempting to delete activity with ID:", activityId);
-    const deleteResult = await this.activityRepository.delete(activityId);
+    const deleteResult = await this.activityRepository!.delete(activityId);
 
     if (deleteResult.affected === 0) {
-      console.error(
-        `❌ Activity with ID ${activityId} not found or could not be deleted.`
-      );
-      throw new Error(
-        `Activity with ID ${activityId} not found or could not be deleted.`
-      );
+      console.warn(`⚠️ Activity with ID ${activityId} not found.`);
+      return false;
     }
 
     console.log(`✅ Activity with ID ${activityId} deleted successfully.`);
+    return true;
   }
 
   async getAllActivities(
     offset: number,
     limit: number
   ): Promise<[Activity[], number]> {
-    if (!this.activityRepository) {
-      throw new Error(
-        "Error in getAllActivities Database connection is not established"
-      );
-    }
+    this.checkRepository();
 
     console.log("📌 Fetching all activities with pagination");
-
-    return await this.activityRepository.findAndCount({
+    return await this.activityRepository!.findAndCount({
       skip: offset,
       take: limit,
     });
   }
 
-  async getActivityById(id: number): Promise<Activity | null> {
-    if (!this.activityRepository) {
-      throw new Error(
-        "Error in getActivityById Database connection is not established"
-      );
-    }
-
-    console.log("🔍 Fetching activity with ID:", id);
-    return await this.activityRepository.findOne({
-      where: { ac_id: id },
-      relations: ["assessment"],
-    });
-  }
-
   async searchActivity(ac_name: string): Promise<Activity[]> {
-    if (!this.activityRepository) {
-      throw new Error("Repository is not initialized");
-    }
+    this.checkRepository();
+
     try {
       const query =
         "SELECT * FROM activity WHERE ac_name ILIKE '%' || $1 || '%' ORDER BY ac_id ASC";
-      const result = await this.activityRepository.query(query, [ac_name]);
-      return result;
+      return await this.activityRepository!.query(query, [ac_name]);
     } catch (error) {
-      console.log(`Error From activity dao: ${error}`);
-      throw new Error(`Error fetching all activities: ${error}`);
+      console.error(`❌ Error in searchActivity:`, error);
+      throw new Error(`Error fetching activities: ${error}`);
     }
   }
 
@@ -164,9 +113,7 @@ export class ActivityDao {
     ac_id: number,
     ac_status: string
   ): Promise<Activity | null> {
-    if (!this.activityRepository) {
-      throw new Error("Repository is not initialized");
-    }
+    this.checkRepository();
 
     const status = ac_status.trim().toLowerCase();
     if (status !== "public" && status !== "private") {
@@ -176,14 +123,16 @@ export class ActivityDao {
     }
 
     try {
-      const query = `UPDATE activity SET ac_status = $1, ac_last_update = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok' WHERE ac_id = $2`;
-      await this.activityRepository.query(query, [ac_status, ac_id]);
-      const querySelect = "SELECT * FROM activity WHERE ac_id = $1";
-      const result = await this.activityRepository.query(querySelect, [ac_id]);
-      return result;
+      const query = `UPDATE activity SET ac_status = $1, ac_last_update = NOW() WHERE ac_id = $2 RETURNING *`;
+      const result = await this.activityRepository!.query(query, [
+        ac_status,
+        ac_id,
+      ]);
+
+      return result.length ? result[0] : null;
     } catch (error) {
-      console.log(`Error From activity dao: ${error}`);
-      throw new Error(`Error fetching all activities: ${error}`);
+      console.error(`❌ Error in adjustStatusActivity:`, error);
+      throw new Error(`Error updating activity status: ${error}`);
     }
   }
 }

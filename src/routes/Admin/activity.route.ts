@@ -1,35 +1,41 @@
-import { Router, Request, Response } from "express";
-import { ActivityController } from "../../controllers/Admin/activity.controller";
+import { Router } from "express";
+import { activityController } from "../../controllers/Admin/activity.controller";
+import { validateDTO } from "../../middleware/validateDTO";
+import {
+  CreateActivityDto,
+  UpdateActivityDto,
+} from "../../dtos/Admin/activity.dto";
 
-const activityController = new ActivityController();
 const router = Router();
 
-router.post("/create-activity", async (req: Request, res: Response) => {
-  await activityController.createActivityController(req, res);
-});
+router.post(
+  "/create-activity",
+  validateDTO(CreateActivityDto),
+  (req, res, next) =>
+    activityController.createActivityController(req, res).catch(next)
+);
 
-router.put("/update-activity/:id", async (req: Request, res: Response) => {
-  await activityController.updateActivityController(req, res);
-});
+router.put(
+  "/update-activity/:id",
+  validateDTO(UpdateActivityDto),
+  (req, res, next) =>
+    activityController.updateActivityController(req, res).catch(next)
+);
 
-router.delete("/delete-activity/:id", async (req: Request, res: Response) => {
-  await activityController.deleteActivityController(req, res);
-});
+router.delete("/delete-activity/:id", (req, res, next) =>
+  activityController.deleteActivityController(req, res).catch(next)
+);
 
-router.get("/get-activities", async (req: Request, res: Response) => {
-  await activityController.getAllActivitiesController(req, res);
-});
+router.get("/get-activities", (req, res, next) =>
+  activityController.getAllActivitiesController(req, res).catch(next)
+);
 
-router.get("/get-activity/:id", async (req: Request, res: Response) => {
-  await activityController.getActivityByIdController(req, res);
-});
+router.get("/get-activity/:id", (req, res, next) =>
+  activityController.getActivityByIdController(req, res).catch(next)
+);
 
-router.get("/searchActivity", async (req: Request, res: Response) => {
-  await activityController.searchActivityController(req, res);
-});
-
-router.patch("/adjustActivity/:id", async (req: Request, res: Response) => {
-  await activityController.adjustStatusActivity(req, res);
-});
+router.get("/searchActivity", (req, res, next) =>
+  activityController.searchActivityController(req, res).catch(next)
+);
 
 export default router;
