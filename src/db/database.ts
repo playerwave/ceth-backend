@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 //import Entity
 import { User } from "../entity/User";
 import { Activity } from "../entity/Activity";
-import { Assessment } from "../entity/Assesment";
+import { Assessment } from "../entity/Assessment";
 
 dotenv.config();
 

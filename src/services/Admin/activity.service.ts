@@ -1,7 +1,7 @@
 import { Activity } from "../../entity/Activity";
-import { Assessment } from "../../entity/Assesment";
+import { Assessment } from "../../entity/Assessment";
 import { ActivityDao } from "../../daos/Admin/activity.dao";
-import { AssessmentDao } from "../../daos/Admin/assesment.dao";
+import { AssessmentDao } from "../../daos/Admin/assessment.dao";
 import { sendMailCreateActivity } from "../../mailer/email";
 import logger from "../../middleware/logger";
 import dayjs from "dayjs";
@@ -28,7 +28,7 @@ export class ActivityService {
         }
 
         selectedAssessment =
-          (await this.assessmentDao.getAssessmentById(
+          (await this.assessmentDao.getAssessmentByIdDao(
             activityData.assessment_id
           )) ?? null;
       }
@@ -69,6 +69,8 @@ export class ActivityService {
           "createActivity",
           "ทดสอบส่งอีเมล"
         );
+
+        console.log("send email success!");
       }
 
       // ✅ สร้างกิจกรรมใหม่

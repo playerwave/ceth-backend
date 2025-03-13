@@ -10,6 +10,7 @@ import { validationResult } from "express-validator";
 //import routes
 import userRoute from "./routes/Test/user.route";
 import activityRoute from "./routes/Admin/activity.route";
+import assessmentRoute from "./routes/Admin/assessment.route";
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use(requestValidator);
 //api
 app.use("/api/user", userRoute);
 app.use("/api/activity", activityRoute);
+app.use("/api/assessment", assessmentRoute);
 
 app.use(errorLogger); // ใช้ Error Logger
 

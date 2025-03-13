@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
-import { Assessment } from "./Assesment";
+import { Assessment } from "./Assessment";
 
 @Entity("activity")
 export class Activity {
