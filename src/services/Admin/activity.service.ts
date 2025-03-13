@@ -4,6 +4,7 @@ import { ActivityDao } from "../../daos/Admin/activity.dao";
 import { AssessmentDao } from "../../daos/Admin/assesment.dao";
 import { sendMailCreateActivity } from "../../mailer/email";
 import logger from "../../middleware/logger";
+import dayjs from "dayjs";
 
 export class ActivityService {
   private activityDao = new ActivityDao();
@@ -20,7 +21,7 @@ export class ActivityService {
 
       let selectedAssessment: Assessment | null = null;
 
-      // ✅ ตรวจสอบ assessment_id และดึงข้อมูล Assessment
+      // ตรวจสอบ assessment_id และดึงข้อมูล Assessment
       if (activityData.assessment_id) {
         if (isNaN(Number(activityData.assessment_id))) {
           throw new Error("Invalid assessment_id format");
@@ -30,6 +31,41 @@ export class ActivityService {
           (await this.assessmentDao.getAssessmentById(
             activityData.assessment_id
           )) ?? null;
+      }
+
+      console.log(
+        "🔍 ac_recieve_hours ก่อนคำนวณ:",
+        activityData.ac_recieve_hours
+      );
+
+      // แปลงค่าเป็น Date ก่อนคำนวณ
+      // กำหนดค่าให้ ac_recieve_hours เมื่อ ac_status เป็น Public และ ac_location_type คือ Onsite หรือ Online
+      if (
+        activityData.ac_status === "Public" &&
+        (activityData.ac_location_type === "Onsite" ||
+          activityData.ac_location_type === "Online") &&
+        activityData.ac_start_time &&
+        activityData.ac_end_time
+      ) {
+        const startTime = dayjs(activityData.ac_start_time);
+        const endTime = dayjs(activityData.ac_end_time);
+
+        activityData.ac_recieve_hours = endTime.hour() - startTime.hour();
+
+        console.log(
+          "✅ คำนวณ ac_recieve_hours:",
+          activityData.ac_recieve_hours
+        );
+      }
+
+      // กำหนด วันเปิดลงทะเบียนเมื่อ ac_status เป็น Public และส่ง Email แจ้งเตือนไปหานิสิต
+      if (activityData.ac_status === "Public") {
+
+        //บันทึกวันที่เริ่มลงทะเบียน
+        activityData.ac_start_register = new Date();
+
+        // ส่งเมลไปหานิสิตที่มีสถานะความเสี่ยงเป็น risk
+        
       }
 
       // ✅ สร้างกิจกรรมใหม่
@@ -44,11 +80,10 @@ export class ActivityService {
 
       return newActivity;
     } catch (error) {
-      logger.error("❌ Error in createActivityService(Admin)", { error });
+      logger.error("❌ Error in createActivityService(Admin)", error);
       throw error;
     }
   }
-
   // ✅ อัปเดตกิจกรรม
   async updateActivityService(
     activityId: string,

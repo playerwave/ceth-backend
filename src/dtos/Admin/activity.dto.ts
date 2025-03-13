@@ -78,8 +78,7 @@ export class CreateActivityDto {
   ac_type!: ActivityType;
 
   @IsEnum(LocationType, {
-    message:
-      "ac_location_type ต้องเป็น 'Onsite', 'Online' หรือ 'Course'",
+    message: "ac_location_type ต้องเป็น 'Onsite', 'Online' หรือ 'Course'",
   })
   ac_location_type!: LocationType;
 

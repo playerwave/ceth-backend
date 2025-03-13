@@ -50,8 +50,8 @@ export class Activity {
   @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   ac_create_date!: Date;
 
-  @Column({ type: "timestamp", nullable: true, onUpdate: "CURRENT_TIMESTAMP" })
-  ac_last_update?: Date;
+  @Column({ type: "timestamp", nullable: false, onUpdate: "CURRENT_TIMESTAMP" })
+  ac_last_update!: Date;
 
   @Column({ type: "int", nullable: false, default: 0 })
   ac_registered_count!: number;
@@ -67,6 +67,9 @@ export class Activity {
 
   @Column({ type: "timestamp", nullable: false }) // ✅ ต้องเป็น timestamp ไม่ใช่ string
   ac_end_time!: Date;
+
+  @Column({ type: "int", nullable: true, default: 0 })
+  ac_recieve_hours?: number;
 
   @Column({ type: "bytea", nullable: true }) // ✅ เก็บเป็น binary (Base64)
   ac_image_data!: Buffer;
