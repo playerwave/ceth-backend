@@ -1,6 +1,7 @@
 import { validate } from "class-validator";
 import { Request, Response, NextFunction, RequestHandler } from "express";
 import { plainToInstance } from "class-transformer";
+import logger from "./logger";
 
 export const validateDTO = (DTOClass: any): RequestHandler => {
   return async (
@@ -19,6 +20,8 @@ export const validateDTO = (DTOClass: any): RequestHandler => {
         field: err.property,
         messages: Object.values(err.constraints || {}),
       }));
+
+      console.log("Error detect in dto:", formattedErrors);
 
       res.status(400).json({ errors: formattedErrors }); // ✅ แก้ไขการ return
       return; // ✅ ให้ middleware จบการทำงาน

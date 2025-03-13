@@ -60,12 +60,15 @@ export class ActivityService {
 
       // กำหนด วันเปิดลงทะเบียนเมื่อ ac_status เป็น Public และส่ง Email แจ้งเตือนไปหานิสิต
       if (activityData.ac_status === "Public") {
-
         //บันทึกวันที่เริ่มลงทะเบียน
         activityData.ac_start_register = new Date();
 
         // ส่งเมลไปหานิสิตที่มีสถานะความเสี่ยงเป็น risk
-        
+        sendMailCreateActivity(
+          "65160169@go.buu.ac.th",
+          "createActivity",
+          "ทดสอบส่งอีเมล"
+        );
       }
 
       // ✅ สร้างกิจกรรมใหม่
