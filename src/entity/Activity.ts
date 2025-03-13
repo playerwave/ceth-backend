@@ -77,6 +77,12 @@ export class Activity {
   @Column({ type: "timestamp", nullable: false }) // ✅ ต้องเป็น timestamp
   ac_normal_register!: Date;
 
+  @Column({ type: "timestamp", nullable: true }) // ✅ ต้องเป็น timestamp
+  ac_start_assesment?: Date;
+
+  @Column({ type: "timestamp", nullable: true }) // ✅ ต้องเป็น timestamp
+  ac_end_assesment?: Date;
+
   @ManyToOne(() => Assessment, (assessment) => assessment.activities, {
     nullable: true,
     onDelete: "SET NULL",

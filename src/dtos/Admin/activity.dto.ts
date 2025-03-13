@@ -12,6 +12,7 @@ import {
   ValidationArguments,
   ValidationOptions,
   registerDecorator,
+  Min,
 } from "class-validator";
 import { Type, Transform } from "class-transformer";
 
@@ -167,6 +168,38 @@ export class CreateActivityDto {
   @IsOptional()
   @IsNumber()
   assessment_id?: number;
+
+  // ✅ 1. ถ้า ac_status เป็น Public และ ac_location_type เป็น Course, ac_recieve_hours ห้ามเป็น 0 หรือ null
+  @ValidateIf(
+    (o) =>
+      o.ac_status === ActivityStatus.PUBLIC &&
+      o.ac_location_type === LocationType.COURSE
+  )
+  @IsNotEmpty({
+    message:
+      "ac_recieve_hours ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public และ ac_location_type เป็น Course",
+  })
+  @Min(1, { message: "ac_recieve_hours ต้องมากกว่า 0" })
+  @IsNumber()
+  ac_recieve_hours?: number;
+
+  // ✅ 2. ถ้า ac_status เป็น Public, ac_start_assesment ห้ามเป็น null และต้องอยู่ระหว่าง ac_start_register และ ac_end_assesment
+  // ✅ ตรวจสอบว่ามีการประกาศฟิลด์ ac_start_assesment และ ac_end_assesment เพียงครั้งเดียว
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @IsNotEmpty({
+    message: "ac_start_assesment ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public",
+  })
+  @IsDate()
+  @Type(() => Date)
+  ac_start_assesment!: Date;
+
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @IsNotEmpty({
+    message: "ac_end_assesment ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public",
+  })
+  @IsDate()
+  @Type(() => Date)
+  ac_end_assesment!: Date;
 }
 // update
 export class UpdateActivityDto {
