@@ -13,6 +13,7 @@ import {
   ValidationOptions,
   registerDecorator,
   Min,
+  IsArray,
 } from "class-validator";
 import { Type, Transform } from "class-transformer";
 
@@ -25,6 +26,7 @@ export enum ActivityStatus {
 export enum ActivityType {
   HARD_SKILL = "Hard Skill",
   SOFT_SKILL = "Soft Skill",
+  NULL = "",
 }
 
 export enum LocationType {
@@ -87,20 +89,27 @@ export class CreateActivityDto {
     if (obj.ac_location_type !== LocationType.ONSITE) return "";
     return value;
   })
-  @ValidateIf((o) => o.ac_location_type === LocationType.ONSITE)
+  @ValidateIf(
+    (o) =>
+      o.ac_location_type === LocationType.ONSITE &&
+      o.ac_status === ActivityStatus.PUBLIC
+  )
   @IsString()
   @IsNotEmpty({
     message: "ac_room ต้องไม่ว่างเมื่อ ac_location_type เป็น 'Onsite'",
   })
   ac_room!: string;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsInt()
   @IsNotEmpty()
   ac_seat!: number;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
-  @IsString()
-  ac_food?: string;
+  @IsArray()
+  @IsString({ each: true })
+  ac_food?: string[];
 
   @IsEnum(ActivityStatus)
   ac_status!: ActivityStatus;
@@ -109,36 +118,36 @@ export class CreateActivityDto {
   @IsString()
   ac_state?: string;
 
+  // ✅ ตรวจสอบเฉพาะเมื่อ `ac_status` เป็น Public
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_normal_register", {
-    message: "ac_start_register ต้องมาก่อน ac_normal_register",
-  })
+  @IsBefore("ac_normal_register")
   ac_start_register!: Date;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_end_register", {
-    message: "ac_normal_register ต้องมาก่อน ac_end_register",
-  })
+  @IsBefore("ac_end_register")
   ac_normal_register!: Date;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_start_time", {
-    message: "ac_end_register ต้องมาก่อน ac_start_time",
-  })
+  @IsBefore("ac_start_time")
   ac_end_register!: Date;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_end_time", { message: "ac_start_time ต้องมาก่อน ac_end_time" })
+  @IsBefore("ac_end_time")
   ac_start_time!: Date;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
@@ -153,31 +162,36 @@ export class CreateActivityDto {
   @Type(() => Date)
   ac_last_update?: Date;
 
-  @IsNumber()
-  ac_registered_count: number = 0;
-
-  @IsNumber()
-  ac_attended_count: number = 0;
-
-  @IsNumber()
-  ac_not_attended_count: number = 0;
-
-  @IsOptional()
-  ac_image_data?: string | null;
-
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   @IsNumber()
-  assessment_id?: number;
+  ac_registered_count?: number | null;
 
-  // ✅ ถ้า ac_status เป็น Public ต้องมีค่าทุกตัวที่สำคัญ
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @IsOptional()
+  @IsNumber()
+  ac_attended_count?: number | null;
+
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @IsOptional()
+  @IsNumber()
+  ac_not_attended_count?: number | null;
+
+  @IsOptional()
+  ac_image_url?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  assessment_id?: number | null;
+
+  // ✅ ถ้า `ac_status` เป็น Public ต้องมีค่าทุกตัวที่สำคัญ
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsNotEmpty({
-    message:
-      "ac_recieve_hours ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public และ ac_location_type เป็น Course",
+    message: "ac_recieve_hours ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public",
   })
   @Min(1, { message: "ac_recieve_hours ต้องมากกว่า 0" })
   @IsNumber()
-  ac_recieve_hours?: number;
+  ac_recieve_hours!: number;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsNotEmpty({

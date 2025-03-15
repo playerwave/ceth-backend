@@ -66,25 +66,25 @@ export class Activity {
   @Column({ type: "int", nullable: true, default: 0 })
   ac_not_attended_count?: number;
 
-  @Column({ type: "timestamp", nullable: true }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
   ac_start_time?: Date;
 
-  @Column({ type: "timestamp", nullable: true }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
   ac_end_time?: Date;
 
   @Column({ type: "int", nullable: true, default: 0 })
   ac_recieve_hours?: number;
 
-  @Column({ type: "bytea", nullable: true }) // ✅ เก็บเป็น binary (Base64)
-  ac_image_data?: Buffer;
+  @Column({ type: "varchar", nullable: true }) // ✅ เก็บเป็น binary (Base64)
+  ac_image_url?: string;
 
-  @Column({ type: "timestamp", nullable: true }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
   ac_normal_register?: Date;
 
-  @Column({ type: "timestamp", nullable: true }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
   ac_start_assesment?: Date;
 
-  @Column({ type: "timestamp", nullable: true }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
   ac_end_assesment?: Date;
 
   @ManyToOne(() => Assessment, (assessment) => assessment.activities, {

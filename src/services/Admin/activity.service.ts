@@ -5,6 +5,7 @@ import { AssessmentDao } from "../../daos/Admin/assessment.dao";
 import { sendMailCreateActivity } from "../../mailer/email";
 import logger from "../../middleware/logger";
 import dayjs from "dayjs";
+import { v2 as cloudinary } from "cloudinary";
 
 export class ActivityService {
   private activityDao = new ActivityDao();
@@ -89,6 +90,7 @@ export class ActivityService {
       throw error;
     }
   }
+
   // ✅ อัปเดตกิจกรรม
   async updateActivityService(
     activityId: string,
@@ -111,7 +113,7 @@ export class ActivityService {
         return null;
       }
 
-      if (activityData.ac_image_data) {
+      if (activityData.ac_image_url) {
         logger.info("📸 New image detected, updating image...");
       }
 

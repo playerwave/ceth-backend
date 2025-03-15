@@ -1,11 +1,15 @@
-import multer from "multer";
+import multer, { StorageEngine } from "multer";
+import { Request } from "express";
 
-// 📌 ใช้ memoryStorage() แทน diskStorage
-const storage = multer.memoryStorage();
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // จำกัดขนาดไฟล์ไม่เกิน 5MB
+// กำหนด Storage แบบ DiskStorage
+const storage: StorageEngine = multer.diskStorage({
+  filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+    cb(null, file.originalname);
+  }
 });
 
+// สร้างตัวแปร upload สำหรับใช้งาน Middleware
+const upload = multer({ storage });
+
 export default upload;
+

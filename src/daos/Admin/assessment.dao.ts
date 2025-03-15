@@ -45,7 +45,7 @@ export class AssessmentDao {
     try {
       return await this.assessmentRepository!.findOneOrFail({
         where: { as_id: assessmentId },
-        relations: ["assessment"],
+        relations: ["activities"], // ✅ ใช้ "activities" แทน "assessment"
       });
     } catch (error) {
       logger.error(

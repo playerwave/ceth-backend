@@ -13,7 +13,7 @@
   "dependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
-    "cloudinary": "^2.5.1",
+    "cloudinary": "^2.6.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -23,9 +23,11 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^6.10.0",
     "pg": "^8.13.3",
     "reflect-metadata": "^0.2.2",
+    "streamifier": "^0.1.1",
     "typeorm": "^0.3.21",
     "winston": "^3.17.0"
   },
@@ -40,6 +42,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^22.13.4",
     "@types/nodemailer": "^6.4.17",
+    "@types/streamifier": "^0.1.2",
     "@types/winston": "^2.4.4",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",

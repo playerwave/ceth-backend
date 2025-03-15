@@ -5,19 +5,52 @@ import logger from "../../middleware/logger";
 export class ActivityController {
   constructor(private activityService: ActivityService) {}
 
-  // ✅ สร้างกิจกรรมใหม่
   async createActivityController(req: Request, res: Response): Promise<void> {
     try {
-      const activityData = req.body;
+      let imageUrl = req.body.ac_image_url || ""; // ✅ ใช้ค่าที่ได้มาหรือกำหนดค่าเริ่มต้น
+      const activityData = {
+        ...req.body,
+        ac_image_url: imageUrl,
 
-      // ✅ ตรวจสอบ assessment_id ก่อนส่งให้ Service
-      if (
-        activityData.assessment_id &&
-        isNaN(Number(activityData.assessment_id))
-      ) {
-        res.status(400).json({ error: "Invalid assessment_id" });
-        return;
-      }
+        // ✅ ตรวจสอบค่าตัวเลข ห้ามเป็น ""
+        assessment_id: req.body.assessment_id
+          ? !isNaN(Number(req.body.assessment_id))
+            ? parseInt(req.body.assessment_id, 10)
+            : null
+          : null,
+
+        ac_seat: req.body.ac_seat
+          ? !isNaN(Number(req.body.ac_seat))
+            ? parseInt(req.body.ac_seat, 10)
+            : null
+          : null,
+
+        ac_registered_count: req.body.ac_registered_count
+          ? !isNaN(Number(req.body.ac_registered_count))
+            ? parseInt(req.body.ac_registered_count, 10)
+            : 0
+          : 0,
+
+        ac_attended_count: req.body.ac_attended_count
+          ? !isNaN(Number(req.body.ac_attended_count))
+            ? parseInt(req.body.ac_attended_count, 10)
+            : 0
+          : 0,
+
+        ac_not_attended_count: req.body.ac_not_attended_count
+          ? !isNaN(Number(req.body.ac_not_attended_count))
+            ? parseInt(req.body.ac_not_attended_count, 10)
+            : 0
+          : 0,
+
+        ac_start_register: req.body.ac_start_register || null,
+        ac_end_register: req.body.ac_end_register || null,
+        ac_start_time: req.body.ac_start_time || null,
+        ac_end_time: req.body.ac_end_time || null,
+        ac_normal_register: req.body.ac_normal_register || null,
+        ac_start_assessment: req.body.ac_start_assessment || null,
+        ac_end_assessment: req.body.ac_end_assessment || null,
+      };
 
       const activity = await this.activityService.createActivityService(
         activityData
