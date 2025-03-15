@@ -101,18 +101,12 @@ export class ActivityDao {
     }
   }
 
-  async getAllActivitiesDao(
-    offset: number,
-    limit: number
-  ): Promise<[Activity[], number]> {
+  async getAllActivitiesDao(): Promise<Activity[]> {
     this.checkRepository();
 
     try {
-      logger.info("📌 Fetching all activities with pagination");
-      return await this.activityRepository!.findAndCount({
-        skip: offset,
-        take: limit,
-      });
+      logger.info("📌 Fetching all activities");
+      return await this.activityRepository!.find(); // ❌ เอา pagination ออก
     } catch (error) {
       logger.error("❌ Error in getAllActivities(Admin):", error);
       throw new Error("Failed to get all activity");

@@ -20,7 +20,12 @@ export class Activity {
   @Column({ type: "text", nullable: true })
   ac_description?: string;
 
-  @Column({ type: "varchar", length: 100, nullable: true })
+  @Column({
+    type: "varchar",
+    length: 100,
+    nullable: true,
+    default: "Soft Skill",
+  })
   ac_type?: string;
 
   @Column({ type: "varchar", length: 100, nullable: true })
@@ -82,10 +87,10 @@ export class Activity {
   ac_normal_register?: Date;
 
   @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
-  ac_start_assesment?: Date;
+  ac_start_assessment?: Date;
 
   @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
-  ac_end_assesment?: Date;
+  ac_end_assessment?: Date;
 
   @ManyToOne(() => Assessment, (assessment) => assessment.activities, {
     nullable: true,

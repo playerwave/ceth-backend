@@ -8,6 +8,8 @@ export class ActivityController {
   async createActivityController(req: Request, res: Response): Promise<void> {
     try {
       let imageUrl = req.body.ac_image_url || ""; // ✅ ใช้ค่าที่ได้มาหรือกำหนดค่าเริ่มต้น
+
+      
       const activityData = {
         ...req.body,
         ac_image_url: imageUrl,
@@ -42,7 +44,7 @@ export class ActivityController {
             ? parseInt(req.body.ac_not_attended_count, 10)
             : 0
           : 0,
-
+        ac_type: req.body.ac_type || "Soft Skill",
         ac_start_register: req.body.ac_start_register || null,
         ac_end_register: req.body.ac_end_register || null,
         ac_start_time: req.body.ac_start_time || null,
@@ -104,13 +106,7 @@ export class ActivityController {
   // ✅ ดึงรายการกิจกรรมทั้งหมด (รองรับ Pagination)
   async getAllActivitiesController(req: Request, res: Response): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 10;
-      const activities = await this.activityService.getAllActivitiesService(
-        page,
-        limit
-      );
-
+      const activities = await this.activityService.getAllActivitiesService();
       res.status(200).json(activities);
     } catch (error) {
       logger.error("❌ Error in getAllActivitiesController(Admin)", { error });

@@ -120,6 +120,9 @@ export class CreateActivityDto {
 
   // ✅ ตรวจสอบเฉพาะเมื่อ `ac_status` เป็น Public
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @Transform(({ value }) =>
+    typeof value === "string" ? new Date(value) : value
+  )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
@@ -127,6 +130,9 @@ export class CreateActivityDto {
   ac_start_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @Transform(({ value }) =>
+    typeof value === "string" ? new Date(value) : value
+  )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
@@ -134,6 +140,9 @@ export class CreateActivityDto {
   ac_normal_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @Transform(({ value }) =>
+    typeof value === "string" ? new Date(value) : value
+  )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
@@ -141,6 +150,9 @@ export class CreateActivityDto {
   ac_end_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @Transform(({ value }) =>
+    typeof value === "string" ? new Date(value) : value
+  )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
@@ -148,15 +160,20 @@ export class CreateActivityDto {
   ac_start_time!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @Transform(({ value }) =>
+    typeof value === "string" ? new Date(value) : value
+  )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
   ac_end_time!: Date;
 
+  @Transform(({ value }) => (value ? new Date(value) : null))
   @IsDate()
   @Type(() => Date)
   ac_create_date: Date = new Date();
 
+  @Transform(({ value }) => (value ? new Date(value) : null))
   @IsOptional()
   @IsDate()
   @Type(() => Date)
@@ -194,19 +211,21 @@ export class CreateActivityDto {
   ac_recieve_hours!: number;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
-  @IsNotEmpty({
-    message: "ac_start_assesment ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public",
-  })
-  @IsDate()
-  @Type(() => Date)
+  @Transform(({ value }) =>
+    typeof value === "string" ? new Date(value) : value
+  )
+  // @IsDate()
+  // @Type(() => Date)
+  // @IsNotEmpty()
   ac_start_assesment!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
-  @IsNotEmpty({
-    message: "ac_end_assesment ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public",
-  })
-  @IsDate()
-  @Type(() => Date)
+  @Transform(({ value }) =>
+    typeof value === "string" ? new Date(value) : value
+  )
+  // @IsDate()
+  // @Type(() => Date)
+  // @IsNotEmpty()
   ac_end_assesment!: Date;
 }
 

@@ -75,6 +75,9 @@ export class ActivityService {
       }
 
       // ✅ สร้างกิจกรรมใหม่
+      const convertToDate = (value: any) =>
+        typeof value === "string" ? new Date(value) : value;
+
       const newActivity = await this.activityDao.createActivityDao({
         ...activityData,
         assessment: selectedAssessment,
@@ -161,31 +164,16 @@ export class ActivityService {
   }
 
   // ✅ ดึงรายการกิจกรรมทั้งหมด (รองรับ Pagination)
-  async getAllActivitiesService(
-    page: number,
-    limit: number
-  ): Promise<{ activities: Activity[]; total: number; totalPages: number }> {
+  async getAllActivitiesService(): Promise<Activity[]> {
     try {
-      // ✅ คำนวณค่า offset
-      const offset = (page - 1) * limit;
-
       // ✅ ดึงข้อมูลจาก DAO
-      const [activities, total] = await this.activityDao.getAllActivitiesDao(
-        offset,
-        limit
-      );
-
-      // ✅ คำนวณจำนวนหน้าทั้งหมด
-      const totalPages = Math.ceil(total / limit);
+      const activities = await this.activityDao.getAllActivitiesDao();
 
       logger.info("✅ Fetched all activities", {
-        page,
-        limit,
-        total,
-        totalPages,
+        total: activities.length,
       });
 
-      return { activities, total, totalPages };
+      return activities;
     } catch (error) {
       logger.error("❌ Error in getAllActivitiesService(Admin)", { error });
       throw error;
