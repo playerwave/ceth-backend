@@ -9,7 +9,6 @@ export class ActivityController {
     try {
       let imageUrl = req.body.ac_image_url || ""; // ✅ ใช้ค่าที่ได้มาหรือกำหนดค่าเริ่มต้น
 
-      
       const activityData = {
         ...req.body,
         ac_image_url: imageUrl,
@@ -52,6 +51,7 @@ export class ActivityController {
         ac_normal_register: req.body.ac_normal_register || null,
         ac_start_assessment: req.body.ac_start_assessment || null,
         ac_end_assessment: req.body.ac_end_assessment || null,
+        assessment: req.body.assessment || null,
       };
 
       const activity = await this.activityService.createActivityService(
@@ -68,7 +68,7 @@ export class ActivityController {
   async updateActivityController(req: Request, res: Response): Promise<void> {
     try {
       const activity = await this.activityService.updateActivityService(
-        req.params.id,
+        parseInt(req.params.id),
         req.body
       );
       if (!activity) {
@@ -77,6 +77,8 @@ export class ActivityController {
       }
 
       logger.info("✅ Activity updated successfully", { activity });
+      console.log("params id:", req.params.id);
+
       res.status(200).json(activity);
     } catch (error) {
       logger.error("❌ Error in updateActivityController(Admin)", { error });
@@ -124,7 +126,7 @@ export class ActivityController {
         res.status(404).json({ error: "Activity not found" });
         return;
       }
-
+      console.log("🔍 Activity Response:", JSON.stringify(activity, null, 2));
       res.status(200).json(activity);
     } catch (error) {
       logger.error("❌ Error in getActivityByIdController(Admin)", { error });

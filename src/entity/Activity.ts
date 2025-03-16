@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
 import { Assessment } from "./Assessment";
 
 @Entity("activity")
@@ -96,5 +102,6 @@ export class Activity {
     nullable: true,
     onDelete: "SET NULL",
   })
+  @JoinColumn({ name: "assessment_id" }) // ✅ เพิ่มบรรทัดนี้
   assessment?: Assessment | null;
 }

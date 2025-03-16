@@ -40,6 +40,30 @@ export class ActivityDao {
     }
   }
 
+  // async updateActivityDao(
+  //   activityId: number,
+  //   activityData: Partial<Activity>
+  // ): Promise<Activity> {
+  //   this.checkRepository();
+
+  //   try {
+  //     logger.info("🔄 Updating activity with ID:", activityId);
+  //     const existingActivity = await this.activityRepository!.findOne({
+  //       where: { ac_id: activityId },
+  //     });
+
+  //     if (!existingActivity) {
+  //       throw new Error(`Activity with ID ${activityId} not found`);
+  //     }
+
+  //     Object.assign(existingActivity, activityData);
+  //     return await this.activityRepository!.save(existingActivity);
+  //   } catch (error) {
+  //     logger.error("❌ Error in updateActivityDao(Admin):", error);
+  //     throw new Error("Failed to update activity");
+  //   }
+  // }
+
   async updateActivityDao(
     activityId: number,
     activityData: Partial<Activity>
@@ -48,16 +72,34 @@ export class ActivityDao {
 
     try {
       logger.info("🔄 Updating activity with ID:", activityId);
+      console.log("🛠️ Received activityId in DAO:", activityId);
+
       const existingActivity = await this.activityRepository!.findOne({
         where: { ac_id: activityId },
+        relations: ["assessment"], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
       });
 
       if (!existingActivity) {
+        console.error(`❌ Activity with ID ${activityId} not found in DB`);
         throw new Error(`Activity with ID ${activityId} not found`);
       }
 
+      console.log("✅ Found existing activity:", existingActivity);
+
+      // ✅ กำหนด `ac_id` ให้แน่ใจว่าอัปเดตข้อมูลเดิม ไม่สร้างใหม่
+      activityData.ac_id = activityId;
+
       Object.assign(existingActivity, activityData);
-      return await this.activityRepository!.save(existingActivity);
+
+      console.log("🔄 Final Data before Saving:", existingActivity);
+
+      // ✅ ใช้ `save()` โดยกำหนด explicit `ac_id`
+      const updatedActivity = await this.activityRepository!.save(
+        existingActivity
+      );
+
+      console.log("✅ Successfully updated activity:", updatedActivity);
+      return updatedActivity;
     } catch (error) {
       logger.error("❌ Error in updateActivityDao(Admin):", error);
       throw new Error("Failed to update activity");
@@ -68,10 +110,16 @@ export class ActivityDao {
     this.checkRepository();
 
     try {
-      return await this.activityRepository!.findOneOrFail({
-        where: { ac_id: activityId },
-        relations: ["assessment"],
-      });
+      const activity = await this.activityRepository!.createQueryBuilder(
+        "activity"
+      )
+        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
+        .where("activity.ac_id = :id", { id: activityId })
+        .getOne();
+
+      console.log("🟢 DAO Response:", JSON.stringify(activity, null, 2)); // ✅ ตรวจสอบข้อมูลที่ถูกดึงมา
+
+      return activity;
     } catch (error) {
       logger.error(
         `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
