@@ -35,14 +35,23 @@ export class ActivityDao {
         "📌 Fetching all public activities that user has not registered for"
       );
 
-      // ดึงกิจกรรมที่ ac_status เป็น 'public' และไม่มี user ลงทะเบียน
+      // ใช้ `new Date()` เพื่อให้เป็นเวลาปัจจุบันในการเปรียบเทียบ
+      const currentDate = new Date();
+
       return await this.activityRepository!.createQueryBuilder("activity")
-        .leftJoin("activity.userActivities", "user_activity") // เชื่อมโยงกับ user_activity
-        .where("activity.ac_status = :status", { status: "Public" }) // กรองแค่ public
+        .leftJoin("activity.userActivities", "user_activity")
+        .where("activity.ac_status = 'Public'") // กรองกิจกรรมที่มีสถานะเป็น Public
         .andWhere(
-          "user_activity.u_id IS NULL OR user_activity.u_id != :userId",
+          "(user_activity.u_id IS NULL OR user_activity.u_id != :userId)",
           { userId }
-        ) // กรองแค่กิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
+        ) // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
+        .andWhere(
+          "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL OR activity.ac_seat = 0)"
+        ) // กรองกิจกรรมที่มีการลงทะเบียนน้อยกว่า ac_seat หรือ ac_seat เป็น NULL หรือ 0
+        .andWhere("activity.ac_end_register > :currentDate", { currentDate }) // กรองกิจกรรมที่ ac_end_register ยังไม่ผ่านวันที่ปัจจุบัน
+        .andWhere(
+          "(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)"
+        ) // กรองกิจกรรมที่ ac_registered_count น้อยกว่า ac_seat หรือ ac_seat เป็น NULL
         .getMany();
     } catch (error) {
       logger.error("❌ Error in getAllActivities(Admin):", error);
