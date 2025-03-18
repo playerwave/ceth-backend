@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, JoinColumn } from "typeorm";
+import {
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Column,
+  JoinColumn,
+} from "typeorm";
 import { User } from "./User";
 import { Activity } from "./Activity";
 
@@ -7,20 +13,24 @@ export class UserActivity {
   @PrimaryGeneratedColumn()
   uac_id!: number; // Primary Key
 
-  @ManyToOne(() => User, (user) => user.activities, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "u_id" }) // FK ไปที่ User
+  @ManyToOne(() => User, (user) => user.userActivities, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "u_id" })
   user!: User;
 
-  @ManyToOne(() => Activity, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "ac_id" }) // FK ไปที่ Activity
+  @ManyToOne(() => Activity, (activity) => activity.userActivities, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "ac_id" })
   activity!: Activity;
 
   @Column({ type: "timestamp", nullable: true })
-  uac_checkin?: Date; // เวลาที่เข้าร่วมกิจกรรม
+  uac_checkin?: Date;
 
   @Column({ type: "timestamp", nullable: true })
-  uac_checkout?: Date; // เวลาที่ออกจากกิจกรรม
+  uac_checkout?: Date;
 
   @Column({ type: "boolean", default: false })
-  uac_take_assessment?: boolean; // ได้ทำแบบประเมินหรือยัง
+  uac_take_assessment?: boolean;
 }

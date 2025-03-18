@@ -7,10 +7,13 @@ import "reflect-metadata";
 import { httpLogger, requestLogger, errorLogger } from "./middleware/logger";
 import { validationResult } from "express-validator";
 
-//import routes
-import userRoute from "./routes/Test/user.route";
-import activityRoute from "./routes/Admin/activity.route";
-import assessmentRoute from "./routes/Admin/assessment.route";
+//import admin routes
+// import userRoute from "./routes/Test/user.route";
+import adminActivityRoute from "./routes/Admin/activity.route";
+import adminAssessmentRoute from "./routes/Admin/assessment.route";
+
+//import student routes
+import studentActivityRoute from "./routes/Student/activity.route";
 
 dotenv.config();
 
@@ -49,10 +52,13 @@ const requestValidator = (req: Request, res: Response, next: NextFunction) => {
 // ใช้เป็น Middleware ที่ถูกต้อง
 app.use(requestValidator);
 
-//api
-app.use("/api/user", userRoute);
-app.use("/api/activity", activityRoute);
-app.use("/api/assessment", assessmentRoute);
+//api admin
+// app.use("/api/user", userRoute);
+app.use("/api/admin/activity", adminActivityRoute);
+app.use("/api/admin/assessment", adminAssessmentRoute);
+
+//api student
+app.use("/api/student/activity", studentActivityRoute);
 
 app.use(errorLogger); // ใช้ Error Logger
 

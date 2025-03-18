@@ -4,8 +4,10 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from "typeorm";
 import { Assessment } from "./Assessment";
+import { UserActivity } from "./UserActivity";
 
 @Entity("activity")
 export class Activity {
@@ -104,4 +106,7 @@ export class Activity {
   })
   @JoinColumn({ name: "assessment_id" }) // ✅ เพิ่มบรรทัดนี้
   assessment?: Assessment | null;
+
+  @OneToMany(() => UserActivity, (userActivity) => userActivity.activity)
+  userActivities!: UserActivity[];
 }
