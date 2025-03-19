@@ -58,4 +58,18 @@ export class ActivityDao {
       throw new Error("Failed to get all activities");
     }
   }
+
+  async fetchEnrolledActivities(u_id: number): Promise<Activity[]> {
+    if (!this.activityRepository) {
+      throw new Error("Repository is not initialized")
+    }
+    try {
+      const query = "SELECT a.ac_name, a.ac_type, a.ac_description, a.ac_start_time, a.ac_seat, u.u_soft_hours, u.u_hard_hours FROM users u JOIN activity a ON u.u_id = a.ac_id WHERE u_id = $1"
+      const result = await this.activityRepository.query(query, [u_id]);
+      return result
+    } catch (error) {
+      console.log(`Error form fetchEnrolledActivities Dao: ${error}`)
+      throw new Error("Failed to get fetchEnrolledActivities")
+    }
+  }
 }

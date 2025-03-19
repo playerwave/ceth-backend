@@ -7,4 +7,9 @@ router.get("/get-student-activities/:id", (req, res, next) =>
   activityController.getAllActivitiesController(req, res).catch(next)
 );
 
+router.get("/fetchEnrolledActivities/:u_id", (req, res) => {
+  activityController.fetchEnrolledActivities(req, res)
+})
+
+
 export default router;

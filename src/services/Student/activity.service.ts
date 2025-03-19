@@ -24,4 +24,8 @@ export class ActivityService {
       throw error;
     }
   }
+
+  async fetchEnrolledActivities(u_id: number): Promise<Activity[]> {
+    return await this.activityDao.fetchEnrolledActivities(u_id);
+  }
 }
