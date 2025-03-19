@@ -1,6 +1,8 @@
-import { Repository } from "typeorm";
+import { Repository, getRepository } from "typeorm";
 import { connectDatabase } from "../../db/database";
+import { UserActivity } from "../../entity/UserActivity";
 import { Activity } from "../../entity/Activity";
+import { User } from "../../entity/User";
 import logger from "../../middleware/logger";
 
 export class ActivityDao {
@@ -27,7 +29,7 @@ export class ActivityDao {
     }
   }
 
-  async getAllActivitiesDao(userId: number): Promise<Activity[]> {
+  async getStudentActivitiesDao(userId: number): Promise<Activity[]> {
     this.checkRepository();
 
     try {
@@ -57,5 +59,54 @@ export class ActivityDao {
       logger.error("❌ Error in getAllActivities(Admin):", error);
       throw new Error("Failed to get all activities");
     }
+  }
+
+  async studentEnrollActivityDao(
+    userId: number,
+    activityId: number
+  ): Promise<void> {
+    const userActivityRepository = getRepository(UserActivity);
+    const userRepository = getRepository(User);
+    const activityRepository = getRepository(Activity);
+
+    const user = await userRepository.findOneBy({ u_id: userId });
+    const activity = await activityRepository.findOneBy({ ac_id: activityId });
+
+    if (!user || !activity) {
+      throw new Error("User or activity not found.");
+    }
+
+    // ✅ ตรวจสอบว่า ac_registered_count >= ac_seat หรือไม่
+    if (
+      activity.ac_seat !== null &&
+      activity.ac_seat !== undefined &&
+      activity.ac_registered_count !== undefined &&
+      activity.ac_seat !== 0 &&
+      activity.ac_registered_count >= activity.ac_seat
+    ) {
+      throw new Error("Activity is full. Cannot register.");
+    }
+
+    const existingRegistration = await userActivityRepository.findOne({
+      where: { user: user, activity: activity },
+    });
+
+    if (existingRegistration) {
+      throw new Error("User has already registered for this activity.");
+    }
+
+    // ✅ ใช้ instance แทน `create()`
+    const userActivity = new UserActivity();
+    userActivity.user = user;
+    userActivity.activity = activity;
+    userActivity.uac_checkin = undefined;
+    userActivity.uac_checkout = undefined;
+    userActivity.uac_take_assessment = false;
+
+    await userActivityRepository.save(userActivity);
+
+    await activityRepository.update(activity.ac_id, {
+      ac_registered_count: () => "ac_registered_count + 1",
+    });
   }
 }

@@ -6,10 +6,10 @@ import dayjs from "dayjs";
 export class ActivityService {
   private activityDao = new ActivityDao();
 
-  async getAllActivitiesService(userId: number): Promise<Activity[]> {
+  async getStudentActivitiesService(userId: number): Promise<Activity[]> {
     try {
       // ดึงข้อมูลกิจกรรมจาก DAO โดยกรองแค่กิจกรรมที่ผู้ใช้ยังไม่ได้ลงทะเบียน
-      const activities = await this.activityDao.getAllActivitiesDao(userId);
+      const activities = await this.activityDao.getStudentActivitiesDao(userId);
 
       logger.info(
         "✅ Fetched all public activities that user has not registered for",
@@ -23,5 +23,12 @@ export class ActivityService {
       logger.error("❌ Error in getAllActivitiesService(Admin)", { error });
       throw error;
     }
+  }
+
+  async studentEnrollActivityService(
+    userId: number,
+    activityId: number
+  ): Promise<void> {
+    await this.activityDao.studentEnrollActivityDao(userId, activityId);
   }
 }
