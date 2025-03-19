@@ -61,6 +61,29 @@ export class ActivityDao {
     }
   }
 
+  async getActivityByIdDao(activityId: number): Promise<Activity | null> {
+    this.checkRepository();
+
+    try {
+      const activity = await this.activityRepository!.createQueryBuilder(
+        "activity"
+      )
+        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
+        .where("activity.ac_id = :id", { id: activityId })
+        .getOne();
+
+      console.log("🟢 DAO Response:", JSON.stringify(activity, null, 2)); // ✅ ตรวจสอบข้อมูลที่ถูกดึงมา
+
+      return activity;
+    } catch (error) {
+      logger.error(
+        `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
+        error
+      );
+      throw new Error("Failed to get activity by id");
+    }
+  }
+
   async studentEnrollActivityDao(
     userId: number,
     activityId: number

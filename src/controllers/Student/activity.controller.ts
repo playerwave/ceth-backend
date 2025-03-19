@@ -25,6 +25,23 @@ export class ActivityController {
     }
   }
 
+  async getActivityByIdController(req: Request, res: Response): Promise<void> {
+    try {
+      const activity = await this.activityService.getActivityByIdService(
+        req.params.id
+      );
+      if (!activity) {
+        res.status(404).json({ error: "Activity not found" });
+        return;
+      }
+      console.log("🔍 Activity Response:", JSON.stringify(activity, null, 2));
+      res.status(200).json(activity);
+    } catch (error) {
+      logger.error("❌ Error in getActivityByIdController(Admin)", { error });
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+
   async studentEnrollActivityController(
     req: Request,
     res: Response
@@ -43,7 +60,9 @@ export class ActivityController {
       );
 
       console.log("User successfully registered for the activity.");
-      res.status(200).json({ message: "Enroll activity successful" });
+      res
+        .status(200)
+        .json({ message: "Registration successful", activity: activity });
     } catch (error) {
       console.error("Error registering user for activity:", error);
       res.status(500).json({ error: "Failed to register user for activity." });

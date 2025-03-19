@@ -25,6 +25,25 @@ export class ActivityService {
     }
   }
 
+  async getActivityByIdService(activityId: string): Promise<Activity | null> {
+    try {
+      const id = parseInt(activityId, 10);
+      if (isNaN(id)) {
+        throw new Error("Invalid activity ID format");
+      }
+
+      const activity = await this.activityDao.getActivityByIdDao(id);
+      console.log(
+        "📌 Activity Data from DAO:",
+        JSON.stringify(activity, null, 2)
+      );
+      return activity;
+    } catch (error) {
+      logger.error("❌ Error in getActivityByIdService(Admin)", { error });
+      throw error;
+    }
+  }
+
   async studentEnrollActivityService(
     userId: number,
     activityId: number
