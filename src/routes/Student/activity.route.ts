@@ -22,4 +22,8 @@ router.get("/get-activity/:id", (req, res, next) =>
   activityController.getActivityByIdController(req, res).catch(next)
 );
 
+router.delete("/unenroll-activity/:id", (req, res, next) =>
+  activityController.unEnrollActivityController(req, res).catch(next)
+);
+
 export default router;

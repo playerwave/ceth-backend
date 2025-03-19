@@ -68,6 +68,35 @@ export class ActivityController {
       res.status(500).json({ error: "Failed to register user for activity." });
     }
   }
+
+  async unEnrollActivityController(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = parseInt(req.params.id, 10);
+      const activityId = parseInt(req.body.activityId, 10);
+
+      console.log(userId);
+
+      if (isNaN(userId) || isNaN(activityId)) {
+        res.status(400).json({ error: "Invalid userId or activityId" });
+        return;
+      }
+
+      const success = await this.activityService.unEnrollActivityService(
+        userId,
+        activityId
+      );
+      if (success) {
+        res
+          .status(200)
+          .json({ message: "Successfully unenrolled from activity" });
+      } else {
+        res.status(404).json({ error: "Activity registration not found" });
+      }
+    } catch (error) {
+      console.error("❌ Error in unEnrollActivityController:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
 }
 
 const activityService = new ActivityService();

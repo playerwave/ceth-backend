@@ -132,4 +132,32 @@ export class ActivityDao {
       ac_registered_count: () => "ac_registered_count + 1",
     });
   }
+  
+  async unEnrollActivityDao(userId: number, activityId: number): Promise<boolean> {
+    try {
+      const userActivityRepository = getRepository(UserActivity);
+      
+      // ค้นหาข้อมูลการลงทะเบียนก่อน
+      const userActivity = await userActivityRepository.findOne({
+        where: {
+          user: { u_id: userId },
+          activity: { ac_id: activityId },
+        },
+        relations: ["user", "activity"], // ดึงข้อมูล User และ Activity มาด้วย
+      });
+
+      if (!userActivity) {
+        console.warn("⚠️ User is not enrolled in this activity.");
+        return false;
+      }
+
+      // ลบข้อมูลการลงทะเบียน
+      await userActivityRepository.remove(userActivity);
+
+      return true;
+    } catch (error) {
+      console.error("❌ Error in unEnrollActivity DAO:", error);
+      throw new Error("Failed to unenroll from activity");
+    }
+  }
 }

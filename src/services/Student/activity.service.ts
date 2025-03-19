@@ -50,4 +50,8 @@ export class ActivityService {
   ): Promise<void> {
     await this.activityDao.studentEnrollActivityDao(userId, activityId);
   }
+
+  async unEnrollActivityService(userId: number, activityId: number): Promise<boolean> {
+    return await this.activityDao.unEnrollActivityDao(userId, activityId);
+  }
 }
