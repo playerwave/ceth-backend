@@ -1,7 +1,7 @@
-import { Repository } from "typeorm";
-import { connectDatabase } from "../../db/database";
-import { Activity } from "../../entity/Activity";
-import logger from "../../middleware/logger";
+import { Repository } from 'typeorm';
+import { connectDatabase } from '../../db/database';
+import { Activity } from '../../entity/Activity';
+import logger from '../../middleware/logger';
 
 export class ActivityDao {
   private activityRepository: Repository<Activity> | null = null;
@@ -15,15 +15,15 @@ export class ActivityDao {
     try {
       const connection = await connectDatabase();
       this.activityRepository = connection.getRepository(Activity);
-      console.log("✅ Activity Repository initialized");
+      console.log('✅ Activity Repository initialized');
     } catch (error) {
-      console.error("❌ Error initializing ActivityDao(Admin):", error);
+      console.error('❌ Error initializing ActivityDao(Admin):', error);
     }
   }
 
   private checkRepository(): void {
     if (!this.activityRepository) {
-      throw new Error("Database connection is not established");
+      throw new Error('Database connection is not established');
     }
   }
 
@@ -31,12 +31,12 @@ export class ActivityDao {
     this.checkRepository();
     try {
       const activity = this.activityRepository!.create(activityData);
-      logger.info("📌 Creating activity:", activityData);
+      logger.info('📌 Creating activity:', activityData);
 
       return await this.activityRepository!.save(activity);
     } catch (error) {
-      logger.error("❌ Error in createActivityDao(Admin):", error);
-      throw new Error("Failed to create activity");
+      logger.error('❌ Error in createActivityDao(Admin):', error);
+      throw new Error('Failed to create activity');
     }
   }
 
@@ -66,17 +66,17 @@ export class ActivityDao {
 
   async updateActivityDao(
     activityId: number,
-    activityData: Partial<Activity>
+    activityData: Partial<Activity>,
   ): Promise<Activity> {
     this.checkRepository();
 
     try {
-      logger.info("🔄 Updating activity with ID:", activityId);
-      console.log("🛠️ Received activityId in DAO:", activityId);
+      logger.info('🔄 Updating activity with ID:', activityId);
+      console.log('🛠️ Received activityId in DAO:', activityId);
 
       const existingActivity = await this.activityRepository!.findOne({
         where: { ac_id: activityId },
-        relations: ["assessment"], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
+        relations: ['assessment'], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
       });
 
       if (!existingActivity) {
@@ -84,25 +84,24 @@ export class ActivityDao {
         throw new Error(`Activity with ID ${activityId} not found`);
       }
 
-      console.log("✅ Found existing activity:", existingActivity);
+      console.log('✅ Found existing activity:', existingActivity);
 
       // ✅ กำหนด `ac_id` ให้แน่ใจว่าอัปเดตข้อมูลเดิม ไม่สร้างใหม่
       activityData.ac_id = activityId;
 
       Object.assign(existingActivity, activityData);
 
-      console.log("🔄 Final Data before Saving:", existingActivity);
+      console.log('🔄 Final Data before Saving:', existingActivity);
 
       // ✅ ใช้ `save()` โดยกำหนด explicit `ac_id`
-      const updatedActivity = await this.activityRepository!.save(
-        existingActivity
-      );
+      const updatedActivity =
+        await this.activityRepository!.save(existingActivity);
 
-      console.log("✅ Successfully updated activity:", updatedActivity);
+      console.log('✅ Successfully updated activity:', updatedActivity);
       return updatedActivity;
     } catch (error) {
-      logger.error("❌ Error in updateActivityDao(Admin):", error);
-      throw new Error("Failed to update activity");
+      logger.error('❌ Error in updateActivityDao(Admin):', error);
+      throw new Error('Failed to update activity');
     }
   }
 
@@ -111,21 +110,21 @@ export class ActivityDao {
 
     try {
       const activity = await this.activityRepository!.createQueryBuilder(
-        "activity"
+        'activity',
       )
-        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
-        .where("activity.ac_id = :id", { id: activityId })
+        .leftJoinAndSelect('activity.assessment', 'assessment') // ✅ ดึง assessment ด้วย
+        .where('activity.ac_id = :id', { id: activityId })
         .getOne();
 
-      console.log("🟢 DAO Response:", JSON.stringify(activity, null, 2)); // ✅ ตรวจสอบข้อมูลที่ถูกดึงมา
+      console.log('🟢 DAO Response:', JSON.stringify(activity, null, 2)); // ✅ ตรวจสอบข้อมูลที่ถูกดึงมา
 
       return activity;
     } catch (error) {
       logger.error(
         `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
-        error
+        error,
       );
-      throw new Error("Failed to get activity by id");
+      throw new Error('Failed to get activity by id');
     }
   }
 
@@ -133,7 +132,7 @@ export class ActivityDao {
     this.checkRepository();
 
     try {
-      logger.info("🔄 Attempting to delete activity with ID:", activityId);
+      logger.info('🔄 Attempting to delete activity with ID:', activityId);
       const deleteResult = await this.activityRepository!.delete(activityId);
 
       if (deleteResult.affected === 0) {
@@ -144,8 +143,8 @@ export class ActivityDao {
       logger.info(`✅ Activity with ID ${activityId} deleted successfully.`);
       return true;
     } catch (error) {
-      logger.error("❌ Error in updateActivityDao(Admin):", error);
-      throw new Error("Failed to update activity");
+      logger.error('❌ Error in updateActivityDao(Admin):', error);
+      throw new Error('Failed to update activity');
     }
   }
 
@@ -153,11 +152,11 @@ export class ActivityDao {
     this.checkRepository();
 
     try {
-      logger.info("📌 Fetching all activities");
+      logger.info('📌 Fetching all activities');
       return await this.activityRepository!.find(); // ❌ เอา pagination ออก
     } catch (error) {
-      logger.error("❌ Error in getAllActivities(Admin):", error);
-      throw new Error("Failed to get all activity");
+      logger.error('❌ Error in getAllActivities(Admin):', error);
+      throw new Error('Failed to get all activity');
     }
   }
 
@@ -176,14 +175,14 @@ export class ActivityDao {
 
   async adjustStatusActivityDao(
     ac_id: number,
-    ac_status: string
+    ac_status: string,
   ): Promise<Activity | null> {
     this.checkRepository();
 
     const status = ac_status.trim().toLowerCase();
-    if (status !== "public" && status !== "private") {
+    if (status !== 'public' && status !== 'private') {
       throw new Error(
-        "ค่าที่ส่งเข้ามาที่ ac_status ไม่ใช่ 'Public' หรือ 'Private'"
+        "ค่าที่ส่งเข้ามาที่ ac_status ไม่ใช่ 'Public' หรือ 'Private'",
       );
     }
 

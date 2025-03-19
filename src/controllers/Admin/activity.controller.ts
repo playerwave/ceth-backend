@@ -1,13 +1,13 @@
-import { Request, Response } from "express";
-import { ActivityService } from "../../services/Admin/activity.service";
-import logger from "../../middleware/logger";
+import { Request, Response } from 'express';
+import { ActivityService } from '../../services/Admin/activity.service';
+import logger from '../../middleware/logger';
 
 export class ActivityController {
   constructor(private activityService: ActivityService) {}
 
   async createActivityController(req: Request, res: Response): Promise<void> {
     try {
-      let imageUrl = req.body.ac_image_url || ""; // ✅ ใช้ค่าที่ได้มาหรือกำหนดค่าเริ่มต้น
+      let imageUrl = req.body.ac_image_url || ''; // ✅ ใช้ค่าที่ได้มาหรือกำหนดค่าเริ่มต้น
 
       const activityData = {
         ...req.body,
@@ -43,7 +43,7 @@ export class ActivityController {
             ? parseInt(req.body.ac_not_attended_count, 10)
             : 0
           : 0,
-        ac_type: req.body.ac_type || "Soft Skill",
+        ac_type: req.body.ac_type || 'Soft Skill',
         ac_start_register: req.body.ac_start_register || null,
         ac_end_register: req.body.ac_end_register || null,
         ac_start_time: req.body.ac_start_time || null,
@@ -54,13 +54,12 @@ export class ActivityController {
         assessment: req.body.assessment || null,
       };
 
-      const activity = await this.activityService.createActivityService(
-        activityData
-      );
+      const activity =
+        await this.activityService.createActivityService(activityData);
       res.status(201).json(activity);
     } catch (error) {
-      logger.error("❌ Error in createActivityController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
+      logger.error('❌ Error in createActivityController(Admin)', { error });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 
@@ -69,20 +68,20 @@ export class ActivityController {
     try {
       const activity = await this.activityService.updateActivityService(
         parseInt(req.params.id),
-        req.body
+        req.body,
       );
       if (!activity) {
-        res.status(404).json({ error: "Activity not found" });
+        res.status(404).json({ error: 'Activity not found' });
         return;
       }
 
-      logger.info("✅ Activity updated successfully", { activity });
-      console.log("params id:", req.params.id);
+      logger.info('✅ Activity updated successfully', { activity });
+      console.log('params id:', req.params.id);
 
       res.status(200).json(activity);
     } catch (error) {
-      logger.error("❌ Error in updateActivityController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
+      logger.error('❌ Error in updateActivityController(Admin)', { error });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 
@@ -90,18 +89,18 @@ export class ActivityController {
   async deleteActivityController(req: Request, res: Response): Promise<void> {
     try {
       const deleted = await this.activityService.deleteActivityService(
-        req.params.id
+        req.params.id,
       );
       if (!deleted) {
-        res.status(404).json({ error: "Activity not found" });
+        res.status(404).json({ error: 'Activity not found' });
         return;
       }
 
-      logger.info("✅ Activity deleted successfully", { id: req.params.id });
-      res.status(200).json({ message: "Activity deleted successfully" });
+      logger.info('✅ Activity deleted successfully', { id: req.params.id });
+      res.status(200).json({ message: 'Activity deleted successfully' });
     } catch (error) {
-      logger.error("❌ Error in deleteActivityController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
+      logger.error('❌ Error in deleteActivityController(Admin)', { error });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 
@@ -111,8 +110,8 @@ export class ActivityController {
       const activities = await this.activityService.getAllActivitiesService();
       res.status(200).json(activities);
     } catch (error) {
-      logger.error("❌ Error in getAllActivitiesController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
+      logger.error('❌ Error in getAllActivitiesController(Admin)', { error });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 
@@ -120,17 +119,17 @@ export class ActivityController {
   async getActivityByIdController(req: Request, res: Response): Promise<void> {
     try {
       const activity = await this.activityService.getActivityByIdService(
-        req.params.id
+        req.params.id,
       );
       if (!activity) {
-        res.status(404).json({ error: "Activity not found" });
+        res.status(404).json({ error: 'Activity not found' });
         return;
       }
-      console.log("🔍 Activity Response:", JSON.stringify(activity, null, 2));
+      console.log('🔍 Activity Response:', JSON.stringify(activity, null, 2));
       res.status(200).json(activity);
     } catch (error) {
-      logger.error("❌ Error in getActivityByIdController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
+      logger.error('❌ Error in getActivityByIdController(Admin)', { error });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 
@@ -144,17 +143,17 @@ export class ActivityController {
       }
 
       const activities = await this.activityService.searchActivityService(
-        ac_name as string
+        ac_name as string,
       );
       if (activities.length === 0) {
-        res.status(404).json({ message: "No activities found" });
+        res.status(404).json({ message: 'No activities found' });
         return;
       }
 
       res.status(200).json(activities);
     } catch (error) {
-      logger.error("❌ Error in searchActivityController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
+      logger.error('❌ Error in searchActivityController(Admin)', { error });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 }

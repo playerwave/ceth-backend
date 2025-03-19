@@ -1,13 +1,13 @@
-import { validate } from "class-validator";
-import { Request, Response, NextFunction, RequestHandler } from "express";
-import { plainToInstance } from "class-transformer";
-import logger from "./logger";
+import { validate } from 'class-validator';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { plainToInstance } from 'class-transformer';
+import logger from './logger';
 
 export const validateDTO = (DTOClass: any): RequestHandler => {
   return async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> => {
     const dtoInstance = plainToInstance(DTOClass, req.body, {
       enableImplicitConversion: true,
@@ -21,7 +21,7 @@ export const validateDTO = (DTOClass: any): RequestHandler => {
         messages: Object.values(err.constraints || {}),
       }));
 
-      console.log("Error detect in dto:", formattedErrors);
+      console.log('Error detect in dto:', formattedErrors);
 
       res.status(400).json({ errors: formattedErrors }); // ✅ แก้ไขการ return
       return; // ✅ ให้ middleware จบการทำงาน
