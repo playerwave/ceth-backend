@@ -69,6 +69,31 @@ export class ActivityController {
     }
   }
 
+  async getEnrolledActivitiesController(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    const userId = parseInt(req.params.id, 10);
+    if (!userId) {
+      return res.status(400).json({ error: "Invalid user ID." });
+    }
+    try {
+      const result = await this.activityService.getEnrolledActivitiesService(
+        userId
+      );
+
+      console.log("✅ Data to be sent:", JSON.stringify(result, null, 2));
+
+      return res
+        .status(200)
+        .header("Cache-Control", "no-store") // ✅ ปิด Cache
+        .json(result);
+    } catch (error) {
+      console.error(`❌ Error in fetchEnrolledActivities: ${error}`);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+
   async unEnrollActivityController(req: Request, res: Response): Promise<void> {
     try {
       const userId = parseInt(req.params.id, 10);

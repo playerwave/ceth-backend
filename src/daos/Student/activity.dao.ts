@@ -133,6 +133,33 @@ export class ActivityDao {
     });
   }
 
+  async getEnrolledActivitiesDao(u_id: number): Promise<any[]> {
+    // ✅ เปลี่ยนเป็น any[] เพื่อให้รองรับ soft_hours, hard_hours
+    if (!this.activityRepository) {
+      throw new Error("Repository is not initialized");
+    }
+    try {
+      const query = `
+      SELECT 
+        a.ac_id, a.ac_name, a.ac_type, a.ac_description, 
+        a.ac_start_time, a.ac_end_time, a.ac_seat, 
+        u.u_soft_hours, u.u_hard_hours
+      FROM users u
+      JOIN user_activity ua ON u.u_id = ua.u_id
+      JOIN activity a ON ua.ac_id = a.ac_id
+      WHERE u.u_id = $1
+      ORDER BY a.ac_start_time ASC;
+    `;
+
+      const result = await this.activityRepository.query(query, [u_id]);
+
+      return result;
+    } catch (error) {
+      console.error(`❌ Error in fetchEnrolledActivities Dao: ${error}`);
+      throw new Error("Failed to fetch enrolled activities");
+    }
+  }
+
   async unEnrollActivityDao(
     userId: number,
     activityId: number

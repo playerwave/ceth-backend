@@ -22,6 +22,10 @@ router.get("/get-activity/:id", (req, res, next) =>
   activityController.getActivityByIdController(req, res).catch(next)
 );
 
+router.get("/get-enrolled-activities/:id", (req, res) => {
+  activityController.getEnrolledActivitiesController(req, res);
+});
+
 router.delete("/unenroll-activity/:id", (req, res, next) =>
   activityController.unEnrollActivityController(req, res).catch(next)
 );
