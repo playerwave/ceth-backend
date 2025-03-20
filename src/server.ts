@@ -58,13 +58,7 @@ app.use("/api/admin/activity", adminActivityRoute);
 app.use("/api/admin/assessment", adminAssessmentRoute);
 
 //api student
-
-
-
-// ✅ ตรวจสอบว่าใช้ Router ที่ถูกต้อง
 app.use("/api/student/activity", studentActivityRoute);
-
-
 
 app.use(errorLogger); // ใช้ Error Logger
 
