@@ -28,7 +28,10 @@ export class User {
   u_std_id?: string; // รหัสนิสิต
 
   @Column({ type: 'int', default: 0 })
-  u_risk_point?: number;
+  u_risk_soft?: number;
+
+  @Column({ type: 'int', default: 0 })
+  u_risk_hard?: number;
 
   @Column({ type: 'int', default: 0 })
   u_soft_hours?: number;
