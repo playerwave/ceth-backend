@@ -97,6 +97,31 @@ export class ActivityController {
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
+
+  async getEnrolledActivitiesController(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    const { u_id } = req.params;
+    if (!u_id) {
+      return res.status(400).json({ error: "Invalid user ID." });
+    }
+    try {
+      const result = await this.activityService.getEnrolledActivitiesService(
+        Number(u_id)
+      );
+
+      console.log("✅ Data to be sent:", JSON.stringify(result, null, 2));
+
+      return res
+        .status(200)
+        .header("Cache-Control", "no-store") // ✅ ปิด Cache
+        .json(result);
+    } catch (error) {
+      console.error(`❌ Error in fetchEnrolledActivities: ${error}`);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
 }
 
 const activityService = new ActivityService();

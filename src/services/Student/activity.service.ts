@@ -51,7 +51,14 @@ export class ActivityService {
     await this.activityDao.studentEnrollActivityDao(userId, activityId);
   }
 
-  async unEnrollActivityService(userId: number, activityId: number): Promise<boolean> {
+  async unEnrollActivityService(
+    userId: number,
+    activityId: number
+  ): Promise<boolean> {
     return await this.activityDao.unEnrollActivityDao(userId, activityId);
+  }
+
+  async getEnrolledActivitiesService(u_id: number): Promise<Activity[]> {
+    return await this.activityDao.getEnrolledActivitiesDao(u_id);
   }
 }
