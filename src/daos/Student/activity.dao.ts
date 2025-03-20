@@ -59,17 +59,69 @@ export class ActivityDao {
     }
   }
 
-  async fetchEnrolledActivities(u_id: number): Promise<Activity[]> {
+  async fetchEnrolledActivities(u_id: number): Promise<any[]> {  // ✅ เปลี่ยนเป็น any[] เพื่อให้รองรับ soft_hours, hard_hours
     if (!this.activityRepository) {
-      throw new Error("Repository is not initialized")
+      throw new Error("Repository is not initialized");
     }
     try {
-      const query = "SELECT a.ac_name, a.ac_type, a.ac_description, a.ac_start_time, a.ac_seat, u.u_soft_hours, u.u_hard_hours FROM users u JOIN activity a ON u.u_id = a.ac_id WHERE u_id = $1"
+      const query = `
+      SELECT 
+        a.ac_id, a.ac_name, a.ac_type, a.ac_description, 
+        a.ac_start_time, a.ac_end_time, a.ac_seat, 
+        u.u_soft_hours, u.u_hard_hours
+      FROM users u
+      JOIN user_activity ua ON u.u_id = ua.u_id
+      JOIN activity a ON ua.ac_id = a.ac_id
+      WHERE u.u_id = $1
+      ORDER BY a.ac_start_time ASC;
+    `;
+
+
       const result = await this.activityRepository.query(query, [u_id]);
-      return result
+
+
+      return result;
     } catch (error) {
-      console.log(`Error form fetchEnrolledActivities Dao: ${error}`)
-      throw new Error("Failed to get fetchEnrolledActivities")
+      console.error(`❌ Error in fetchEnrolledActivities Dao: ${error}`);
+      throw new Error("Failed to fetch enrolled activities");
+    }
+
+
+
+
+  }
+
+  async getUserSkills(userId: number): Promise<{ u_soft_hours: number; u_hard_hours: number } | null> {
+    if (!this.activityRepository) {
+      throw new Error("Repository is not initialized");
+    }
+    try {
+      console.log(`📡 Querying database for user ID: ${userId}`); // ✅ Debug
+
+      const query = `
+          SELECT u.u_soft_hours, u.u_hard_hours 
+          FROM users u
+          WHERE u.u_id = $1;
+      `;
+
+      const result = await this.activityRepository.query(query, [userId]);
+
+      if (result.length > 0) {
+        console.log("✅ Query Result:", result[0]); // ✅ Debug
+        return result[0];
+      } else {
+        console.log("⚠️ No data found for user");
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ Error in getUserSkills DAO: ${error}`);
+      throw new Error("Failed to get user skills");
     }
   }
+
+
+
+
+
+
 }

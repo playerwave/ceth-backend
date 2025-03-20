@@ -8,8 +8,12 @@ router.get("/get-student-activities/:id", (req, res, next) =>
 );
 
 router.get("/fetchEnrolledActivities/:u_id", (req, res) => {
-  activityController.fetchEnrolledActivities(req, res)
-})
+  activityController.fetchEnrolledActivities(req, res);
+});
 
+// ✅ ตรวจสอบว่าเส้นทางนี้มีอยู่
+router.get("/skillStats/:id", (req, res) => {
+  activityController.getSkillStats(req, res);
+});
 
 export default router;

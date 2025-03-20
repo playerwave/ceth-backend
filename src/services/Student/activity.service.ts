@@ -28,4 +28,29 @@ export class ActivityService {
   async fetchEnrolledActivities(u_id: number): Promise<Activity[]> {
     return await this.activityDao.fetchEnrolledActivities(u_id);
   }
+
+
+  async getSkillStats(userId: number): Promise<{ softSkill: number; hardSkill: number } | null> {
+    try {
+        console.log(`🔍 Fetching user skills for ID: ${userId}`); // ✅ Debug
+        
+        const user = await this.activityDao.getUserSkills(userId);
+        
+        if (!user) {
+            console.log("⚠️ No user found");
+            return null;
+        }
+
+        console.log("✅ User Skill Data:", user); // ✅ Debug
+        return {
+            softSkill: user.u_soft_hours || 0,
+            hardSkill: user.u_hard_hours || 0
+        };
+    } catch (error) {
+        console.error("❌ Error in getSkillStats Service:", error);
+        throw new Error("Failed to get skill stats");
+    }
+}
+
+
 }
