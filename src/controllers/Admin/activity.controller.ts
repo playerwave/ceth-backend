@@ -90,7 +90,7 @@ export class ActivityController {
   async deleteActivityController(req: Request, res: Response): Promise<void> {
     try {
       const deleted = await this.activityService.deleteActivityService(
-        req.params.id
+        parseInt(req.params.id, 10)
       );
       if (!deleted) {
         res.status(404).json({ error: "Activity not found" });

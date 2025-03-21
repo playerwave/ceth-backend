@@ -1,7 +1,8 @@
-import { Repository } from "typeorm";
+import { Repository, getRepository } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { Activity } from "../../entity/Activity";
 import logger from "../../middleware/logger";
+import { UserActivity } from "../../entity/UserActivity";
 
 export class ActivityDao {
   private activityRepository: Repository<Activity> | null = null;
@@ -129,11 +130,43 @@ export class ActivityDao {
     }
   }
 
+  // async deleteActivityDao(activityId: number): Promise<boolean> {
+  //   this.checkRepository();
+
+  //   try {
+  //     logger.info("🔄 Attempting to delete activity with ID:", activityId);
+  //     const deleteResult = await this.activityRepository!.delete(activityId);
+
+  //     const userActivityRepository = getRepository(UserActivity);
+
+  //     if (deleteResult.affected === 0) {
+  //       console.warn(`⚠️ Activity with ID ${activityId} not found.`);
+  //       return false;
+  //     }
+
+  //     logger.info(`✅ Activity with ID ${activityId} deleted successfully.`);
+  //     return true;
+  //   } catch (error) {
+  //     logger.error("❌ Error in updateActivityDao(Admin):", error);
+  //     throw new Error("Failed to update activity");
+  //   }
+  // }
+
   async deleteActivityDao(activityId: number): Promise<boolean> {
     this.checkRepository();
 
     try {
       logger.info("🔄 Attempting to delete activity with ID:", activityId);
+
+      const userActivityRepository = getRepository(UserActivity);
+
+      // ✅ ลบ UserActivity ที่เกี่ยวข้องก่อน
+      await userActivityRepository.delete({ activity: { ac_id: activityId } });
+      logger.info(
+        `🧹 Deleted all UserActivity rows with activityId ${activityId}`
+      );
+
+      // ✅ ลบ Activity หลังจากเคลียร์ข้อมูลที่เกี่ยวข้อง
       const deleteResult = await this.activityRepository!.delete(activityId);
 
       if (deleteResult.affected === 0) {
@@ -144,8 +177,8 @@ export class ActivityDao {
       logger.info(`✅ Activity with ID ${activityId} deleted successfully.`);
       return true;
     } catch (error) {
-      logger.error("❌ Error in updateActivityDao(Admin):", error);
-      throw new Error("Failed to update activity");
+      logger.error("❌ Error in deleteActivityDao(Admin):", error);
+      throw new Error("Failed to delete activity and related data");
     }
   }
 

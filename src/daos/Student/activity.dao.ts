@@ -176,18 +176,53 @@ export class ActivityDao {
     }
   }
 
+  // async unEnrollActivityDao(
+  //   userId: number,
+  //   activityId: number
+  // ): Promise<boolean> {
+  //   try {
+  //     const userActivityRepository = getRepository(UserActivity);
+
+  //     // ค้นหาข้อมูลการลงทะเบียนก่อน
+
+  //     console.log(userId);
+  //     console.log(activityId);
+
+  //     const userActivity = await userActivityRepository.findOne({
+  //       where: {
+  //         user: Equal(userId),
+  //         activity: Equal(activityId),
+  //       },
+  //       relations: ["user", "activity"],
+  //     });
+
+  //     if (!userActivity) {
+  //       console.warn("⚠️ User is not enrolled in this activity.");
+  //       return false;
+  //     }
+
+  //     // ลบข้อมูลการลงทะเบียน
+  //     await userActivityRepository.remove(userActivity);
+
+  //     return true;
+  //   } catch (error) {
+  //     console.error("❌ Error in unEnrollActivity DAO:", error);
+  //     throw new Error("Failed to unenroll from activity");
+  //   }
+  // }
+
   async unEnrollActivityDao(
     userId: number,
     activityId: number
   ): Promise<boolean> {
     try {
       const userActivityRepository = getRepository(UserActivity);
-
-      // ค้นหาข้อมูลการลงทะเบียนก่อน
+      const activityRepository = getRepository(Activity);
 
       console.log(userId);
       console.log(activityId);
 
+      // ✅ ค้นหาข้อมูลการลงทะเบียนก่อน
       const userActivity = await userActivityRepository.findOne({
         where: {
           user: Equal(userId),
@@ -201,8 +236,21 @@ export class ActivityDao {
         return false;
       }
 
-      // ลบข้อมูลการลงทะเบียน
+      // ✅ ลบข้อมูลการลงทะเบียน
       await userActivityRepository.remove(userActivity);
+      console.log("✅ Unenrolled successfully.");
+
+      // ✅ ลด `ac_registered_count` ของ activity นั้นลง 1
+      await activityRepository
+        .createQueryBuilder()
+        .update(Activity)
+        .set({
+          ac_registered_count: () => "GREATEST(ac_registered_count - 1, 0)",
+        }) // ป้องกันค่าติดลบ
+        .where("ac_id = :activityId", { activityId })
+        .execute();
+
+      console.log("✅ Updated ac_registered_count for activity:", activityId);
 
       return true;
     } catch (error) {

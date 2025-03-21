@@ -138,9 +138,9 @@ export class ActivityService {
   }
 
   // ✅ ลบกิจกรรม
-  async deleteActivityService(activityId: string): Promise<boolean> {
+  async deleteActivityService(activityId: number): Promise<boolean> {
     try {
-      const id = parseInt(activityId, 10);
+      const id = activityId
       if (isNaN(id)) {
         throw new Error("Invalid activity ID format");
       }

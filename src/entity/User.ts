@@ -6,8 +6,9 @@ import {
   OneToMany,
   JoinColumn,
 } from "typeorm";
-// import { EventCoop } from "./EventCoop";
+import { EventCoop } from "./EventCoop";
 import { UserActivity } from "./UserActivity";
+import { Certificate } from "./Certificate";
 
 @Entity("users")
 export class User {
@@ -44,4 +45,11 @@ export class User {
 
   @OneToMany(() => UserActivity, (userActivity) => userActivity.user)
   userActivities!: UserActivity[];
+
+  @OneToMany(() => Certificate, (certificate) => certificate.user)
+  certificates!: Certificate[];
+
+  @ManyToOne(() => EventCoop, (event) => event.users)
+  @JoinColumn({ name: "e_id" })
+  eventCoop?: EventCoop;
 }
