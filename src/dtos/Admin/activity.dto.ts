@@ -65,21 +65,26 @@ export function IsBefore(
 }
 
 export class CreateActivityDto {
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsString()
   @IsNotEmpty()
-  ac_name!: string;
+  ac_name?: string;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   @IsString()
   ac_company_lecturer?: string;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsString()
   @IsNotEmpty()
   ac_description!: string;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsEnum(ActivityType)
   ac_type!: ActivityType;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsEnum(LocationType, {
     message: "ac_location_type ต้องเป็น 'Onsite', 'Online' หรือ 'Course'",
   })
@@ -114,6 +119,7 @@ export class CreateActivityDto {
   @IsEnum(ActivityStatus)
   ac_status!: ActivityStatus;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   @IsString()
   ac_state?: string;
@@ -194,9 +200,11 @@ export class CreateActivityDto {
   @IsNumber()
   ac_not_attended_count?: number | null;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   ac_image_url?: string | null;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   @IsNumber()
   assessment_id?: number | null;
@@ -231,21 +239,26 @@ export class CreateActivityDto {
 
 // update
 export class UpdateActivityDto {
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsString()
   @IsNotEmpty()
-  ac_name!: string;
+  ac_name?: string;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   @IsString()
   ac_company_lecturer?: string;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsString()
   @IsNotEmpty()
   ac_description!: string;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsEnum(ActivityType)
   ac_type!: ActivityType;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsEnum(LocationType, {
     message: "ac_location_type ต้องเป็น 'Onsite', 'Online' หรือ 'Course'",
   })
@@ -280,6 +293,7 @@ export class UpdateActivityDto {
   @IsEnum(ActivityStatus)
   ac_status!: ActivityStatus;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   @IsString()
   ac_state?: string;
@@ -360,9 +374,11 @@ export class UpdateActivityDto {
   @IsNumber()
   ac_not_attended_count?: number | null;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   ac_image_url?: string | null;
 
+  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
   @IsNumber()
   assessment_id?: number | null;
