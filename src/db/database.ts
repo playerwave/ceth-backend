@@ -8,6 +8,9 @@ import { Assessment } from "../entity/Assessment";
 import { UserActivity } from "../entity/UserActivity";
 import { EventCoop } from "../entity/EventCoop";
 import { Certificate } from "../entity/Certificate";
+import { Question } from "../entity/Question";
+import { Choice } from "../entity/Choice";
+import { UserChoice } from "../entity/UserChoice";
 
 dotenv.config();
 
@@ -28,6 +31,9 @@ export const connectDatabase = async () => {
         UserActivity,
         EventCoop,
         Certificate,
+        Choice,
+        UserChoice,
+        Question
       ],
       // synchronize: true,
       logging: false, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error

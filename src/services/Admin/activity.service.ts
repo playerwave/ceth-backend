@@ -80,7 +80,7 @@ export class ActivityService {
 
       const newActivity = await this.activityDao.createActivityDao({
         ...activityData,
-        assessment: selectedAssessment,
+        assessment_id: selectedAssessment,
         ac_create_date: new Date(),
         ac_last_update: new Date(),
       });
@@ -140,7 +140,7 @@ export class ActivityService {
   // ✅ ลบกิจกรรม
   async deleteActivityService(activityId: number): Promise<boolean> {
     try {
-      const id = activityId
+      const id = activityId;
       if (isNaN(id)) {
         throw new Error("Invalid activity ID format");
       }
@@ -236,6 +236,18 @@ export class ActivityService {
       return updatedActivity;
     } catch (error) {
       logger.error("❌ Error in adjustStatusActivity(Admin)", { error });
+      throw error;
+    }
+  }
+
+  async getEnrolledStudentsListService(activityId: number): Promise<any[]> {
+    try {
+      logger.info(
+        `📡 Fetching enrolled students for activity ID: ${activityId}`
+      );
+      return await this.activityDao.getEnrolledStudentsListDao(activityId);
+    } catch (error) {
+      logger.error("❌ Error in getEnrolledStudentsListService", { error });
       throw error;
     }
   }

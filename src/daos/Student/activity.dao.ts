@@ -68,7 +68,7 @@ export class ActivityDao {
       const activity = await this.activityRepository!.createQueryBuilder(
         "activity"
       )
-        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
+        .leftJoinAndSelect("activity.assessment_id", "assessment_id") // ✅ ดึง assessment ด้วย
         .where("activity.ac_id = :id", { id: activityId })
         .getOne();
 

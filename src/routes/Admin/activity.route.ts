@@ -51,5 +51,8 @@ router.get("/get-activity/:id", (req, res, next) =>
 router.get("/searchActivity", (req, res, next) =>
   activityController.searchActivityController(req, res).catch(next)
 );
+router.get("/get-enrolled-studentslist/:id", (req, res, next) => {
+  activityController.getEnrolledStudentsListController(req, res).catch(next);
+});
 
 export default router;

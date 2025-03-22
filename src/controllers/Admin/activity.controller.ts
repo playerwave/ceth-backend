@@ -52,6 +52,18 @@ export class ActivityController {
         ac_start_assessment: req.body.ac_start_assessment || null,
         ac_end_assessment: req.body.ac_end_assessment || null,
         assessment: req.body.assessment || null,
+        ac_food: (() => {
+          if (!req.body.ac_food) return [];
+          if (Array.isArray(req.body.ac_food)) return req.body.ac_food;
+          if (typeof req.body.ac_food === "string") {
+            try {
+              return JSON.parse(req.body.ac_food);
+            } catch (error) {
+              return [req.body.ac_food]; // กรณี JSON.parse() ไม่สำเร็จ ใส่เป็น array
+            }
+          }
+          return [];
+        })(),
       };
 
       const activity = await this.activityService.createActivityService(
@@ -154,6 +166,30 @@ export class ActivityController {
       res.status(200).json(activities);
     } catch (error) {
       logger.error("❌ Error in searchActivityController(Admin)", { error });
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+
+  async getEnrolledStudentsListController(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const activityId = parseInt(req.params.id, 10);
+      if (isNaN(activityId)) {
+        res.status(400).json({ error: "Invalid activity ID" });
+        return;
+      }
+
+      const students =
+        await this.activityService.getEnrolledStudentsListService(activityId);
+
+      res.status(200).json({
+        activityId,
+        students,
+      });
+    } catch (error) {
+      logger.error("❌ Error in getEnrolledStudentsListController", { error });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }

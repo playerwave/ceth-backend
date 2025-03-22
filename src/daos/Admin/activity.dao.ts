@@ -28,13 +28,48 @@ export class ActivityDao {
     }
   }
 
+  // async createActivityDao(activityData: Partial<Activity>): Promise<Activity> {
+  //   this.checkRepository();
+  //   try {
+  //     const activity = this.activityRepository!.create(activityData);
+  //     logger.info("📌 Creating activity:", activityData);
+
+  //     return await this.activityRepository!.save(activity);
+  //   } catch (error) {
+  //     logger.error("❌ Error in createActivityDao(Admin):", error);
+  //     throw new Error("Failed to create activity");
+  //   }
+  // }
+
   async createActivityDao(activityData: Partial<Activity>): Promise<Activity> {
     this.checkRepository();
     try {
+      // ✅ ถ้า ac_food เป็น string ให้แปลงเป็น array
+      if (typeof activityData.ac_food === "string") {
+        try {
+          activityData.ac_food = JSON.parse(activityData.ac_food);
+        } catch (error) {
+          logger.warn("⚠ ac_food format is invalid, setting as empty array.");
+          activityData.ac_food = [];
+        }
+      }
+
+      // ✅ ถ้า ac_food ไม่ใช่ array ให้ตั้งค่าเป็น []
+      if (!Array.isArray(activityData.ac_food)) {
+        activityData.ac_food = [];
+      }
+
       const activity = this.activityRepository!.create(activityData);
       logger.info("📌 Creating activity:", activityData);
 
-      return await this.activityRepository!.save(activity);
+      const savedActivity = await this.activityRepository!.save(activity);
+
+      // ✅ แปลง ac_food กลับเป็น array (เผื่อ DB บันทึกเป็น JSON string)
+      savedActivity.ac_food = savedActivity.ac_food
+        ? JSON.parse(savedActivity.ac_food as unknown as string)
+        : [];
+
+      return savedActivity;
     } catch (error) {
       logger.error("❌ Error in createActivityDao(Admin):", error);
       throw new Error("Failed to create activity");
@@ -49,16 +84,34 @@ export class ActivityDao {
 
   //   try {
   //     logger.info("🔄 Updating activity with ID:", activityId);
+  //     console.log("🛠️ Received activityId in DAO:", activityId);
+
   //     const existingActivity = await this.activityRepository!.findOne({
   //       where: { ac_id: activityId },
+  //       relations: ["assessment"], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
   //     });
 
   //     if (!existingActivity) {
+  //       console.error(`❌ Activity with ID ${activityId} not found in DB`);
   //       throw new Error(`Activity with ID ${activityId} not found`);
   //     }
 
+  //     console.log("✅ Found existing activity:", existingActivity);
+
+  //     // ✅ กำหนด `ac_id` ให้แน่ใจว่าอัปเดตข้อมูลเดิม ไม่สร้างใหม่
+  //     activityData.ac_id = activityId;
+
   //     Object.assign(existingActivity, activityData);
-  //     return await this.activityRepository!.save(existingActivity);
+
+  //     console.log("🔄 Final Data before Saving:", existingActivity);
+
+  //     // ✅ ใช้ `save()` โดยกำหนด explicit `ac_id`
+  //     const updatedActivity = await this.activityRepository!.save(
+  //       existingActivity
+  //     );
+
+  //     console.log("✅ Successfully updated activity:", updatedActivity);
+  //     return updatedActivity;
   //   } catch (error) {
   //     logger.error("❌ Error in updateActivityDao(Admin):", error);
   //     throw new Error("Failed to update activity");
@@ -77,7 +130,7 @@ export class ActivityDao {
 
       const existingActivity = await this.activityRepository!.findOne({
         where: { ac_id: activityId },
-        relations: ["assessment"], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
+        relations: ["assessment_id"], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
       });
 
       if (!existingActivity) {
@@ -86,6 +139,33 @@ export class ActivityDao {
       }
 
       console.log("✅ Found existing activity:", existingActivity);
+
+      // ✅ ตรวจสอบว่า ac_food มีค่าหรือไม่
+      if (activityData.ac_food) {
+        if (typeof activityData.ac_food === "string") {
+          if (
+            (activityData.ac_food as string).startsWith("[") &&
+            (activityData.ac_food as string).endsWith("]")
+          ) {
+            try {
+              activityData.ac_food = JSON.parse(activityData.ac_food);
+            } catch (error) {
+              logger.warn(
+                "⚠ ac_food JSON parse failed, setting as empty array."
+              );
+              activityData.ac_food = [];
+            }
+          } else {
+            activityData.ac_food = [activityData.ac_food];
+          }
+        }
+
+        if (!Array.isArray(activityData.ac_food)) {
+          activityData.ac_food = [];
+        }
+      } else {
+        activityData.ac_food = [];
+      }
 
       // ✅ กำหนด `ac_id` ให้แน่ใจว่าอัปเดตข้อมูลเดิม ไม่สร้างใหม่
       activityData.ac_id = activityId;
@@ -98,6 +178,16 @@ export class ActivityDao {
       const updatedActivity = await this.activityRepository!.save(
         existingActivity
       );
+
+      // ✅ ตรวจสอบ `ac_food` หลังบันทึก และแปลงเป็น array ถ้าจำเป็น
+      if (typeof updatedActivity.ac_food === "string") {
+        try {
+          updatedActivity.ac_food = JSON.parse(updatedActivity.ac_food);
+        } catch (error) {
+          logger.warn("⚠ ac_food JSON parse failed, setting as empty array.");
+          updatedActivity.ac_food = [];
+        }
+      }
 
       console.log("✅ Successfully updated activity:", updatedActivity);
       return updatedActivity;
@@ -114,7 +204,7 @@ export class ActivityDao {
       const activity = await this.activityRepository!.createQueryBuilder(
         "activity"
       )
-        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
+        .leftJoinAndSelect("activity.assessment_id", "assessment_id") // ✅ ดึง assessment ด้วย
         .where("activity.ac_id = :id", { id: activityId })
         .getOne();
 
@@ -231,6 +321,41 @@ export class ActivityDao {
     } catch (error) {
       console.error(`❌ Error in adjustStatusActivity:`, error);
       throw new Error(`Error updating activity status: ${error}`);
+    }
+  }
+
+  async getEnrolledStudentsListDao(activityId: number): Promise<any[]> {
+    this.checkRepository();
+
+    try {
+      const userActivityRepository = getRepository(UserActivity);
+
+      const enrolledStudents = await userActivityRepository
+        .createQueryBuilder("user_activity")
+        .innerJoin("user_activity.user", "user")
+        .innerJoin("user_activity.activity", "activity") // ✅ ต้อง join activity ก่อนถึงจะใช้เงื่อนไขได้
+        .where("activity.ac_id = :activityId", { activityId }) // ✅ ใช้ชื่อ alias ที่ join มา
+        .select([
+          `"user"."u_id" AS id`,
+          `"user"."u_fullname" AS fullname`,
+          `"user"."u_std_id" AS studentId`,
+          `"user"."u_role" AS role`,
+          `"user"."u_soft_hours" AS softHours`,
+          `"user"."u_hard_hours" AS hardHours`,
+          `"user"."u_risk_soft" AS riskSoft`,
+          `"user"."u_risk_hard" AS riskHard`,
+          `"user"."u_risk_status" AS riskStatus`,
+        ])
+
+        .getRawMany();
+
+      logger.info(
+        `✅ Retrieved ${enrolledStudents.length} students for activity ${activityId}`
+      );
+      return enrolledStudents;
+    } catch (error) {
+      logger.error("❌ Error in getEnrolledStudentsListDao", { error });
+      throw new Error("Failed to fetch enrolled students");
     }
   }
 }

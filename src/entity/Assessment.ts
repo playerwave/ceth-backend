@@ -22,6 +22,6 @@ export class Assessment {
   as_last_update?: Date;
 
   // ✅ เปลี่ยนจาก ManyToMany เป็น OneToMany
-  @OneToMany(() => Activity, (activity) => activity.assessment)
+  @OneToMany(() => Activity, (activity) => activity.assessment_id)
   activities!: Activity[];
 }

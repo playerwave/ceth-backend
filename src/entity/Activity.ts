@@ -43,7 +43,7 @@ export class Activity {
   ac_seat?: number;
 
   @Column({ type: "text", nullable: true }) // ✅ รองรับ JSON string
-  ac_food?: string;
+  ac_food?: string[];
 
   @Column({ type: "varchar", length: 50, nullable: true, default: "private" })
   ac_status?: string;
@@ -105,7 +105,7 @@ export class Activity {
     onDelete: "SET NULL",
   })
   @JoinColumn({ name: "assessment_id" }) // ✅ เพิ่มบรรทัดนี้
-  assessment?: Assessment | null;
+  assessment_id?: Assessment | null;
 
   @OneToMany(() => UserActivity, (userActivity) => userActivity.activity)
   userActivities!: UserActivity[];
