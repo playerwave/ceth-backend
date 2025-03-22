@@ -9,7 +9,7 @@ import { validationResult } from "express-validator";
 
 //import admin routes
 // import userRoute from "./routes/Test/user.route";
-import adminActivityRoute from "./routes/Admin/activity.route";
+// import adminActivityRoute from "./routes/Admin/activity.route";
 import adminAssessmentRoute from "./routes/Admin/assessment.route";
 
 //import student routes
@@ -54,7 +54,7 @@ app.use(requestValidator);
 
 //api admin
 // app.use("/api/user", userRoute);
-app.use("/api/admin/activity", adminActivityRoute);
+// app.use("/api/admin/activity", adminActivityRoute);
 app.use("/api/admin/assessment", adminAssessmentRoute);
 
 //api student
@@ -71,7 +71,7 @@ app.use(errorLogger); // ใช้ Error Logger
 // เชื่อมต่อ database
 connectDatabase()
   .then(() => {
-    const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
+    const PORT =  5091; // ใช้พอร์ต 5090
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });

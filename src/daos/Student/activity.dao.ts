@@ -39,10 +39,10 @@ export class ActivityDao {
       const currentDate = new Date();
 
       return await this.activityRepository!.createQueryBuilder("activity")
-        .leftJoin("activity.userActivities", "user_activity")
+        .leftJoin("activity.userActivities", "useractivity")
         .where("activity.ac_status = 'Public'") // กรองกิจกรรมที่มีสถานะเป็น Public
         .andWhere(
-          "(user_activity.u_id IS NULL OR user_activity.u_id != :userId)",
+          "(useractivity.u_id IS NULL OR useractivity.u_id != :userId)",
           { userId }
         ) // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
         .andWhere(
@@ -70,7 +70,7 @@ export class ActivityDao {
         a.ac_start_time, a.ac_end_time, a.ac_seat, 
         u.u_soft_hours, u.u_hard_hours
       FROM users u
-      JOIN user_activity ua ON u.u_id = ua.u_id
+      JOIN useractivity ua ON u.u_id = ua.u_id
       JOIN activity a ON ua.ac_id = a.ac_id
       WHERE u.u_id = $1
       ORDER BY a.ac_start_time ASC;
