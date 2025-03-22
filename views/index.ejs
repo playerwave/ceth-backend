@@ -57,6 +57,7 @@
         <tr>
           <th>ID</th>
           <th>Email</th>
+          <th>Password</th>
           <th>Fullname</th>
           <th>Role</th>
           <th>Student ID</th>
@@ -74,6 +75,7 @@
         <tr>
           <td><%= user[i].u_id %></td>
           <td><%= user[i].u_email %></td>
+          <td><%= user[i].u_password %></td>
           <td><%= user[i].u_fullname %></td>
           <td><%= user[i].u_role %></td>
           <td><%= user[i].u_std_id %></td>
@@ -88,6 +90,9 @@
         <% } %>
       </tbody>
     </table>
-
+<br>
+<br>
+<br>
+    <h1 style="text-align: center ; color: rgb(240, 48, 48);">Copy URL ไปใส่ที่ GET: ________  ใน PostMan เพื่อดู ฟิลด์ ทั้งหมดของ Entity</h1>
   </body>
 </html>
