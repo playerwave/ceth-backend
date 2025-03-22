@@ -1,30 +1,45 @@
 import { createConnection } from 'typeorm';
+import { Users } from '../entity/Users';
 import dotenv from 'dotenv';
-
-//import Entity
-import { User } from '../entity/User';
-import { Activity } from '../entity/Activity';
+import { EventCoop } from '../entity/EventCoop';
+import { Certificate } from '../entity/Certificate';
+import { Question } from '../entity/Question';
 import { Assessment } from '../entity/Assessment';
+import { Activity } from '../entity/Activity';
+import { ActivityAssessment } from '../entity/ActivityAssessment';
 import { UserActivity } from '../entity/UserActivity';
-
+import { Choice } from '../entity/Choice';
+import { UserChoice } from '../entity/UserChoice';
 dotenv.config();
 
-// ✅ ฟังก์ชันเชื่อมต่อฐานข้อมูล
 export const connectDatabase = async () => {
   try {
     const connection = await createConnection({
-      type: 'postgres', // ใช้ PostgreSQL
-      host: process.env.HOST, // ที่อยู่ของ PostgreSQL container (เชื่อมต่อที่ localhost)
-      port: process.env.PG_PORT ? parseInt(process.env.PG_PORT) : 5432, // พอร์ตที่ใช้สำหรับ PostgreSQL
-      username: process.env.NAME, // ชื่อผู้ใช้ที่ใช้ใน Docker Compose
-      password: process.env.PASSWORD, // รหัสผ่านที่ตั้งใน Docker Compose
-      database: process.env.DATABASENAME, // ชื่อฐานข้อมูลที่ตั้งใน Docker Compose
-      entities: [User, Activity, Assessment, UserActivity], // กำหนด Entity ที่ใช้
-      synchronize: false, // สร้างตารางจาก Entity โดยอัตโนมัติ
-      logging: false, // เปิด log การเชื่อมต่อ
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      entities: [
+        Users,
+        EventCoop,
+        Certificate,
+        Question,
+        Assessment,
+        Activity,
+        ActivityAssessment,
+        UserActivity,
+        Choice,
+        UserChoice,
+      ],
+      // synchronize: true,
+      logging: true, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error
+      ssl: {
+        rejectUnauthorized: false, //
+      },
     });
-
-    console.log('✅ Database connected successfully');
+    console.log('Database connected successfully');
     return connection;
   } catch (error) {
     console.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล: ', error);

@@ -2,7 +2,7 @@ import { Activity } from '../../entity/Activity';
 import { ActivityDao } from '../../daos/Student/activity.dao';
 import logger from '../../middleware/logger';
 import dayjs from 'dayjs';
-import { User } from '../../entity/User';
+import { Users } from '../../entity/Users';
 import moment from 'moment';
 
 interface CustomRiskActivity {
@@ -13,13 +13,15 @@ interface CustomRiskActivity {
   hardCurrent: number;
   softRisk: number;
   hardRisk: number;
-  recommendedActivities: {  // เพิ่มฟิลด์ recommendedActivities
+  recommendedActivities: {
+    // เพิ่มฟิลด์ recommendedActivities
     name: string | undefined;
     type: string | undefined;
     start_time: Date | undefined;
+    end_time: Date | undefined;
     end_register: Date | undefined;
   }[];
-  timeLeftForEvent?: number;  // เพิ่ม timeLeftForEvent ที่สามารถเป็น optional
+  timeLeftForEvent?: number; // เพิ่ม timeLeftForEvent ที่สามารถเป็น optional
 }
 
 export class ActivityService {
@@ -69,13 +71,13 @@ export class ActivityService {
       let needHard = hardRequired - hardCurrent;
 
       const recommendedActivities = [];
-      const recommendedActivityIds = new Set();  // เก็บ ID ของกิจกรรมที่แนะนำแล้ว
+      const recommendedActivityIds = new Set(); // เก็บ ID ของกิจกรรมที่แนะนำแล้ว
 
       if (needSoft > 0) {
         // ค้นหากิจกรรมที่ประเภท soft ที่เปิดให้ลงทะเบียน
         const softActivities = statusActivities.filter((activity) => {
           return (
-            activity.ac_type === 'soft' &&
+            activity.ac_type?.toLowerCase() === 'soft skill' &&
             activity.ac_end_register &&
             activity.ac_end_register > new Date()
           );
@@ -94,7 +96,7 @@ export class ActivityService {
           // ตรวจสอบว่ากิจกรรมนี้ได้ถูกแนะนำแล้วหรือยัง
           if (recommendedActivityIds.has(activity.ac_id)) continue;
 
-          const availableTime = activity.ac_scope_time ?? 0;
+          const availableTime = activity.ac_recieve_hours ?? 0;
           if (availableTime > needSoft) {
             recommendedActivities.push({
               name: activity.ac_name,
@@ -102,6 +104,7 @@ export class ActivityService {
               seat: activity.ac_seat,
               registerCount: activity.ac_registered_count,
               start_time: activity.ac_start_time,
+              end_time: activity.ac_end_time,
               end_register: activity.ac_end_register,
             });
             recommendedActivityIds.add(activity.ac_id); // บันทึก ID ของกิจกรรมที่แนะนำแล้ว
@@ -113,6 +116,7 @@ export class ActivityService {
               seat: activity.ac_seat,
               registerCount: activity.ac_registered_count,
               start_time: activity.ac_start_time,
+              end_time: activity.ac_end_time,
               end_register: activity.ac_end_register,
             });
             recommendedActivityIds.add(activity.ac_id); // บันทึก ID ของกิจกรรมที่แนะนำแล้ว
@@ -125,7 +129,7 @@ export class ActivityService {
         // ค้นหากิจกรรมที่ประเภท hard ที่เปิดให้ลงทะเบียน
         const hardActivities = statusActivities.filter((activity) => {
           return (
-            activity.ac_type === 'hard' &&
+            activity.ac_type?.toLowerCase() === 'hard skill' &&
             activity.ac_end_register &&
             activity.ac_end_register > new Date()
           );
@@ -144,7 +148,7 @@ export class ActivityService {
           // ตรวจสอบว่ากิจกรรมนี้ได้ถูกแนะนำแล้วหรือยัง
           if (recommendedActivityIds.has(activity.ac_id)) continue;
 
-          const availableTime = activity.ac_scope_time ?? 0;
+          const availableTime = activity.ac_recieve_hours ?? 0;
           if (availableTime > needHard) {
             recommendedActivities.push({
               name: activity.ac_name,
@@ -178,7 +182,6 @@ export class ActivityService {
     }
   }
 
-
   async calculateRiskActivities(u_id: number): Promise<CustomRiskActivity[]> {
     try {
       const users = await this.activityDao.getUsersById(u_id);
@@ -187,7 +190,8 @@ export class ActivityService {
       }
 
       const statusActivities = await this.activityDao.getStatusActivities();
-      const eventCoopActivities = await this.activityDao.getEventCoopActivities();
+      const eventCoopActivities =
+        await this.activityDao.getEventCoopActivities();
       const recommendedActivities = await this.recommendActivities(u_id); // ใช้ recommendedActivities ที่คุณมี
       const result: CustomRiskActivity[] = [];
 
@@ -230,8 +234,8 @@ export class ActivityService {
           hardRisk = 100;
         }
         // อัพเดทข้อมูลความเสี่ยงในฐานข้อมูล
-        await this.activityDao.updateUserRiskSoft(u_id, softRisk);
-        await this.activityDao.updateUserRiskHard(u_id, hardRisk);
+        await this.activityDao.updateUsersRiskSoft(u_id, softRisk);
+        await this.activityDao.updateUsersRiskHard(u_id, hardRisk);
 
         // คำนวณ timeFactor ขึ้นอยู่กับเวลาที่เหลือจนถึง e_date
         const eventCoopDate = moment(eventCoopActivities[0]?.e_date); // วันที่สิ้นสุดกิจกรรม
@@ -262,7 +266,7 @@ export class ActivityService {
           hardCurrent,
           softRisk,
           hardRisk,
-          recommendedActivities,  // ส่งออกกิจกรรมที่แนะนำ
+          recommendedActivities, // ส่งออกกิจกรรมที่แนะนำ
           timeLeftForEvent, // เวลาที่เหลือจนถึงวันที่ e_date
         });
       }
@@ -273,7 +277,4 @@ export class ActivityService {
       throw error;
     }
   }
-
-
-
 }

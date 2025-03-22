@@ -3,7 +3,7 @@ import { ActivityService } from '../../services/Student/activity.service';
 import logger from '../../middleware/logger';
 
 export class ActivityController {
-  constructor(private activityService: ActivityService) { }
+  constructor(private activityService: ActivityService) {}
 
   async getAllActivitiesController(req: Request, res: Response): Promise<void> {
     try {
@@ -45,7 +45,9 @@ export class ActivityController {
       return res.status(400).send('You sent an invalid request.');
     }
     try {
-      const result = await this.activityService.calculateRiskActivities(Number(u_id));
+      const result = await this.activityService.calculateRiskActivities(
+        Number(u_id),
+      );
       if (result.length > 0) {
         return res.status(200).json(result);
       } else {

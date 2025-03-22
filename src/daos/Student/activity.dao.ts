@@ -2,7 +2,7 @@ import { Repository } from 'typeorm';
 import { connectDatabase } from '../../db/database';
 import { Activity } from '../../entity/Activity';
 import logger from '../../middleware/logger';
-import { User } from '../../entity/User';
+import { Users } from '../../entity/Users';
 import { EventCoop } from '../../entity/EventCoop';
 
 export class ActivityDao {
@@ -76,7 +76,7 @@ export class ActivityDao {
     }
   }
 
-  async getUsersById(u_id: number): Promise<User[]> {
+  async getUsersById(u_id: number): Promise<Users[]> {
     if (!this.activityRepository) {
       throw new Error('Repository is not initialized');
     }
@@ -97,7 +97,7 @@ export class ActivityDao {
     }
     try {
       const query =
-        "SELECT * FROM activity WHERE ac_status = 'public' AND ac_end_register <= (SELECT e_date FROM event_coop LIMIT 1)";
+        "SELECT * FROM activity WHERE ac_status = 'Public' AND ac_end_register <= (SELECT e_date FROM eventcoop LIMIT 1)";
       const result = await this.activityRepository.query(query);
       return result;
     } catch (error) {
@@ -111,7 +111,7 @@ export class ActivityDao {
       throw new Error('Repository is not initialized');
     }
     try {
-      const query = 'SELECT e_date FROM event_coop LIMIT 1';
+      const query = 'SELECT e_date FROM eventcoop LIMIT 1';
       const result = await this.activityRepository.query(query);
       return result;
     } catch (error) {
@@ -120,31 +120,43 @@ export class ActivityDao {
     }
   }
 
-  async updateUserRiskSoft(u_id: number, u_risk_soft: number): Promise<User[]> {
+  async updateUsersRiskSoft(
+    u_id: number,
+    u_risk_soft: number,
+  ): Promise<Users[]> {
     if (!this.activityRepository) {
       throw new Error('Repository is not initialized');
     }
     try {
-      const query = "UPDATE public.users SET u_risk_soft = $1 WHERE u_id = $2;"
-      const result = await this.activityRepository.query(query, [u_risk_soft, u_id])
-      return result
+      const query = 'UPDATE users SET u_risk_soft = $1 WHERE u_id = $2;';
+      const result = await this.activityRepository.query(query, [
+        u_risk_soft,
+        u_id,
+      ]);
+      return result;
     } catch (error) {
-      console.log(`Error form updateUserRiskSoft Dao: ${error}`);
-      throw new Error('Failed to updateUserRiskSoft');
+      console.log(`Error form updateUsersRiskSoft Dao: ${error}`);
+      throw new Error('Failed to updateUsersRiskSoft');
     }
   }
 
-  async updateUserRiskHard(u_id: number, u_risk_hard: number): Promise<User[]> {
+  async updateUsersRiskHard(
+    u_id: number,
+    u_risk_hard: number,
+  ): Promise<Users[]> {
     if (!this.activityRepository) {
       throw new Error('Repository is not initialized');
     }
     try {
-      const query = "UPDATE public.users SET u_risk_hard = $1 WHERE u_id = $2;"
-      const result = await this.activityRepository.query(query, [u_risk_hard, u_id])
-      return result
+      const query = 'UPDATE users SET u_risk_hard = $1 WHERE u_id = $2;';
+      const result = await this.activityRepository.query(query, [
+        u_risk_hard,
+        u_id,
+      ]);
+      return result;
     } catch (error) {
-      console.log(`Error form updateUserRiskHard Dao: ${error}`);
-      throw new Error('Failed to updateUserRiskHard');
+      console.log(`Error form updateUsersRiskHard Dao: ${error}`);
+      throw new Error('Failed to updateUsersRiskHard');
     }
   }
 }

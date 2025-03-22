@@ -1,27 +1,33 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { Activity } from './Activity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Question } from './Question'; // Import Entity ของ Question ที่สร้างไว้
 
 @Entity('assessment')
 export class Assessment {
   @PrimaryGeneratedColumn()
   as_id!: number;
 
-  @Column({ type: 'varchar', length: 255, nullable: false })
-  as_name!: string;
+  @ManyToOne(() => Question, (question) => question.q_id)
+  @JoinColumn({ name: 'q_id' })
+  q_id!: Question;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  as_type!: string;
+  @Column({ type: 'varchar', length: 255 })
+  as_name?: string;
 
-  @Column({ type: 'text', nullable: false })
-  as_description!: string;
+  @Column({ type: 'varchar', length: 100 })
+  as_type?: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  as_description?: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  as_create_date!: Date;
+  as_create_date?: Date;
 
-  @Column({ type: 'timestamp', nullable: true, onUpdate: 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', nullable: true })
   as_last_update?: Date;
-
-  // ✅ เปลี่ยนจาก ManyToMany เป็น OneToMany
-  @OneToMany(() => Activity, (activity) => activity.assessment)
-  activities!: Activity[];
 }
