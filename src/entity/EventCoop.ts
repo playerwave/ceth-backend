@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
-import { User } from "./User"; // สมมติว่า entity สำหรับ user อยู่ในไฟล์ User.ts
+import { Users } from "./Users";
 
-@Entity("event_coop")
+@Entity("eventcoop")
 export class EventCoop {
   @PrimaryGeneratedColumn()
   e_id!: number;
@@ -15,6 +15,6 @@ export class EventCoop {
   @Column({ type: "timestamp", nullable: true })
   e_date?: Date;
 
-  @OneToMany(() => User, (user) => user.eventCoop)
-  users?: User[];
+  @OneToMany(() => Users, (users) => users.eventCoop)
+  users?: Users[];
 }

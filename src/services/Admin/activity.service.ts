@@ -13,7 +13,7 @@ export class ActivityService {
 
   // ✅ สร้างกิจกรรมใหม่
   async createActivityService(
-    activityData: Partial<Activity> & { assessment_id?: number }
+    activityData: Partial<Activity> & { assessment_id?: number },
   ): Promise<Activity> {
     try {
       logger.info("📩 Received data in createActivityService", {
@@ -30,13 +30,13 @@ export class ActivityService {
 
         selectedAssessment =
           (await this.assessmentDao.getAssessmentByIdDao(
-            activityData.assessment_id
+            activityData.assessment_id,
           )) ?? null;
       }
 
       console.log(
         "🔍 ac_recieve_hours ก่อนคำนวณ:",
-        activityData.ac_recieve_hours
+        activityData.ac_recieve_hours,
       );
 
       // แปลงค่าเป็น Date ก่อนคำนวณ
@@ -55,7 +55,7 @@ export class ActivityService {
 
         console.log(
           "✅ คำนวณ ac_recieve_hours:",
-          activityData.ac_recieve_hours
+          activityData.ac_recieve_hours,
         );
       }
 
@@ -68,7 +68,7 @@ export class ActivityService {
         sendMailCreateActivity(
           "65160169@go.buu.ac.th",
           "createActivity",
-          "ทดสอบส่งอีเมล"
+          "ทดสอบส่งอีเมล",
         );
 
         console.log("send email success!");
@@ -80,7 +80,7 @@ export class ActivityService {
 
       const newActivity = await this.activityDao.createActivityDao({
         ...activityData,
-        assessment: selectedAssessment,
+        assessment_id: selectedAssessment?.as_id,
         ac_create_date: new Date(),
         ac_last_update: new Date(),
       });
@@ -97,7 +97,7 @@ export class ActivityService {
   // ✅ อัปเดตกิจกรรม
   async updateActivityService(
     activityId: number,
-    activityData: Partial<Activity>
+    activityData: Partial<Activity>,
   ): Promise<Activity | null> {
     try {
       const id = activityId;
@@ -140,7 +140,7 @@ export class ActivityService {
   // ✅ ลบกิจกรรม
   async deleteActivityService(activityId: number): Promise<boolean> {
     try {
-      const id = activityId
+      const id = activityId;
       if (isNaN(id)) {
         throw new Error("Invalid activity ID format");
       }
@@ -191,7 +191,7 @@ export class ActivityService {
       const activity = await this.activityDao.getActivityByIdDao(id);
       console.log(
         "📌 Activity Data from DAO:",
-        JSON.stringify(activity, null, 2)
+        JSON.stringify(activity, null, 2),
       );
       return activity;
     } catch (error) {
@@ -219,7 +219,7 @@ export class ActivityService {
   // ✅ ปรับสถานะกิจกรรม
   async adjustStatusActivityService(
     ac_id: string,
-    ac_status: string
+    ac_status: string,
   ): Promise<Activity | null> {
     try {
       const id = parseInt(ac_id, 10);
@@ -229,7 +229,7 @@ export class ActivityService {
 
       const updatedActivity = await this.activityDao.adjustStatusActivityDao(
         id,
-        ac_status
+        ac_status,
       );
       logger.info("✅ Activity status updated", { ac_id: id, ac_status });
 

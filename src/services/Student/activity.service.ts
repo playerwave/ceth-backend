@@ -15,7 +15,7 @@ export class ActivityService {
         "✅ Fetched all public activities that user has not registered for",
         {
           total: activities.length,
-        }
+        },
       );
 
       return activities;
@@ -35,7 +35,7 @@ export class ActivityService {
       const activity = await this.activityDao.getActivityByIdDao(id);
       console.log(
         "📌 Activity Data from DAO:",
-        JSON.stringify(activity, null, 2)
+        JSON.stringify(activity, null, 2),
       );
       return activity;
     } catch (error) {
@@ -46,7 +46,7 @@ export class ActivityService {
 
   async studentEnrollActivityService(
     userId: number,
-    activityId: number
+    activityId: number,
   ): Promise<void> {
     await this.activityDao.studentEnrollActivityDao(userId, activityId);
   }
@@ -57,7 +57,7 @@ export class ActivityService {
 
   async unEnrollActivityService(
     userId: number,
-    activityId: number
+    activityId: number,
   ): Promise<boolean> {
     return await this.activityDao.unEnrollActivityDao(userId, activityId);
   }

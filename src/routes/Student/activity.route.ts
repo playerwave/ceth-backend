@@ -4,11 +4,11 @@ import { activityController } from "../../controllers/Student/activity.controlle
 const router = Router();
 
 router.get("/get-student-activities/:id", (req, res, next) =>
-  activityController.getStudentActivitiesController(req, res).catch(next)
+  activityController.getStudentActivitiesController(req, res).catch(next),
 );
 
 router.post("/student-enroll-activity/:id", (req, res, next) =>
-  activityController.studentEnrollActivityController(req, res).catch(next)
+  activityController.studentEnrollActivityController(req, res).catch(next),
 );
 // router.post("/student-enroll-activity/:id", (req, res, next) => {
 //   const userId = parseInt(req.params.id, 10); // แปลงจาก string เป็น number
@@ -19,7 +19,7 @@ router.post("/student-enroll-activity/:id", (req, res, next) =>
 // });
 
 router.get("/get-activity/:id", (req, res, next) =>
-  activityController.getActivityByIdController(req, res).catch(next)
+  activityController.getActivityByIdController(req, res).catch(next),
 );
 
 router.get("/get-enrolled-activities/:id", (req, res) => {
@@ -27,7 +27,7 @@ router.get("/get-enrolled-activities/:id", (req, res) => {
 });
 
 router.delete("/unenroll-activity/:id", (req, res, next) =>
-  activityController.unEnrollActivityController(req, res).catch(next)
+  activityController.unEnrollActivityController(req, res).catch(next),
 );
 
 export default router;

@@ -15,6 +15,17 @@ import adminAssessmentRoute from "./routes/Admin/assessment.route";
 //import student routes
 import studentActivityRoute from "./routes/Student/activity.route";
 
+import userRoute from "./routes/TestCloud/user.route";
+import eventCoopRoute from "./routes/TestCloud/eventCoop.route";
+import certificateCoopRoute from "./routes/TestCloud/certificate.route";
+import quetionRoute from "./routes/TestCloud/quetion.route";
+import assessmentRoute from "./routes/TestCloud/assessment.route";
+import activityRoute from "./routes/TestCloud/activity.route";
+import activityAssessmentRoute from "./routes/TestCloud/activityAssessment.route";
+import userActivityRoute from "./routes/TestCloud/userActivity.route";
+import choiceRoute from "./routes/TestCloud/choice.route";
+import userChoiceRoute from "./routes/TestCloud/userChoice.route";
+
 dotenv.config();
 
 const app = express();
@@ -27,7 +38,7 @@ app.use(
   cors({
     origin: "http://localhost:5173", // ระบุโดเมนที่อนุญาต
     credentials: true, // อนุญาตให้ใช้ credentials เช่น cookies
-  })
+  }),
 );
 
 // ตั้งค่า middleware สำหรับการแปลง request body เป็น JSON
@@ -59,6 +70,18 @@ app.use("/api/admin/assessment", adminAssessmentRoute);
 
 //api student
 app.use("/api/student/activity", studentActivityRoute);
+
+// ทดสอบดึงข้อมูลจาก cloud
+app.use("/users", userRoute);
+app.use("/eventCoop", eventCoopRoute);
+app.use("/certificate", certificateCoopRoute);
+app.use("/question", quetionRoute);
+app.use("/assessment", assessmentRoute);
+app.use("/activity", activityRoute);
+app.use("/activityAssessment", activityAssessmentRoute);
+app.use("/userActivity", userActivityRoute);
+app.use("/choice", choiceRoute);
+app.use("/userChoice", userChoiceRoute);
 
 app.use(errorLogger); // ใช้ Error Logger
 

@@ -39,7 +39,7 @@ export enum LocationType {
 
 export function IsBefore(
   property: string,
-  validationOptions?: ValidationOptions
+  validationOptions?: ValidationOptions,
 ) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
@@ -97,7 +97,7 @@ export class CreateActivityDto {
   @ValidateIf(
     (o) =>
       o.ac_location_type === LocationType.ONSITE &&
-      o.ac_status === ActivityStatus.PUBLIC
+      o.ac_status === ActivityStatus.PUBLIC,
   )
   @IsString()
   @IsNotEmpty({
@@ -127,7 +127,7 @@ export class CreateActivityDto {
   // ✅ ตรวจสอบเฉพาะเมื่อ `ac_status` เป็น Public
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -137,7 +137,7 @@ export class CreateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -147,7 +147,7 @@ export class CreateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -157,7 +157,7 @@ export class CreateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -167,7 +167,7 @@ export class CreateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -220,7 +220,7 @@ export class CreateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)
@@ -229,7 +229,7 @@ export class CreateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)
@@ -271,7 +271,7 @@ export class UpdateActivityDto {
   @ValidateIf(
     (o) =>
       o.ac_location_type === LocationType.ONSITE &&
-      o.ac_status === ActivityStatus.PUBLIC
+      o.ac_status === ActivityStatus.PUBLIC,
   )
   @IsString()
   @IsNotEmpty({
@@ -301,7 +301,7 @@ export class UpdateActivityDto {
   // ✅ ตรวจสอบเฉพาะเมื่อ `ac_status` เป็น Public
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -311,7 +311,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -321,7 +321,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -331,7 +331,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -341,7 +341,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -394,7 +394,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)
@@ -403,7 +403,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === "string" ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)

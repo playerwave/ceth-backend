@@ -10,14 +10,13 @@ export class ActivityController {
 
   async getStudentActivitiesController(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
     try {
       const { userId } = req.body;
 
-      const activities = await this.activityService.getStudentActivitiesService(
-        userId
-      );
+      const activities =
+        await this.activityService.getStudentActivitiesService(userId);
       res.status(200).json(activities);
     } catch (error) {
       logger.error("❌ Error in getAllActivitiesController(Admin)", { error });
@@ -28,7 +27,7 @@ export class ActivityController {
   async getActivityByIdController(req: Request, res: Response): Promise<void> {
     try {
       const activity = await this.activityService.getActivityByIdService(
-        req.params.id
+        req.params.id,
       );
       if (!activity) {
         res.status(404).json({ error: "Activity not found" });
@@ -44,7 +43,7 @@ export class ActivityController {
 
   async studentEnrollActivityController(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
     try {
       const userId = parseInt(req.params.id, 10);
@@ -56,7 +55,7 @@ export class ActivityController {
 
       const activity = await this.activityService.studentEnrollActivityService(
         userId,
-        activityId
+        activityId,
       );
 
       console.log("User successfully registered for the activity.");
@@ -71,16 +70,15 @@ export class ActivityController {
 
   async getEnrolledActivitiesController(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<Response> {
     const userId = parseInt(req.params.id, 10);
     if (!userId) {
       return res.status(400).json({ error: "Invalid user ID." });
     }
     try {
-      const result = await this.activityService.getEnrolledActivitiesService(
-        userId
-      );
+      const result =
+        await this.activityService.getEnrolledActivitiesService(userId);
 
       console.log("✅ Data to be sent:", JSON.stringify(result, null, 2));
 
@@ -108,7 +106,7 @@ export class ActivityController {
 
       const success = await this.activityService.unEnrollActivityService(
         userId,
-        activityId
+        activityId,
       );
       if (success) {
         res

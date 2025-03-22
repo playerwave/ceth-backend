@@ -7,7 +7,7 @@ export class AssessmentController {
 
   async getAllAssessmentsController(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
     try {
       const assessments =

@@ -54,9 +54,8 @@ export class ActivityController {
         assessment: req.body.assessment || null,
       };
 
-      const activity = await this.activityService.createActivityService(
-        activityData
-      );
+      const activity =
+        await this.activityService.createActivityService(activityData);
       res.status(201).json(activity);
     } catch (error) {
       logger.error("❌ Error in createActivityController(Admin)", { error });
@@ -69,7 +68,7 @@ export class ActivityController {
     try {
       const activity = await this.activityService.updateActivityService(
         parseInt(req.params.id),
-        req.body
+        req.body,
       );
       if (!activity) {
         res.status(404).json({ error: "Activity not found" });
@@ -90,7 +89,7 @@ export class ActivityController {
   async deleteActivityController(req: Request, res: Response): Promise<void> {
     try {
       const deleted = await this.activityService.deleteActivityService(
-        parseInt(req.params.id, 10)
+        parseInt(req.params.id, 10),
       );
       if (!deleted) {
         res.status(404).json({ error: "Activity not found" });
@@ -120,7 +119,7 @@ export class ActivityController {
   async getActivityByIdController(req: Request, res: Response): Promise<void> {
     try {
       const activity = await this.activityService.getActivityByIdService(
-        req.params.id
+        req.params.id,
       );
       if (!activity) {
         res.status(404).json({ error: "Activity not found" });
@@ -144,7 +143,7 @@ export class ActivityController {
       }
 
       const activities = await this.activityService.searchActivityService(
-        ac_name as string
+        ac_name as string,
       );
       if (activities.length === 0) {
         res.status(404).json({ message: "No activities found" });

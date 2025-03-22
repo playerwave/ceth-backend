@@ -50,7 +50,7 @@ export class AssessmentDao {
     } catch (error) {
       logger.error(
         `❌ Error in getAssessmentByIdDao(Admin) ${assessmentId}:`,
-        error
+        error,
       );
       throw new Error("Failed to get assessment by id");
     }

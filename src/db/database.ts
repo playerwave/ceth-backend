@@ -1,17 +1,17 @@
 import { createConnection } from "typeorm";
+import { Users } from "../entity/Users";
 import dotenv from "dotenv";
-
-//import Entity
-import { User } from "../entity/User";
-import { Activity } from "../entity/Activity";
-import { Assessment } from "../entity/Assessment";
-import { UserActivity } from "../entity/UserActivity";
 import { EventCoop } from "../entity/EventCoop";
 import { Certificate } from "../entity/Certificate";
-
+import { Question } from "../entity/Question";
+import { Assessment } from "../entity/Assessment";
+import { Activity } from "../entity/Activity";
+import { ActivityAssessment } from "../entity/ActivityAssessment";
+import { UserActivity } from "../entity/UserActivity";
+import { Choice } from "../entity/Choice";
+import { UserChoice } from "../entity/UserChoice";
 dotenv.config();
 
-// ✅ ฟังก์ชันเชื่อมต่อฐานข้อมูล
 export const connectDatabase = async () => {
   try {
     const connection = await createConnection({
@@ -22,17 +22,21 @@ export const connectDatabase = async () => {
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       entities: [
-        User,
-        Activity,
-        Assessment,
-        UserActivity,
+        Users,
         EventCoop,
         Certificate,
+        Question,
+        Assessment,
+        Activity,
+        ActivityAssessment,
+        UserActivity,
+        Choice,
+        UserChoice,
       ],
       // synchronize: true,
-      logging: false, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error
+      logging: true, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error
       ssl: {
-        rejectUnauthorized: false, // หากไม่ต้องการให้เกิดข้อผิดพลาดจาก certificate
+        rejectUnauthorized: false, //
       },
     });
     console.log("Database connected successfully");

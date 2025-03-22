@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #ddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      /* สไตล์ของปุ่ม */
+      a.button {
+        display: inline-block;
+        background-color: #4CAF50; /* สีเขียว */
+        color: white;
+        padding: 12px 20px;
+        text-align: center;
+        text-decoration: none;
+        font-size: 16px;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+      }
+      a.button:hover {
+        background-color: #45a049; /* สีเขียวเข้มเมื่อ Hover */
+      }
+      a.button:active {
+        background-color: #3e8e41; /* สีเขียวเข้มที่สุดเมื่อคลิก */
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <a href="/users" class="button">Users</a>
+      <a href="/eventCoop" class="button">Even Coop</a>
+      <a href="/certificate" class="button">Certificate</a>
+      <a href="/question" class="button">Quetion</a>
+      <a href="/assessment" class="button">Assessment</a>
+      <a href="/activity" class="button">Activity</a>
+      <a href="/activityAssessment" class="button">Activity Assessment</a>
+      <a href="/userActivity" class="button">User Activity</a>
+      <a href="/choice" class="button">Choice</a>
+      <a href="/userChoice" class="button">User Choice</a>
+    </div>
+    <h1>Event Coop</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Department</th>
+          <th>Grade</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% for(var i = 0; i < event.length; i++){ %>
+        <tr>
+          <td><%= event[i].e_id %></td>
+          <td><%= event[i].e_department %></td>
+          <td><%= event[i].e_grade %></td>
+          <td><%= event[i].e_date %></td>
+        </tr>
+        <% } %>
+      </tbody>
+    </table>
+
+  </body>
+</html>

@@ -2,7 +2,7 @@ import { Repository, getRepository, Equal } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { UserActivity } from "../../entity/UserActivity";
 import { Activity } from "../../entity/Activity";
-import { User } from "../../entity/User";
+import { Users } from "../../entity/Users";
 import logger from "../../middleware/logger";
 
 export class ActivityDao {
@@ -34,25 +34,25 @@ export class ActivityDao {
 
     try {
       logger.info(
-        "📌 Fetching all public activities that user has not registered for"
+        "📌 Fetching all public activities that user has not registered for",
       );
 
       // ใช้ `new Date()` เพื่อให้เป็นเวลาปัจจุบันในการเปรียบเทียบ
       const currentDate = new Date();
 
       return await this.activityRepository!.createQueryBuilder("activity")
-        .leftJoin("activity.userActivities", "user_activity")
+        .leftJoin("activity.userActivities", "useractivity")
         .where("activity.ac_status = 'Public'") // กรองกิจกรรมที่มีสถานะเป็น Public
         .andWhere(
-          "(user_activity.u_id IS NULL OR user_activity.u_id != :userId)",
-          { userId }
+          "(useractivity.u_id IS NULL OR useractivity.u_id != :userId)",
+          { userId },
         ) // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
         .andWhere(
-          "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL OR activity.ac_seat = 0)"
+          "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL OR activity.ac_seat = 0)",
         ) // กรองกิจกรรมที่มีการลงทะเบียนน้อยกว่า ac_seat หรือ ac_seat เป็น NULL หรือ 0
         .andWhere("activity.ac_end_register > :currentDate", { currentDate }) // กรองกิจกรรมที่ ac_end_register ยังไม่ผ่านวันที่ปัจจุบัน
         .andWhere(
-          "(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)"
+          "(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)",
         ) // กรองกิจกรรมที่ ac_registered_count น้อยกว่า ac_seat หรือ ac_seat เป็น NULL
         .getMany();
     } catch (error) {
@@ -66,7 +66,7 @@ export class ActivityDao {
 
     try {
       const activity = await this.activityRepository!.createQueryBuilder(
-        "activity"
+        "activity",
       )
         .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
         .where("activity.ac_id = :id", { id: activityId })
@@ -78,7 +78,7 @@ export class ActivityDao {
     } catch (error) {
       logger.error(
         `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
-        error
+        error,
       );
       throw new Error("Failed to get activity by id");
     }
@@ -86,10 +86,10 @@ export class ActivityDao {
 
   async studentEnrollActivityDao(
     userId: number,
-    activityId: number
+    activityId: number,
   ): Promise<void> {
     const userActivityRepository = getRepository(UserActivity);
-    const userRepository = getRepository(User);
+    const userRepository = getRepository(Users);
     const activityRepository = getRepository(Activity);
 
     const user = await userRepository.findOneBy({ u_id: userId });
@@ -166,8 +166,8 @@ export class ActivityDao {
       logger.info(`📌 Fetching enrolled activities for student ID: ${userId}`);
 
       return await this.activityRepository!.createQueryBuilder("activity")
-        .innerJoin("activity.userActivities", "user_activity")
-        .where("user_activity.u_id = :userId", { userId }) // ✅ กรองกิจกรรมที่นิสิตลงทะเบียน
+        .innerJoin("activity.userActivities", "useractivity")
+        .where("useractivity.u_id = :userId", { userId }) // ✅ กรองกิจกรรมที่นิสิตลงทะเบียน
         .orderBy("activity.ac_start_time", "ASC") // ✅ เรียงลำดับตามเวลาเริ่มต้น
         .getMany();
     } catch (error) {
@@ -213,7 +213,7 @@ export class ActivityDao {
 
   async unEnrollActivityDao(
     userId: number,
-    activityId: number
+    activityId: number,
   ): Promise<boolean> {
     try {
       const userActivityRepository = getRepository(UserActivity);

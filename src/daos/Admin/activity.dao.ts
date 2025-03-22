@@ -67,7 +67,7 @@ export class ActivityDao {
 
   async updateActivityDao(
     activityId: number,
-    activityData: Partial<Activity>
+    activityData: Partial<Activity>,
   ): Promise<Activity> {
     this.checkRepository();
 
@@ -95,9 +95,8 @@ export class ActivityDao {
       console.log("🔄 Final Data before Saving:", existingActivity);
 
       // ✅ ใช้ `save()` โดยกำหนด explicit `ac_id`
-      const updatedActivity = await this.activityRepository!.save(
-        existingActivity
-      );
+      const updatedActivity =
+        await this.activityRepository!.save(existingActivity);
 
       console.log("✅ Successfully updated activity:", updatedActivity);
       return updatedActivity;
@@ -112,7 +111,7 @@ export class ActivityDao {
 
     try {
       const activity = await this.activityRepository!.createQueryBuilder(
-        "activity"
+        "activity",
       )
         .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
         .where("activity.ac_id = :id", { id: activityId })
@@ -124,7 +123,7 @@ export class ActivityDao {
     } catch (error) {
       logger.error(
         `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
-        error
+        error,
       );
       throw new Error("Failed to get activity by id");
     }
@@ -163,7 +162,7 @@ export class ActivityDao {
       // ✅ ลบ UserActivity ที่เกี่ยวข้องก่อน
       await userActivityRepository.delete({ activity: { ac_id: activityId } });
       logger.info(
-        `🧹 Deleted all UserActivity rows with activityId ${activityId}`
+        `🧹 Deleted all UserActivity rows with activityId ${activityId}`,
       );
 
       // ✅ ลบ Activity หลังจากเคลียร์ข้อมูลที่เกี่ยวข้อง
@@ -209,14 +208,14 @@ export class ActivityDao {
 
   async adjustStatusActivityDao(
     ac_id: number,
-    ac_status: string
+    ac_status: string,
   ): Promise<Activity | null> {
     this.checkRepository();
 
     const status = ac_status.trim().toLowerCase();
     if (status !== "public" && status !== "private") {
       throw new Error(
-        "ค่าที่ส่งเข้ามาที่ ac_status ไม่ใช่ 'Public' หรือ 'Private'"
+        "ค่าที่ส่งเข้ามาที่ ac_status ไม่ใช่ 'Public' หรือ 'Private'",
       );
     }
 

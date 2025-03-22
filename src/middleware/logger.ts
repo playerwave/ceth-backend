@@ -13,7 +13,7 @@ const logger = winston.createLogger({
         ? `\n📌 Meta: ${JSON.stringify(meta, null, 2)}`
         : "";
       return `[${timestamp}] ${level}: ${message}${metaString}`;
-    })
+    }),
   ),
   transports: [
     new winston.transports.Console(), // ✅ แสดง Log บน Console
@@ -37,7 +37,7 @@ export const httpLogger = morgan("tiny", {
 export const requestLogger = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   logger.info(`📩 Incoming Request: ${req.method} ${req.url}`, {
     Params: req.params,
@@ -52,7 +52,7 @@ export const errorLogger = (
   error: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   logger.error("❌ Error Occurred", {
     Message: error.message,

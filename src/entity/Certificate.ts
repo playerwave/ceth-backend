@@ -5,16 +5,16 @@ import {
   ManyToOne,
   JoinColumn,
 } from "typeorm";
-import { User } from "./User";
+import { Users } from "./Users";
 
 @Entity("certificate")
 export class Certificate {
   @PrimaryGeneratedColumn()
   c_id!: number;
 
-  @ManyToOne(() => User, (user) => user.certificates)
+  @ManyToOne(() => Users, (users) => users.certificates)
   @JoinColumn({ name: "u_id" })
-  user!: User;
+  user!: Users;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   c_name?: string;

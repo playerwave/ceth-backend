@@ -7,7 +7,7 @@ export const validateDTO = (DTOClass: any): RequestHandler => {
   return async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> => {
     const dtoInstance = plainToInstance(DTOClass, req.body, {
       enableImplicitConversion: true,

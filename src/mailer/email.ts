@@ -25,13 +25,13 @@ const transporter = nodemailer.createTransport({
 export const sendMailCreateActivity = async (
   to: string,
   sub: string,
-  msg: string
+  msg: string,
 ) => {
   try {
     // ✅ ใช้ __dirname เพื่อหาพาธของไฟล์ EJS อย่างถูกต้อง
     const templatePath = path.join(
       __dirname,
-      "../mailer/template/createActivityTemplate.ejs"
+      "../mailer/template/createActivityTemplate.ejs",
     );
 
     // ✅ เช็คว่าไฟล์มีอยู่จริงก่อนอ่าน
@@ -60,17 +60,16 @@ export const sendMailCreateActivity = async (
   }
 };
 
-
 export const sendMailUpdateActivity = async (
   to: string,
   sub: string,
-  msg: string
+  msg: string,
 ) => {
   try {
     // ✅ ใช้ __dirname เพื่อหาพาธของไฟล์ EJS อย่างถูกต้อง
     const templatePath = path.join(
       __dirname,
-      "../mailer/template/updateActivityTemplate.ejs"
+      "../mailer/template/updateActivityTemplate.ejs",
     );
 
     // ✅ เช็คว่าไฟล์มีอยู่จริงก่อนอ่าน
