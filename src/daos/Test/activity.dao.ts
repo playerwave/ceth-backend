@@ -21,7 +21,7 @@ export class ActivityDao {
             throw new Error("Repository is not initialized")
         }
         try {
-            const query = "SELECT * FROM activity"
+            const query = "SELECT * FROM activity ORDER BY ac_id ASC" 
             const result = await this.activityRepository.query(query)
             return result
         } catch (error) {
