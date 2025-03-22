@@ -1,23 +1,43 @@
 import { createConnection } from "typeorm";
+import { Users } from "../entity/Users";
 import dotenv from "dotenv";
-import { User } from "../entity/User";
+import { EventCoop } from "../entity/EventCoop";
+import { Certificate } from "../entity/Certificate";
+import { Question } from "../entity/Question";
+import { Assessment } from "../entity/Assessment";
 import { Activity } from "../entity/Activity";
-
+import { ActivityAssessment } from "../entity/ActivityAssessment";
+import { UserActivity } from "../entity/UserActivity";
+import { Choice } from "../entity/Choice";
+import { UserChoice } from "../entity/UserChoice";
 dotenv.config();
 
-// ✅ ฟังก์ชันเชื่อมต่อฐานข้อมูล
 export const connectDatabase = async () => {
   try {
     const connection = await createConnection({
       type: "postgres",
-      host: process.env.HOST,
-      port: parseInt(process.env.PG_PORT || "5432"),
-      username: process.env.NAME,
-      password: process.env.PASSWORD,
-      database: process.env.DATABASENAME,
-      entities: [Activity],
-      synchronize: false,
-      logging: false, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || "5432"),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      entities: [
+        Users,
+        EventCoop,
+        Certificate,
+        Question,
+        Assessment,
+        Activity,
+        ActivityAssessment,
+        UserActivity,
+        Choice,
+        UserChoice,
+      ],
+      // synchronize: true,
+      logging: true, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error
+      ssl: {
+        rejectUnauthorized: false, //
+      },
     });
     console.log("Database connected successfully");
     return connection;

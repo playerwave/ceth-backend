@@ -15,9 +15,4 @@ router.patch("/adjustActivity/:id", async (req: Request, res: Response) => {
   await activityController.adjustStatusActivity(req, res)
 })
 
-
-
-// router.get("/tests", async (req: Request, res: Response) => {
-//   await activityController.getTest(req, res);
-// })
 export default router;
