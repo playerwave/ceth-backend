@@ -35,7 +35,7 @@ import { Activity } from "./Activity";
 //   uac_take_assessment?: boolean;
 // }
 
-@Entity("user_activity")
+@Entity("useractivity")
 export class UserActivity {
   @PrimaryGeneratedColumn()
   uac_id!: number;

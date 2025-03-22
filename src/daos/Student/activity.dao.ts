@@ -41,10 +41,10 @@ export class ActivityDao {
       const currentDate = new Date();
 
       return await this.activityRepository!.createQueryBuilder("activity")
-        .leftJoin("activity.userActivities", "user_activity")
+        .leftJoin("activity.userActivities", "useractivity")
         .where("activity.ac_status = 'Public'") // กรองกิจกรรมที่มีสถานะเป็น Public
         .andWhere(
-          "(user_activity.u_id IS NULL OR user_activity.u_id != :userId)",
+          "(useractivity.u_id IS NULL OR useractivity.u_id != :userId)",
           { userId }
         ) // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
         .andWhere(
@@ -68,7 +68,7 @@ export class ActivityDao {
       const activity = await this.activityRepository!.createQueryBuilder(
         "activity"
       )
-        .leftJoinAndSelect("activity.assessment_id", "assessment_id") // ✅ ดึง assessment ด้วย
+        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
         .where("activity.ac_id = :id", { id: activityId })
         .getOne();
 
@@ -166,8 +166,8 @@ export class ActivityDao {
       logger.info(`📌 Fetching enrolled activities for student ID: ${userId}`);
 
       return await this.activityRepository!.createQueryBuilder("activity")
-        .innerJoin("activity.userActivities", "user_activity")
-        .where("user_activity.u_id = :userId", { userId }) // ✅ กรองกิจกรรมที่นิสิตลงทะเบียน
+        .innerJoin("activity.userActivities", "useractivity")
+        .where("useractivity.u_id = :userId", { userId }) // ✅ กรองกิจกรรมที่นิสิตลงทะเบียน
         .orderBy("activity.ac_start_time", "ASC") // ✅ เรียงลำดับตามเวลาเริ่มต้น
         .getMany();
     } catch (error) {

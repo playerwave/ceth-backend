@@ -105,10 +105,14 @@ export class CreateActivityDto {
   })
   ac_room!: string;
 
-  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @ValidateIf(
+    (o) =>
+      o.ac_status === ActivityStatus.PUBLIC &&
+      o.location_type !== LocationType.COURSE
+  )
   @IsInt()
   @IsNotEmpty()
-  ac_seat!: number;
+  ac_seat?: number;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()
@@ -279,10 +283,14 @@ export class UpdateActivityDto {
   })
   ac_room!: string;
 
-  @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
+  @ValidateIf(
+    (o) =>
+      o.ac_status === ActivityStatus.PUBLIC &&
+      o.location_type !== LocationType.COURSE
+  )
   @IsInt()
   @IsNotEmpty()
-  ac_seat!: number;
+  ac_seat?: number;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsOptional()

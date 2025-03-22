@@ -105,7 +105,7 @@ export class Activity {
     onDelete: "SET NULL",
   })
   @JoinColumn({ name: "assessment_id" }) // ✅ เพิ่มบรรทัดนี้
-  assessment_id?: Assessment | null;
+  assessment?: Assessment | null;
 
   @OneToMany(() => UserActivity, (userActivity) => userActivity.activity)
   userActivities!: UserActivity[];

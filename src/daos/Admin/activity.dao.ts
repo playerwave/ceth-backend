@@ -130,7 +130,7 @@ export class ActivityDao {
 
       const existingActivity = await this.activityRepository!.findOne({
         where: { ac_id: activityId },
-        relations: ["assessment_id"], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
+        relations: ["assessment"], // ✅ โหลด relation เพื่อป้องกันปัญหาการสร้างใหม่
       });
 
       if (!existingActivity) {
@@ -204,7 +204,9 @@ export class ActivityDao {
       const activity = await this.activityRepository!.createQueryBuilder(
         "activity"
       )
-        .leftJoinAndSelect("activity.assessment_id", "assessment_id") // ✅ ดึง assessment ด้วย
+        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ใช้ชื่อ relation ที่ถูกต้อง
+        // ✅ ใช้ชื่อ relation ที่ถูกต้อง
+        // ✅ ดึง assessment ด้วย
         .where("activity.ac_id = :id", { id: activityId })
         .getOne();
 
@@ -331,9 +333,9 @@ export class ActivityDao {
       const userActivityRepository = getRepository(UserActivity);
 
       const enrolledStudents = await userActivityRepository
-        .createQueryBuilder("user_activity")
-        .innerJoin("user_activity.user", "user")
-        .innerJoin("user_activity.activity", "activity") // ✅ ต้อง join activity ก่อนถึงจะใช้เงื่อนไขได้
+        .createQueryBuilder("useractivity")
+        .innerJoin("useractivity.user", "user")
+        .innerJoin("useractivity.activity", "activity") // ✅ ต้อง join activity ก่อนถึงจะใช้เงื่อนไขได้
         .where("activity.ac_id = :activityId", { activityId }) // ✅ ใช้ชื่อ alias ที่ join มา
         .select([
           `"user"."u_id" AS id`,

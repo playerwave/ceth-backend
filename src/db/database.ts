@@ -33,7 +33,7 @@ export const connectDatabase = async () => {
         Certificate,
         Choice,
         UserChoice,
-        Question
+        Question,
       ],
       // synchronize: true,
       logging: false, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error

@@ -80,7 +80,7 @@ export class ActivityService {
 
       const newActivity = await this.activityDao.createActivityDao({
         ...activityData,
-        assessment_id: selectedAssessment,
+        assessment: selectedAssessment,
         ac_create_date: new Date(),
         ac_last_update: new Date(),
       });
