@@ -211,6 +211,19 @@ export class ActivityDao {
   //   }
   // }
 
+  async searchActivityDao(ac_name: string): Promise<Activity[]> {
+    this.checkRepository();
+
+    try {
+      const query =
+        "SELECT * FROM activity WHERE ac_name ILIKE '%' || $1 || '%' ORDER BY ac_id ASC";
+      return await this.activityRepository!.query(query, [ac_name]);
+    } catch (error) {
+      logger.error(`❌ Error in searchActivity:`, error);
+      throw new Error(`Error fetching activities: ${error}`);
+    }
+  }
+
   async unEnrollActivityDao(
     userId: number,
     activityId: number

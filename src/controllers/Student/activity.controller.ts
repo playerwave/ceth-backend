@@ -94,6 +94,29 @@ export class ActivityController {
     }
   }
 
+  async searchActivityController(req: Request, res: Response): Promise<void> {
+    try {
+      const { ac_name } = req.query;
+      if (!ac_name) {
+        res.status(400).json({ error: "Missing 'ac_name' parameter" });
+        return;
+      }
+
+      const activities = await this.activityService.searchActivityService(
+        ac_name as string
+      );
+      if (activities.length === 0) {
+        res.status(404).json({ message: "No activities found" });
+        return;
+      }
+
+      res.status(200).json(activities);
+    } catch (error) {
+      logger.error("❌ Error in searchActivityController(Student)", { error });
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+
   async unEnrollActivityController(req: Request, res: Response): Promise<void> {
     try {
       const userId = parseInt(req.params.id, 10);

@@ -55,6 +55,21 @@ export class ActivityService {
     return await this.activityDao.getEnrolledActivitiesDao(u_id);
   }
 
+  async searchActivityService(ac_name: string): Promise<Activity[]> {
+    try {
+      const activities = await this.activityDao.searchActivityDao(ac_name);
+      logger.info("✅ Fetched activities by search", {
+        ac_name,
+        count: activities.length,
+      });
+
+      return activities;
+    } catch (error) {
+      logger.error("❌ Error in searchActivity(Student)", { error });
+      throw error;
+    }
+  }
+
   async unEnrollActivityService(
     userId: number,
     activityId: number

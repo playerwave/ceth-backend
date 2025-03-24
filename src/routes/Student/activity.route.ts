@@ -18,6 +18,10 @@ router.post("/student-enroll-activity/:id", (req, res, next) =>
 //     .catch(next);
 // });
 
+router.get("/searchActivity", (req, res, next) =>
+  activityController.searchActivityController(req, res).catch(next)
+);
+
 router.get("/get-activity/:id", (req, res, next) =>
   activityController.getActivityByIdController(req, res).catch(next)
 );
