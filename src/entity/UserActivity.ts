@@ -56,6 +56,9 @@ export class UserActivity {
   @Column({ type: "timestamp", nullable: true })
   uac_checkout?: Date;
 
+  @Column({ type: "varchar", length: 100, nullable: true })
+  uac_selected_food?: string; // ฟิลด์ใหม่ที่เพิ่มเข้ามา
+
   @Column({ type: "boolean", default: false })
   uac_take_assessment?: boolean;
 }
