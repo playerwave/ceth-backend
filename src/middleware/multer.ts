@@ -1,15 +1,22 @@
-import multer, { StorageEngine } from "multer";
-import { Request } from "express";
+import multer from "multer";
+import { CloudinaryStorage } from "@fluidjs/multer-cloudinary";
+import { v2 as cloudinary } from "cloudinary";
 
-// กำหนด Storage แบบ DiskStorage
-const storage: StorageEngine = multer.diskStorage({
-  filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-    cb(null, file.originalname);
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// สร้างตัวแปร upload สำหรับใช้งาน Middleware
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "your_folder_name",
+    allowed_formats: ["jpg", "png", "jpeg"],
+    // ลบ public_id ออกเพื่อให้ Cloudinary สร้างชื่อไฟล์ให้อัตโนมัติ
+  },
+});
+
 const upload = multer({ storage });
 
 export default upload;
-
