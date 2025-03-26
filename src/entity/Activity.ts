@@ -42,9 +42,9 @@ export class Activity {
   @Column({ type: "int", nullable: true }) // ✅ เปลี่ยนจาก false -> true
   ac_seat?: number;
 
-  @Column({ type: "text", nullable: true }) // ✅ รองรับ JSON string
+  @Column('varchar', { array: true, nullable: true })
   ac_food?: string[];
-
+  
   @Column({ type: "varchar", length: 50, nullable: true, default: "private" })
   ac_status?: string;
 
