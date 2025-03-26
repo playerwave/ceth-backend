@@ -61,20 +61,65 @@ export class ActivityDao {
     }
   }
 
-  async getActivityByIdDao(activityId: number): Promise<Activity | null> {
+  // async getActivityByIdDao(activityId: number): Promise<Activity | null> {
+  //   this.checkRepository();
+
+  //   try {
+  //     const activity = await this.activityRepository!.createQueryBuilder(
+  //       "activity"
+  //     )
+  //       .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
+  //       .where("activity.ac_id = :id", { id: activityId })
+  //       .getOne();
+
+  //     console.log("🟢 DAO Response:", JSON.stringify(activity, null, 2)); // ✅ ตรวจสอบข้อมูลที่ถูกดึงมา
+
+  //     return activity;
+  //   } catch (error) {
+  //     logger.error(
+  //       `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
+  //       error
+  //     );
+  //     throw new Error("Failed to get activity by id");
+  //   }
+  // }
+
+  async getActivityByIdDao(
+    activityId: number,
+    userId?: number
+  ): Promise<any | null> {
     this.checkRepository();
 
     try {
-      const activity = await this.activityRepository!.createQueryBuilder(
+      const query = this.activityRepository!.createQueryBuilder(
         "activity"
-      )
-        .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
-        .where("activity.ac_id = :id", { id: activityId })
-        .getOne();
+      ).leftJoinAndSelect("activity.assessment", "assessment");
 
-      console.log("🟢 DAO Response:", JSON.stringify(activity, null, 2)); // ✅ ตรวจสอบข้อมูลที่ถูกดึงมา
+      query.where("activity.ac_id = :id", { id: activityId });
 
-      return activity;
+      const activity = await query.getOne();
+
+      let uac_selected_food = null;
+
+      console.log("userId in getActivityByIdDao: ", userId);
+
+      if (userId) {
+        const userActivity = await getRepository(UserActivity)
+          .createQueryBuilder("userActivity")
+          .where("userActivity.ac_id = :activityId", { activityId })
+          .andWhere("userActivity.u_id = :userId", { userId })
+          .getOne();
+
+        uac_selected_food = userActivity?.uac_selected_food || null;
+
+        console.log("userActivity in getActivityByIdDao: ", userActivity);
+      }
+
+      const result = { ...activity, uac_selected_food };
+
+      console.log("🟢 DAO Response:", JSON.stringify(result, null, 2));
+
+      return result;
     } catch (error) {
       logger.error(
         `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
@@ -84,9 +129,60 @@ export class ActivityDao {
     }
   }
 
+  // async studentEnrollActivityDao(
+  //   userId: number,
+  //   activityId: number,
+  //   food?: string
+  // ): Promise<void> {
+  //   const userActivityRepository = getRepository(UserActivity);
+  //   const userRepository = getRepository(User);
+  //   const activityRepository = getRepository(Activity);
+
+  //   const user = await userRepository.findOneBy({ u_id: userId });
+  //   const activity = await activityRepository.findOneBy({ ac_id: activityId });
+
+  //   if (!user || !activity) {
+  //     throw new Error("User or activity not found.");
+  //   }
+
+  //   // ✅ ตรวจสอบว่า ac_registered_count >= ac_seat หรือไม่
+  //   if (
+  //     activity.ac_seat !== null &&
+  //     activity.ac_seat !== undefined &&
+  //     activity.ac_registered_count !== undefined &&
+  //     activity.ac_seat !== 0 &&
+  //     activity.ac_registered_count >= activity.ac_seat
+  //   ) {
+  //     throw new Error("Activity is full. Cannot register.");
+  //   }
+
+  //   const existingRegistration = await userActivityRepository.findOne({
+  //     where: { user: user, activity: activity },
+  //   });
+
+  //   if (existingRegistration) {
+  //     throw new Error("User has already registered for this activity.");
+  //   }
+
+  //   // ✅ ใช้ instance แทน `create()`
+  //   const userActivity = new UserActivity();
+  //   userActivity.user = user;
+  //   userActivity.activity = activity;
+  //   userActivity.uac_checkin = undefined;
+  //   userActivity.uac_checkout = undefined;
+  //   userActivity.uac_take_assessment = false;
+
+  //   await userActivityRepository.save(userActivity);
+
+  //   await activityRepository.update(activity.ac_id, {
+  //     ac_registered_count: () => "ac_registered_count + 1",
+  //   });
+  // }
+
   async studentEnrollActivityDao(
     userId: number,
-    activityId: number
+    activityId: number,
+    food?: string
   ): Promise<void> {
     const userActivityRepository = getRepository(UserActivity);
     const userRepository = getRepository(User);
@@ -99,7 +195,6 @@ export class ActivityDao {
       throw new Error("User or activity not found.");
     }
 
-    // ✅ ตรวจสอบว่า ac_registered_count >= ac_seat หรือไม่
     if (
       activity.ac_seat !== null &&
       activity.ac_seat !== undefined &&
@@ -118,13 +213,17 @@ export class ActivityDao {
       throw new Error("User has already registered for this activity.");
     }
 
-    // ✅ ใช้ instance แทน `create()`
+    console.log("food: ", food);
+
     const userActivity = new UserActivity();
     userActivity.user = user;
     userActivity.activity = activity;
     userActivity.uac_checkin = undefined;
     userActivity.uac_checkout = undefined;
     userActivity.uac_take_assessment = false;
+    userActivity.uac_selected_food = food || undefined; // ✅ บันทึกอาหารที่เลือก
+
+    console.log("UserActivity in studentEnrollActivityDao: ", userActivity);
 
     await userActivityRepository.save(userActivity);
 

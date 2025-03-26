@@ -27,8 +27,13 @@ export class ActivityController {
 
   async getActivityByIdController(req: Request, res: Response): Promise<void> {
     try {
+      const userId = Number(req.query.userId);
+
+      console.log("userId in getActivityByIdController: ", userId);
+
       const activity = await this.activityService.getActivityByIdService(
-        req.params.id
+        req.params.id,
+        userId
       );
       if (!activity) {
         res.status(404).json({ error: "Activity not found" });
@@ -49,6 +54,7 @@ export class ActivityController {
     try {
       const userId = parseInt(req.params.id, 10);
       const activityId = parseInt(req.body.activityId, 10);
+      const food = req.body.food;
 
       if (isNaN(userId) || isNaN(activityId)) {
         throw new Error("Invalid user ID or activity ID.");
@@ -56,7 +62,8 @@ export class ActivityController {
 
       const activity = await this.activityService.studentEnrollActivityService(
         userId,
-        activityId
+        activityId,
+        food
       );
 
       console.log("User successfully registered for the activity.");

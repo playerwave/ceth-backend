@@ -25,14 +25,17 @@ export class ActivityService {
     }
   }
 
-  async getActivityByIdService(activityId: string): Promise<Activity | null> {
+  async getActivityByIdService(
+    activityId: string,
+    userId?: number
+  ): Promise<Activity | null> {
     try {
       const id = parseInt(activityId, 10);
       if (isNaN(id)) {
         throw new Error("Invalid activity ID format");
       }
 
-      const activity = await this.activityDao.getActivityByIdDao(id);
+      const activity = await this.activityDao.getActivityByIdDao(id, userId);
       console.log(
         "📌 Activity Data from DAO:",
         JSON.stringify(activity, null, 2)
@@ -46,9 +49,14 @@ export class ActivityService {
 
   async studentEnrollActivityService(
     userId: number,
-    activityId: number
+    activityId: number,
+    food?: string
   ): Promise<void> {
-    await this.activityDao.studentEnrollActivityDao(userId, activityId);
+    console.log(
+      `service( userId: ${userId}, activityId: ${activityId}, food: ${food})`
+    );
+
+    await this.activityDao.studentEnrollActivityDao(userId, activityId, food);
   }
 
   async getEnrolledActivitiesService(u_id: number): Promise<Activity[]> {
