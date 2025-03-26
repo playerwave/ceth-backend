@@ -28,19 +28,6 @@ export class ActivityDao {
     }
   }
 
-  // async createActivityDao(activityData: Partial<Activity>): Promise<Activity> {
-  //   this.checkRepository();
-  //   try {
-  //     const activity = this.activityRepository!.create(activityData);
-  //     logger.info("📌 Creating activity:", activityData);
-
-  //     return await this.activityRepository!.save(activity);
-  //   } catch (error) {
-  //     logger.error("❌ Error in createActivityDao(Admin):", error);
-  //     throw new Error("Failed to create activity");
-  //   }
-  // }
-
   async createActivityDao(activityData: Partial<Activity>): Promise<Activity> {
     this.checkRepository();
     try {
@@ -65,9 +52,11 @@ export class ActivityDao {
       const savedActivity = await this.activityRepository!.save(activity);
 
       // ✅ แปลง ac_food กลับเป็น array (เผื่อ DB บันทึกเป็น JSON string)
-      savedActivity.ac_food = savedActivity.ac_food
-        ? JSON.parse(savedActivity.ac_food as unknown as string)
-        : [];
+      if (typeof savedActivity.ac_food === "string") {
+        savedActivity.ac_food = JSON.parse(savedActivity.ac_food);
+      } else if (!Array.isArray(savedActivity.ac_food)) {
+        savedActivity.ac_food = [];
+      }
 
       return savedActivity;
     } catch (error) {
