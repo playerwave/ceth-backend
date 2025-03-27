@@ -336,6 +336,7 @@ export class ActivityDao {
           `"user"."u_risk_soft" AS riskSoft`,
           `"user"."u_risk_hard" AS riskHard`,
           `"user"."u_risk_status" AS riskStatus`,
+          `"useractivity"."uac_selected_food" AS selectedFood`,
         ])
 
         .getRawMany();
@@ -343,6 +344,7 @@ export class ActivityDao {
       logger.info(
         `✅ Retrieved ${enrolledStudents.length} students for activity ${activityId}`
       );
+      console.dir(enrolledStudents, { depth: null });
       return enrolledStudents;
     } catch (error) {
       logger.error("❌ Error in getEnrolledStudentsListDao", { error });
