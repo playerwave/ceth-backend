@@ -313,8 +313,7 @@ export class UpdateActivityDto {
   )
   @IsDate()
   @Type(() => Date)
-  @IsNotEmpty()
-  @IsBefore("ac_normal_register")
+  @IsNotEmpty() 
   ac_start_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
