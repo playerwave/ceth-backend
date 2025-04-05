@@ -1,0 +1,15 @@
+# node modules (ใช้ของ container ไม่เอาของ host)
+node_modules
+npm-debug.log
+
+# build output
+dist
+build
+
+# editor/IDE
+.vscode
+.DS_Store
+
+# system
+*.swp
+.env
