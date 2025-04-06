@@ -9,6 +9,9 @@
     "resolveJsonModule": true,
     "experimentalDecorators": true,     // เปิดใช้งาน decorators
     "emitDecoratorMetadata": true,      // เปิดใช้งาน metadata reflection
+
+    "outDir": "dist",                //  build ไปไว้ที่ dist/
+    "noEmitOnError": true            //  ถ้ามี error จะไม่ build
   },
   "include": ["src/**/*"],              // รวมไฟล์ทั้งหมดในโฟลเดอร์ src
   "exclude": ["node_modules"]           // ไม่รวม node_modules
