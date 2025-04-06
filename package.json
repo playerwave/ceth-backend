@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@fluidjs/multer-cloudinary": "^1.0.4",
+    "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cloudinary": "^2.6.0",
@@ -32,6 +33,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/cookie-parser": "^1.4.8",
     "@types/cors": "^2.8.17",
     "@types/ejs": "^3.1.5",

@@ -6,6 +6,10 @@ import bodyParser from "body-parser";
 import "reflect-metadata";
 import { httpLogger, requestLogger, errorLogger } from "./middleware/logger";
 import { validationResult } from "express-validator";
+import cookieParser from "cookie-parser";
+
+//import authRoute
+import authRoute from "./routes/auth.route";
 
 //import admin routes
 // import userRoute from "./routes/Test/user.route";
@@ -32,6 +36,7 @@ app.use(
 
 // ตั้งค่า middleware สำหรับการแปลง request body เป็น JSON
 app.use(express.json());
+app.use(cookieParser());
 
 // สร้าง route พื้นฐาน
 app.get("/", (req, res) => {
@@ -51,6 +56,9 @@ const requestValidator = (req: Request, res: Response, next: NextFunction) => {
 
 // ใช้เป็น Middleware ที่ถูกต้อง
 app.use(requestValidator);
+
+//api authenticate
+app.use("/api/auth", authRoute);
 
 //api admin
 // app.use("/api/user", userRoute);
