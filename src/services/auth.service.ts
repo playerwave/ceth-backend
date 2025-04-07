@@ -7,7 +7,6 @@ import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
 import logger from "../middleware/logger";
 import { AuthRequest } from "../middleware/verifyToken";
 
-
 export default class AuthService {
   private authDao = new AuthDao();
 
@@ -15,6 +14,12 @@ export default class AuthService {
     console.log("login service: ", email);
     try {
       console.log("attemp login service");
+
+      if (email !== "unizalgroup@gmail.com") {
+        if (!email.endsWith("@go.buu.ac.th")) {
+          throw new Error("Email domain must be @go.buu.ac.th");
+        }
+      }
 
       const user = await this.authDao.findUserByEmail(email);
       if (!user) {
@@ -68,9 +73,8 @@ export default class AuthService {
     if (!userId) {
       throw new Error("Unauthorized: No user id in request");
     }
-  
+
     res.clearCookie("token");
     await this.authDao.logout(Number(userId)); // ส่ง userId เข้า DAO
   }
-  
 }

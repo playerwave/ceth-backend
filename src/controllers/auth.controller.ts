@@ -11,7 +11,7 @@ export default class AuthController {
       const { email } = req.body;
       console.log("login controller: ", email);
       const result = await this.authService.login({ email }, res);
-      res.status(200).json(result);
+      res.status(200).json({ user: result }); // ✅ ส่ง user กลับไปใน key "user"
     } catch (error) {
       logger.error("❌ Error in login (AuthController)", { error });
       res.status(400).json({ message: (error as Error).message });
