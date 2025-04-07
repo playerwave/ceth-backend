@@ -29,36 +29,102 @@ export class ActivityDao {
     }
   }
 
+  // async getStudentActivitiesDao(userId: number): Promise<Activity[]> {
+  //   this.checkRepository();
+
+  //   try {
+  //     logger.info(
+  //       "📌 Fetching all public activities that user has not registered for"
+  //     );
+
+  //     // ใช้ `new Date()` เพื่อให้เป็นเวลาปัจจุบันในการเปรียบเทียบ
+  //     const currentDate = new Date();
+
+  //     return await this.activityRepository!.createQueryBuilder("activity")
+  //       .leftJoin("activity.userActivities", "useractivity")
+  //       .where("activity.ac_status = 'Public'") // กรองกิจกรรมที่มีสถานะเป็น Public
+  //       .andWhere(
+  //         "(useractivity.u_id IS NULL OR useractivity.u_id != :userId)",
+  //         { userId }
+  //       )
+  //       // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
+  //       .andWhere(
+  //         "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL)"
+  //       ) // กรองกิจกรรมที่มีการลงทะเบียนน้อยกว่า ac_seat หรือ ac_seat เป็น NULL
+  //       .andWhere("activity.ac_end_register > :currentDate", { currentDate }) // กรองกิจกรรมที่ ac_end_register ยังไม่ผ่านวันที่ปัจจุบัน
+  //       .andWhere(
+  //         "(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)"
+  //       ) // กรองกิจกรรมที่ ac_registered_count น้อยกว่า ac_seat หรือ ac_seat เป็น NULL
+  //       .getMany();
+  //   } catch (error) {
+  //     logger.error("❌ Error in getStudentActivitiesDao(Student):", error);
+  //     throw new Error("Failed to get all activities");
+  //   }
+  // }
+
+  // async getStudentActivitiesDao(userId: number): Promise<Activity[]> {
+  //   this.checkRepository();
+
+  //   try {
+  //     logger.info(
+  //       "📌 Fetching public activities that user has NOT registered for"
+  //     );
+
+  //     const currentDate = new Date();
+
+  //     const query = this.activityRepository!.createQueryBuilder("activity")
+  //       .leftJoin("activity.userActivities", "ua", "ua.u_id = :userId", {
+  //         userId,
+  //       }) // join เฉพาะ row ที่เป็นของ userId
+  //       .where("activity.ac_status = 'Public'")
+  //       .andWhere("ua.ac_id IS NULL") // ✅ ถ้า join แล้วไม่เจอแสดงว่ายังไม่ลงทะเบียน
+  //       .andWhere(
+  //         "(activity.ac_registered_count IS NULL OR activity.ac_seat IS NULL OR activity.ac_registered_count < activity.ac_seat)"
+  //       )
+  //       .andWhere("activity.ac_end_register > :currentDate", { currentDate });
+
+  //     const activities = await query.getMany();
+
+  //     logger.info(
+  //       `✅ Found ${activities.length} activities student has NOT registered for`
+  //     );
+
+  //     return activities;
+  //   } catch (error) {
+  //     logger.error("❌ Error in getStudentActivitiesDao(Student):", error);
+  //     throw new Error("Failed to get available activities");
+  //   }
+  // }
+
   async getStudentActivitiesDao(userId: number): Promise<Activity[]> {
     this.checkRepository();
 
     try {
-      logger.info(
-        "📌 Fetching all public activities that user has not registered for"
-      );
+      logger.info(`📌 Fetching public activities for userId: ${userId}`);
 
-      // ใช้ `new Date()` เพื่อให้เป็นเวลาปัจจุบันในการเปรียบเทียบ
       const currentDate = new Date();
 
-      return await this.activityRepository!.createQueryBuilder("activity")
-        .leftJoin("activity.userActivities", "useractivity")
-        .where("activity.ac_status = 'Public'") // กรองกิจกรรมที่มีสถานะเป็น Public
+      const query = this.activityRepository!.createQueryBuilder("activity")
+        .leftJoin("activity.userActivities", "ua", "ua.u_id = :userId", {
+          userId,
+        }) // join เฉพาะ row ที่เป็นของ userId
+        .where("activity.ac_status = 'Public'")
+        .andWhere("ua.ac_id IS NULL") // ✅ ถ้า join แล้วไม่เจอแสดงว่ายังไม่ลงทะเบียน
         .andWhere(
-          "(useractivity.u_id IS NULL OR useractivity.u_id != :userId)",
-          { userId }
+          "(activity.ac_registered_count IS NULL OR activity.ac_seat IS NULL OR activity.ac_registered_count < activity.ac_seat)"
         )
-        // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
-        .andWhere(
-          "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL OR activity.ac_seat = 0)"
-        ) // กรองกิจกรรมที่มีการลงทะเบียนน้อยกว่า ac_seat หรือ ac_seat เป็น NULL หรือ 0
-        .andWhere("activity.ac_end_register > :currentDate", { currentDate }) // กรองกิจกรรมที่ ac_end_register ยังไม่ผ่านวันที่ปัจจุบัน
-        .andWhere(
-          "(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)"
-        ) // กรองกิจกรรมที่ ac_registered_count น้อยกว่า ac_seat หรือ ac_seat เป็น NULL
-        .getMany();
+        .andWhere("activity.ac_end_register > :currentDate", { currentDate });
+
+      const activities = await query.getMany();
+
+      logger.info(
+        `✅ Found ${activities.length} activities student has NOT registered for (userId: ${userId})`
+      );
+
+      return activities;
     } catch (error) {
-      logger.error("❌ Error in getAllActivities(Admin):", error);
-      throw new Error("Failed to get all activities");
+      logger.error("❌ Error in getStudentActivitiesDao(Student):", error);
+      throw new Error("Failed to get available activities");
     }
   }
 

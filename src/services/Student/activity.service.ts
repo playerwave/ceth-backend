@@ -18,6 +18,8 @@ export class ActivityService {
         }
       );
 
+      logger.info("UserID in Service: ", userId);
+
       return activities;
     } catch (error) {
       logger.error("❌ Error in getAllActivitiesService(Admin)", { error });

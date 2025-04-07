@@ -13,14 +13,18 @@ export class ActivityController {
     res: Response
   ): Promise<void> {
     try {
-      const { userId } = req.body;
+      const userId = Number(req.params.id);
+
+      console.log("typeof userId in Controller: ", typeof userId);
 
       const activities = await this.activityService.getStudentActivitiesService(
         userId
       );
       res.status(200).json(activities);
     } catch (error) {
-      logger.error("❌ Error in getAllActivitiesController(Admin)", { error });
+      logger.error("❌ Error in getStudentActivitiesController(Student)", {
+        error,
+      });
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
