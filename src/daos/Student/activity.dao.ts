@@ -46,7 +46,8 @@ export class ActivityDao {
         .andWhere(
           "(useractivity.u_id IS NULL OR useractivity.u_id != :userId)",
           { userId }
-        ) // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
+        )
+        // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
         .andWhere(
           "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL OR activity.ac_seat = 0)"
         ) // กรองกิจกรรมที่มีการลงทะเบียนน้อยกว่า ac_seat หรือ ac_seat เป็น NULL หรือ 0
