@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction, RequestHandler } from "express";
 import { activityController } from "../../controllers/Admin/activity.controller";
 import { validateDTO } from "../../middleware/validateDTO";
 import {
@@ -8,13 +8,6 @@ import {
 import upload from "../../middleware/multer";
 
 const router = Router();
-
-// router.post(
-//   "/create-activity",
-//   validateDTO(CreateActivityDto),
-//   (req, res, next) =>
-//     activityController.createActivityController(req, res).catch(next)
-// );
 
 router.post(
   "/create-activity",

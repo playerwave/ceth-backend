@@ -23,7 +23,7 @@ dotenv.config();
 
 const app = express();
 
-app.use(bodyParser.json({ limit: "10mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
 
 // ใช้ CORS
@@ -35,7 +35,6 @@ app.use(
 );
 
 // ตั้งค่า middleware สำหรับการแปลง request body เป็น JSON
-app.use(express.json());
 app.use(cookieParser());
 
 // สร้าง route พื้นฐาน
@@ -46,29 +45,32 @@ app.get("/", (req, res) => {
 app.use(httpLogger); // ใช้ HTTP Logger จาก Morgan
 app.use(requestLogger); // Log รายละเอียด Request (Params, Query, Body)
 
+// เป็น middleware ที่ใช้ตรวจสอบว่าข้อมูลที่ client ส่งมาถูกต้องไหม
 const requestValidator = (req: Request, res: Response, next: NextFunction) => {
-  try {
-    next();
-  } catch (error) {
-    next(error);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+  next();
 };
 
-// ใช้เป็น Middleware ที่ถูกต้อง
 app.use(requestValidator);
 
-//api authenticate
-app.use("/api/auth", authRoute);
 
-//api admin
+/* Router(api) */
+
+// api ของ role annonymus (usecase 6 ,7)
+app.use("/api/auth", authRoute); //api authenticate login, logout, checkAuth บลาๆ
+
+// api ของ role admin (usecase 8,9,10,11,12)
 // app.use("/api/user", userRoute);
 app.use("/api/admin/activity", adminActivityRoute);
 app.use("/api/admin/assessment", adminAssessmentRoute);
 
-//api student
+//api ของ role student (usecase 1,2,3,4,5)
 app.use("/api/student/activity", studentActivityRoute);
 
-app.use(errorLogger); // ใช้ Error Logger
+app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 
 // เชื่อมต่อ database
 connectDatabase()
