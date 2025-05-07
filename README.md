@@ -10,7 +10,7 @@
 
 - `feat`: การเพิ่มฟีเจอร์ใหม่
 - `fix`: การแก้ไข Bug ต่าง ๆ
-- `docs`: การเปลี่ยนแปลง Document
+- `docs`: การเปลี่ยนแปลง Document (หมายถึงว่าไฟล์นี้มีการ update)
 - `style`: การปรับ code style (ไม่กระทบ logic) เช่น white-space, formatting หรือ จนถึงการลืมใส่ semi-colins
 - `refactor`: การทำความสะอาดโค้ดให้อ่านง่าย เข้าใจมากยิ่งขึ้น ปรับปรุงโครงสร้างภายใน โดยไม่ได้ทำการแก้ Bug หรือ เพิ่มฟีเจอร์ต่าง ๆ ลงไป
 - `test`: เพิ่ม/แก้ test
@@ -22,6 +22,7 @@
 
 ## Naming Conventions	
 
-- ใช้ camelCase สำหรับตัวแปร/function
-- PascalCase สำหรับ class
+- ใช้ camelCase function    ตัวอย่าง เช่น  createActivity (คำแรกเป็นพิมพ์เล็กคำที่เหลือเป็นพิมพ์ใหญ่)
+- PascalCase สำหรับ class   ตัวอย่าง เช่น  Activity (ทุกคำขึ้นต้นด้วยพิมพ์ใหญ่)
+- kebab Case ใช้ตั้งชื่อไฟล์    ตัวอย่าง เช่น  activity.controller.ts (คั่นแต่ละ layer ด้วย .)
 
