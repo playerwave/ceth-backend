@@ -1,6 +1,6 @@
 import { Assessment } from "../../entity/Assessment";
 import { AssessmentDao } from "../../daos/Admin/assessment.dao";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 
 export class AssessmentService {
   private assessmentDao = new AssessmentDao();

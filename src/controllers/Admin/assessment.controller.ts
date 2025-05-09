@@ -1,6 +1,6 @@
 import { AssessmentService } from "../../services/Admin/assessment.service";
 import { Request, Response } from "express";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 
 export class AssessmentController {
   constructor(private assessmentService: AssessmentService) {}

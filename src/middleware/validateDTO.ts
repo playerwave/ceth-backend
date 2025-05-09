@@ -1,7 +1,7 @@
 import { validate } from "class-validator";
 import { Request, Response, NextFunction, RequestHandler } from "express";
 import { plainToInstance } from "class-transformer";
-import logger from "./logger";
+import logger from "../utils/logger";
 
 export const validateDTO = (DTOClass: any): RequestHandler => {
   return async (

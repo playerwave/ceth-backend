@@ -1,7 +1,7 @@
 import { Repository, getRepository } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { Activity } from "../../entity/Activity";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 import { UserActivity } from "../../entity/UserActivity";
 
 export class ActivityDao {

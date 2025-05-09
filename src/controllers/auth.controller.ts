@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import AuthService from "../services/auth.service";
 import { AuthRequest } from "../middleware/verifyToken";
-import logger from "../middleware/logger";
+import logger from "../utils/logger";
 
 export default class AuthController {
   constructor(private authService: AuthService) {}

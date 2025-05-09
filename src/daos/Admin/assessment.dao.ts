@@ -1,7 +1,7 @@
 import { Repository } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { Assessment } from "../../entity/Assessment";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 
 export class AssessmentDao {
   private assessmentRepository: Repository<Assessment> | null = null;

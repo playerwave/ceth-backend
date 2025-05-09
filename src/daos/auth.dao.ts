@@ -2,7 +2,7 @@
 import { Repository } from "typeorm";
 import { connectDatabase } from "../db/database";
 import { User } from "../entity/User";
-import logger from "../middleware/logger";
+import logger from "../utils/logger";
 
 export class AuthDao {
   private userRepository: Repository<User> | null = null;

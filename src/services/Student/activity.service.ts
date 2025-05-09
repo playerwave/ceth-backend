@@ -1,6 +1,6 @@
 import { Activity } from "../../entity/Activity";
 import { ActivityDao } from "../../daos/Student/activity.dao";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 import dayjs from "dayjs";
 
 export class ActivityService {

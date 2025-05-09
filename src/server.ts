@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { connectDatabase } from "./db/database";
 import bodyParser from "body-parser";
 import "reflect-metadata";
-import { httpLogger, requestLogger, errorLogger } from "./middleware/logger";
+import { httpLogger, requestLogger, errorLogger } from "./utils/logger";
 import { validationResult } from "express-validator";
 import cookieParser from "cookie-parser";
 
@@ -44,7 +44,6 @@ app.get("/", (req, res) => {
 
 app.use(httpLogger); // ใช้ HTTP Logger จาก Morgan
 app.use(requestLogger); // Log รายละเอียด Request (Params, Query, Body)
-
 
 /* Router(api) */
 

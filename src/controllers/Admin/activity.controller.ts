@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { ActivityService } from "../../services/Admin/activity.service";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 
 export class ActivityController {
   constructor(private activityService: ActivityService) {}

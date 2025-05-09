@@ -3,7 +3,7 @@ import { ActivityService } from "../../services/Student/activity.service";
 import { UserActivity } from "../../entity/UserActivity";
 import { Activity } from "../../entity/Activity";
 import { getRepository } from "typeorm";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 
 export class ActivityController {
   constructor(private activityService: ActivityService) {}

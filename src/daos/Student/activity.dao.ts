@@ -3,7 +3,7 @@ import { connectDatabase } from "../../db/database";
 import { UserActivity } from "../../entity/UserActivity";
 import { Activity } from "../../entity/Activity";
 import { User } from "../../entity/User";
-import logger from "../../middleware/logger";
+import logger from "../../utils/logger";
 
 export class ActivityDao {
   private activityRepository: Repository<Activity> | null = null;

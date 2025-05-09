@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { Response, Request } from "express";
 import { AuthDao } from "../daos/auth.dao";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
-import logger from "../middleware/logger";
+import logger from "../utils/logger";
 import { AuthRequest } from "../middleware/verifyToken";
 
 export default class AuthService {
