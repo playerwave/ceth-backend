@@ -144,4 +144,14 @@ export class ActivityController extends ErrorHandledController {
 }
 
 const activityService = new ActivityService();
-export const activityController = new ActivityController(activityService);
+const controller = new ActivityController(activityService);
+
+export const activityController = {
+  create: controller.create.bind(controller),
+  update: controller.update.bind(controller),
+  delete: controller.delete.bind(controller),
+  getAll: controller.getAll.bind(controller),
+  getById: controller.getById.bind(controller),
+  search: controller.search.bind(controller),
+  getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
+};
