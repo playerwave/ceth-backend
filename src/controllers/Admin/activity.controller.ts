@@ -122,8 +122,25 @@ export class ActivityController {
     try {
       const activities = await this.activityService.getAllActivitiesService();
       res.status(200).json(activities);
-    } catch (error) {
-      logger.error("❌ Error in getAllActivitiesController(Admin)", { error });
+    } catch (error: unknown) {
+      // logger.error("❌ Error in getAllActivitiesController(Admin)", {
+      //   message: error.message,
+      //   stack: error.stack,
+      // });
+      // res.status(500).json({ error: "Internal Server Error" });
+      if (error instanceof Error) {
+        logger.error(
+          `❌ Error in getAllActivitiesController(Admin) >> ${error.message}`,
+          {
+            stack: error.stack,
+          }
+        );
+      } else {
+        logger.error("❌ Unknown Error", {
+          raw: error,
+        });
+      }
+
       res.status(500).json({ error: "Internal Server Error" });
     }
   }

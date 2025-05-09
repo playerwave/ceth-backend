@@ -45,17 +45,6 @@ app.get("/", (req, res) => {
 app.use(httpLogger); // ใช้ HTTP Logger จาก Morgan
 app.use(requestLogger); // Log รายละเอียด Request (Params, Query, Body)
 
-// เป็น middleware ที่ใช้ตรวจสอบว่าข้อมูลที่ client ส่งมาถูกต้องไหม
-const requestValidator = (req: Request, res: Response, next: NextFunction) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  next();
-};
-
-app.use(requestValidator);
-
 
 /* Router(api) */
 
