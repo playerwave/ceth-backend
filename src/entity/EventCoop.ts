@@ -1,20 +1,28 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
-import { User } from "./User"; // สมมติว่า entity สำหรับ user อยู่ในไฟล์ User.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+} from "typeorm";
+import { Department } from "./Department";
+import { Grade } from "./Grade";
+import { Students } from "./Students";
 
-@Entity("event_coop")
+@Entity()
 export class EventCoop {
   @PrimaryGeneratedColumn()
-  e_id!: number;
+  eventcoop_id!: number;
 
-  @Column({ type: "varchar", length: 100, nullable: true })
-  e_department?: string;
+  @ManyToOne(() => Department, (department) => department.eventCoops)
+  department?: Department;
 
-  @Column({ type: "int", nullable: true })
-  e_grade?: number;
+  @ManyToOne(() => Grade, (grade) => grade.eventCoops)
+  grade?: Grade;
 
-  @Column({ type: "timestamp", nullable: true })
-  e_date?: Date;
+  @Column({ type: "timestamp" })
+  date?: Date;
 
-  @OneToMany(() => User, (user) => user.eventCoop)
-  users?: User[];
+  @OneToMany(() => Students, (students) => students.users)
+  students!: Students[];
 }
