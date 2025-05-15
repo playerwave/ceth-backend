@@ -4,42 +4,30 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  OneToMany,
-} from "typeorm";
-import { Assessment } from "./Assessment";
-import { UserActivity } from "./UserActivity";
+} from 'typeorm';
+import { Assessment } from './Assessment'; // Import Entity ของ Assessment ที่สร้างไว้
 
-@Entity("activity")
+@Entity('activity')
 export class Activity {
   @PrimaryGeneratedColumn()
   ac_id!: number;
 
-  @Column({
-    type: "varchar",
-    length: 255,
-    nullable: true,
-    default: "Activity Name",
-  }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'varchar', length: 255 })
   ac_name?: string;
 
-  @Column({ type: "varchar", length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255 })
   ac_company_lecturer?: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: 'varchar', length: 255 })
   ac_description?: string;
 
-  @Column({
-    type: "varchar",
-    length: 100,
-    nullable: true,
-    default: "Soft Skill",
-  })
+  @Column({ type: 'varchar', length: 100 })
   ac_type?: string;
 
-  @Column({ type: "varchar", length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100 })
   ac_room?: string;
 
-  @Column({ type: "int", nullable: true }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'int' })
   ac_seat?: number;
 
   @Column('varchar', { array: true, nullable: true })
@@ -48,65 +36,60 @@ export class Activity {
   @Column({ type: "varchar", length: 50, nullable: true, default: "private" })
   ac_status?: string;
 
-  @Column({ type: "varchar", length: 10, nullable: true })
-  ac_location_type?: string;
+  @Column({ type: 'timestamp', nullable: true })
+  ac_start_register?: Date;
 
-  @Column({ type: "varchar", length: 20, nullable: true, default: "Not Start" })
-  ac_state?: string;
-
-  @Column({ type: "timestamp", nullable: true })
-  ac_start_register?: Date | null;
-
-  @Column({ type: "timestamp", nullable: true }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'timestamp', nullable: true })
   ac_end_register?: Date;
 
-  @Column({
-    type: "timestamp",
-    nullable: true,
-    default: () => "CURRENT_TIMESTAMP",
-  })
+  @Column({ type: 'timestamp', nullable: true })
   ac_create_date?: Date;
 
-  @Column({ type: "timestamp", nullable: true, onUpdate: "CURRENT_TIMESTAMP" })
+  @Column({ type: 'timestamp', nullable: true })
   ac_last_update?: Date;
 
-  @Column({ type: "int", nullable: true, default: 0 })
+  @Column({ type: 'int', nullable: true })
   ac_registered_count?: number;
 
-  @Column({ type: "int", nullable: true, default: 0 })
+  @Column({ type: 'int', nullable: true })
   ac_attended_count?: number;
 
-  @Column({ type: "int", nullable: true, default: 0 })
+  @Column({ type: 'int', nullable: true })
   ac_not_attended_count?: number;
 
-  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'timestamp', nullable: true })
   ac_start_time?: Date;
 
-  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'timestamp', nullable: true })
   ac_end_time?: Date;
 
-  @Column({ type: "int", nullable: true, default: 0 })
-  ac_recieve_hours?: number;
-
-  @Column({ type: "varchar", nullable: true }) // ✅ เก็บเป็น binary (Base64)
-  ac_image_url?: string;
-
-  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'timestamp', nullable: true })
   ac_normal_register?: Date;
 
-  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  ac_location_type?: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  ac_state?: string;
+
+  @Column({ type: 'int', nullable: true })
+  ac_recieve_hours?: number;
+
+  @ManyToOne(() => Assessment, (assessment) => assessment.as_id, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'assessment_id' })
+  assessment?: Assessment;
+
+  @Column({ type: 'int', nullable: true })
+  assessment_id?: number; // เพิ่มการรับค่า assessment_id
+
+  @Column({ type: 'timestamp', nullable: true })
   ac_start_assessment?: Date;
 
-  @Column({ type: "timestamp", nullable: true, default: null }) // ✅ เปลี่ยนจาก false -> true
+  @Column({ type: 'timestamp', nullable: true })
   ac_end_assessment?: Date;
 
-  @ManyToOne(() => Assessment, (assessment) => assessment.activities, {
-    nullable: true,
-    onDelete: "SET NULL",
-  })
-  @JoinColumn({ name: "assessment_id" }) // ✅ เพิ่มบรรทัดนี้
-  assessment?: Assessment | null;
-
-  @OneToMany(() => UserActivity, (userActivity) => userActivity.activity)
-  userActivities!: UserActivity[];
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  ac_image_url?: string;
 }

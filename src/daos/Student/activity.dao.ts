@@ -17,15 +17,15 @@ export class ActivityDao {
     try {
       const connection = await connectDatabase();
       this.activityRepository = connection.getRepository(Activity);
-      console.log("✅ Activity Repository initialized");
+      console.log('✅ Activity Repository initialized');
     } catch (error) {
-      console.error("❌ Error initializing ActivityDao(Admin):", error);
+      console.error('❌ Error initializing ActivityDao(Admin):', error);
     }
   }
 
   private checkRepository(): void {
     if (!this.activityRepository) {
-      throw new Error("Database connection is not established");
+      throw new Error('Database connection is not established');
     }
   }
 
@@ -34,7 +34,7 @@ export class ActivityDao {
 
     try {
       logger.info(
-        "📌 Fetching all public activities that user has not registered for"
+        '📌 Fetching all public activities that user has not registered for',
       );
 
       // ใช้ `new Date()` เพื่อให้เป็นเวลาปัจจุบันในการเปรียบเทียบ
@@ -48,11 +48,11 @@ export class ActivityDao {
           { userId }
         ) // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
         .andWhere(
-          "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL OR activity.ac_seat = 0)"
+          '(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL OR activity.ac_seat = 0)',
         ) // กรองกิจกรรมที่มีการลงทะเบียนน้อยกว่า ac_seat หรือ ac_seat เป็น NULL หรือ 0
-        .andWhere("activity.ac_end_register > :currentDate", { currentDate }) // กรองกิจกรรมที่ ac_end_register ยังไม่ผ่านวันที่ปัจจุบัน
+        .andWhere('activity.ac_end_register > :currentDate', { currentDate }) // กรองกิจกรรมที่ ac_end_register ยังไม่ผ่านวันที่ปัจจุบัน
         .andWhere(
-          "(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)"
+          '(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)',
         ) // กรองกิจกรรมที่ ac_registered_count น้อยกว่า ac_seat หรือ ac_seat เป็น NULL
         .getMany();
     } catch (error) {

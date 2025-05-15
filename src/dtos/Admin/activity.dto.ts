@@ -14,36 +14,36 @@ import {
   registerDecorator,
   Min,
   IsArray,
-} from "class-validator";
-import { Type, Transform } from "class-transformer";
+} from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 // ✅ ENUM สำหรับ ac_status และ ac_type
 export enum ActivityStatus {
-  PUBLIC = "Public",
-  PRIVATE = "Private",
+  PUBLIC = 'Public',
+  PRIVATE = 'Private',
 }
 
 export enum ActivityType {
-  HARD_SKILL = "Hard Skill",
-  SOFT_SKILL = "Soft Skill",
-  NULL = "",
+  HARD_SKILL = 'Hard Skill',
+  SOFT_SKILL = 'Soft Skill',
+  NULL = '',
 }
 
 export enum LocationType {
-  ONSITE = "Onsite",
-  ONLINE = "Online",
-  COURSE = "Course",
+  ONSITE = 'Onsite',
+  ONLINE = 'Online',
+  COURSE = 'Course',
 }
 
 // create
 
 export function IsBefore(
   property: string,
-  validationOptions?: ValidationOptions
+  validationOptions?: ValidationOptions,
 ) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
-      name: "isBefore",
+      name: 'isBefore',
       target: object.constructor,
       propertyName: propertyName,
       constraints: [property],
@@ -91,13 +91,13 @@ export class CreateActivityDto {
   ac_location_type!: LocationType;
 
   @Transform(({ value, obj }) => {
-    if (obj.ac_location_type !== LocationType.ONSITE) return "";
+    if (obj.ac_location_type !== LocationType.ONSITE) return '';
     return value;
   })
   @ValidateIf(
     (o) =>
       o.ac_location_type === LocationType.ONSITE &&
-      o.ac_status === ActivityStatus.PUBLIC
+      o.ac_status === ActivityStatus.PUBLIC,
   )
   @IsString()
   @IsNotEmpty({
@@ -131,47 +131,47 @@ export class CreateActivityDto {
   // ✅ ตรวจสอบเฉพาะเมื่อ `ac_status` เป็น Public
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_normal_register")
+  @IsBefore('ac_normal_register')
   ac_start_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_end_register")
+  @IsBefore('ac_end_register')
   ac_normal_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_start_time")
+  @IsBefore('ac_start_time')
   ac_end_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_end_time")
+  @IsBefore('ac_end_time')
   ac_start_time!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -216,15 +216,15 @@ export class CreateActivityDto {
   // ✅ ถ้า `ac_status` เป็น Public ต้องมีค่าทุกตัวที่สำคัญ
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsNotEmpty({
-    message: "ac_recieve_hours ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public",
+    message: 'ac_recieve_hours ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public',
   })
-  @Min(1, { message: "ac_recieve_hours ต้องมากกว่า 0" })
+  @Min(1, { message: 'ac_recieve_hours ต้องมากกว่า 0' })
   @IsNumber()
   ac_recieve_hours!: number;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)
@@ -233,7 +233,7 @@ export class CreateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)
@@ -269,13 +269,13 @@ export class UpdateActivityDto {
   ac_location_type!: LocationType;
 
   @Transform(({ value, obj }) => {
-    if (obj.ac_location_type !== LocationType.ONSITE) return "";
+    if (obj.ac_location_type !== LocationType.ONSITE) return '';
     return value;
   })
   @ValidateIf(
     (o) =>
       o.ac_location_type === LocationType.ONSITE &&
-      o.ac_status === ActivityStatus.PUBLIC
+      o.ac_status === ActivityStatus.PUBLIC,
   )
   @IsString()
   @IsNotEmpty({
@@ -309,7 +309,7 @@ export class UpdateActivityDto {
   // ✅ ตรวจสอบเฉพาะเมื่อ `ac_status` เป็น Public
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -318,37 +318,37 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_end_register")
+  @IsBefore('ac_end_register')
   ac_normal_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_start_time")
+  @IsBefore('ac_start_time')
   ac_end_register!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
   @IsNotEmpty()
-  @IsBefore("ac_end_time")
+  @IsBefore('ac_end_time')
   ac_start_time!: Date;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   @IsDate()
   @Type(() => Date)
@@ -393,15 +393,15 @@ export class UpdateActivityDto {
   // ✅ ถ้า `ac_status` เป็น Public ต้องมีค่าทุกตัวที่สำคัญ
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @IsNotEmpty({
-    message: "ac_recieve_hours ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public",
+    message: 'ac_recieve_hours ห้ามเป็นค่าว่างเมื่อ ac_status เป็น Public',
   })
-  @Min(1, { message: "ac_recieve_hours ต้องมากกว่า 0" })
+  @Min(1, { message: 'ac_recieve_hours ต้องมากกว่า 0' })
   @IsNumber()
   ac_recieve_hours!: number;
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)
@@ -410,7 +410,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.ac_status === ActivityStatus.PUBLIC)
   @Transform(({ value }) =>
-    typeof value === "string" ? new Date(value) : value
+    typeof value === 'string' ? new Date(value) : value,
   )
   // @IsDate()
   // @Type(() => Date)

@@ -1,13 +1,13 @@
-import { AssessmentService } from "../../services/Admin/assessment.service";
-import { Request, Response } from "express";
-import logger from "../../middleware/logger";
+import { AssessmentService } from '../../services/Admin/assessment.service';
+import { Request, Response } from 'express';
+import logger from '../../middleware/logger';
 
 export class AssessmentController {
   constructor(private assessmentService: AssessmentService) {}
 
   async getAllAssessmentsController(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<void> {
     try {
       const assessments =
@@ -15,8 +15,8 @@ export class AssessmentController {
 
       res.status(200).json(assessments);
     } catch (error) {
-      logger.error("❌ Error in getAllAssessmentsController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
+      logger.error('❌ Error in getAllAssessmentsController(Admin)', { error });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 }

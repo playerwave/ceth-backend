@@ -1,19 +1,19 @@
-import nodemailer from "nodemailer";
-import fs from "fs";
-import path from "path";
-import ejs from "ejs";
-import dotenv from "dotenv";
+import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
+import ejs from 'ejs';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
 // ✅ ตรวจสอบว่า EMAIL_SENDER และ EMAIL_APP_PASSWORD ถูกต้องหรือไม่
 if (!process.env.EMAIL_SENDER || !process.env.EMAIL_APP_PASSWORD) {
-  console.error("❌ Missing email credentials in .env file!");
+  console.error('❌ Missing email credentials in .env file!');
 }
 
 // ✅ สร้าง transporter โดยใช้ข้อมูลจาก .env
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
+  host: 'smtp.gmail.com',
   port: 465,
   secure: true,
   auth: {
@@ -25,24 +25,24 @@ const transporter = nodemailer.createTransport({
 export const sendMailCreateActivity = async (
   to: string,
   sub: string,
-  msg: string
+  msg: string,
 ) => {
   try {
     // ✅ ใช้ __dirname เพื่อหาพาธของไฟล์ EJS อย่างถูกต้อง
     const templatePath = path.join(
       __dirname,
-      "../mailer/template/createActivityTemplate.ejs"
+      '../mailer/template/createActivityTemplate.ejs',
     );
 
     // ✅ เช็คว่าไฟล์มีอยู่จริงก่อนอ่าน
     if (!fs.existsSync(templatePath)) {
-      console.error("❌ EJS Template file not found at:", templatePath);
+      console.error('❌ EJS Template file not found at:', templatePath);
       return;
     }
 
     // ✅ อ่านไฟล์ EJS แล้วแปลงเป็น HTML
-    const emailHtml = ejs.render(fs.readFileSync(templatePath, "utf-8"), {
-      name: "John Doe",
+    const emailHtml = ejs.render(fs.readFileSync(templatePath, 'utf-8'), {
+      name: 'John Doe',
       message: msg, // ✅ เพิ่ม message เข้าไป
     });
 
@@ -54,34 +54,33 @@ export const sendMailCreateActivity = async (
       html: emailHtml, // ✅ ใช้ emailHtml ที่ render มาแล้ว
     });
 
-    console.log("✅ Email sent successfully to", to);
+    console.log('✅ Email sent successfully to', to);
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    console.error('❌ Error sending email:', error);
   }
 };
-
 
 export const sendMailUpdateActivity = async (
   to: string,
   sub: string,
-  msg: string
+  msg: string,
 ) => {
   try {
     // ✅ ใช้ __dirname เพื่อหาพาธของไฟล์ EJS อย่างถูกต้อง
     const templatePath = path.join(
       __dirname,
-      "../mailer/template/updateActivityTemplate.ejs"
+      '../mailer/template/updateActivityTemplate.ejs',
     );
 
     // ✅ เช็คว่าไฟล์มีอยู่จริงก่อนอ่าน
     if (!fs.existsSync(templatePath)) {
-      console.error("❌ EJS Template file not found at:", templatePath);
+      console.error('❌ EJS Template file not found at:', templatePath);
       return;
     }
 
     // ✅ อ่านไฟล์ EJS แล้วแปลงเป็น HTML
-    const emailHtml = ejs.render(fs.readFileSync(templatePath, "utf-8"), {
-      name: "John Doe",
+    const emailHtml = ejs.render(fs.readFileSync(templatePath, 'utf-8'), {
+      name: 'John Doe',
       message: msg, // ✅ เพิ่ม message เข้าไป
     });
 
@@ -93,8 +92,8 @@ export const sendMailUpdateActivity = async (
       html: emailHtml, // ✅ ใช้ emailHtml ที่ render มาแล้ว
     });
 
-    console.log("✅ Email sent successfully to", to);
+    console.log('✅ Email sent successfully to', to);
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    console.error('❌ Error sending email:', error);
   }
 };

@@ -14,7 +14,6 @@ import { UserChoice } from "../entity/UserChoice";
 
 dotenv.config();
 
-// ✅ ฟังก์ชันเชื่อมต่อฐานข้อมูล
 export const connectDatabase = async () => {
   try {
     const connection = await createConnection({
@@ -44,7 +43,7 @@ export const connectDatabase = async () => {
     console.log("Database connected successfully");
     return connection;
   } catch (error) {
-    console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล: ", error);
-    throw new Error("การเชื่อมต่อฐานข้อมูลล้มเหลว");
+    console.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล: ', error);
+    throw new Error('การเชื่อมต่อฐานข้อมูลล้มเหลว');
   }
 };

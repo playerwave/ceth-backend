@@ -1,12 +1,12 @@
 import {
   Entity,
-  ManyToOne,
   PrimaryGeneratedColumn,
   Column,
+  ManyToOne,
   JoinColumn,
-} from "typeorm";
-import { User } from "./User";
-import { Activity } from "./Activity";
+} from 'typeorm';
+import { Users } from './Users'; // Import Entity ของ User ที่สร้างไว้
+import { Activity } from './Activity'; // Import Entity ของ Activity ที่สร้างไว้
 
 // @Entity("user_activity")
 // export class UserActivity {
@@ -39,21 +39,23 @@ import { Activity } from "./Activity";
 export class UserActivity {
   @PrimaryGeneratedColumn()
   uac_id!: number;
+  uac_id!: number;
 
   @ManyToOne(() => User, (user) => user.userActivities, { onDelete: "CASCADE" })
   @JoinColumn({ name: "u_id" })
   user!: User;
 
-  @ManyToOne(() => Activity, (activity) => activity.userActivities, {
-    onDelete: "CASCADE",
+  @ManyToOne(() => Activity, (activity) => activity.ac_id, {
+    onUpdate: 'NO ACTION',
+    onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: "ac_id" })
+  @JoinColumn({ name: 'ac_id' })
   activity!: Activity;
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   uac_checkin?: Date;
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   uac_checkout?: Date;
 
   @Column({ type: "varchar", length: 100, nullable: true })
