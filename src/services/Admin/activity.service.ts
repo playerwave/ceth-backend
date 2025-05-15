@@ -7,9 +7,9 @@ import logger from '../../middleware/logger';
 import dayjs from 'dayjs';
 import { v2 as cloudinary } from 'cloudinary';
 
-export class ActivityService {
-  private activityDao = new ActivityDao();
-  private assessmentDao = new AssessmentDao();
+// export class ActivityService {
+//   private activityDao = new ActivityDao();
+//   private assessmentDao = new AssessmentDao();
 
   // ✅ สร้างกิจกรรมใหม่
   async createActivityService(
@@ -20,7 +20,7 @@ export class ActivityService {
         activityData,
       });
 
-      let selectedAssessment: Assessment | null = null;
+//       let selectedAssessment: Assessment | null = null;
 
       // ตรวจสอบ assessment_id และดึงข้อมูล Assessment
       if (activityData.assessment_id) {
@@ -51,7 +51,7 @@ export class ActivityService {
         const startTime = dayjs(activityData.ac_start_time);
         const endTime = dayjs(activityData.ac_end_time);
 
-        activityData.ac_recieve_hours = endTime.hour() - startTime.hour();
+//         activityData.ac_recieve_hours = endTime.hour() - startTime.hour();
 
         console.log(
           '✅ คำนวณ ac_recieve_hours:',
@@ -120,11 +120,11 @@ export class ActivityService {
         logger.info('📸 New image detected, updating image...');
       }
 
-      // ✅ อัปเดต Activity
-      const updatedActivity = await this.activityDao.updateActivityDao(id, {
-        ...activityData,
-        ac_last_update: new Date(),
-      });
+//       // ✅ อัปเดต Activity
+//       const updatedActivity = await this.activityDao.updateActivityDao(id, {
+//         ...activityData,
+//         ac_last_update: new Date(),
+//       });
 
       logger.info('✅ Activity updated successfully', {
         activityId: id,
@@ -163,11 +163,11 @@ export class ActivityService {
     }
   }
 
-  // ✅ ดึงรายการกิจกรรมทั้งหมด (รองรับ Pagination)
-  async getAllActivitiesService(): Promise<Activity[]> {
-    try {
-      // ✅ ดึงข้อมูลจาก DAO
-      const activities = await this.activityDao.getAllActivitiesDao();
+//   // ✅ ดึงรายการกิจกรรมทั้งหมด (รองรับ Pagination)
+//   async getAllActivitiesService(): Promise<Activity[]> {
+//     try {
+//       // ✅ ดึงข้อมูลจาก DAO
+//       const activities = await this.activityDao.getAllActivitiesDao();
 
       logger.info('✅ Fetched all activities', {
         total: activities.length,

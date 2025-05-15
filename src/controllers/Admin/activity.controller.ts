@@ -2,41 +2,41 @@ import { Request, Response } from 'express';
 import { ActivityService } from '../../services/Admin/activity.service';
 import logger from '../../middleware/logger';
 
-export class ActivityController {
-  constructor(private activityService: ActivityService) {}
+// export class ActivityController {
+//   constructor(private activityService: ActivityService) {}
 
   async createActivityController(req: Request, res: Response): Promise<void> {
     try {
       let imageUrl = req.body.ac_image_url || ''; // ✅ ใช้ค่าที่ได้มาหรือกำหนดค่าเริ่มต้น
 
-      const activityData = {
-        ...req.body,
-        ac_image_url: imageUrl,
+//       const activityData = {
+//         ...req.body,
+//         ac_image_url: imageUrl,
 
-        // ✅ ตรวจสอบค่าตัวเลข ห้ามเป็น ""
-        assessment_id: req.body.assessment_id
-          ? !isNaN(Number(req.body.assessment_id))
-            ? parseInt(req.body.assessment_id, 10)
-            : null
-          : null,
+//         // ✅ ตรวจสอบค่าตัวเลข ห้ามเป็น ""
+//         assessment_id: req.body.assessment_id
+//           ? !isNaN(Number(req.body.assessment_id))
+//             ? parseInt(req.body.assessment_id, 10)
+//             : null
+//           : null,
 
-        ac_seat: req.body.ac_seat
-          ? !isNaN(Number(req.body.ac_seat))
-            ? parseInt(req.body.ac_seat, 10)
-            : null
-          : null,
+//         ac_seat: req.body.ac_seat
+//           ? !isNaN(Number(req.body.ac_seat))
+//             ? parseInt(req.body.ac_seat, 10)
+//             : null
+//           : null,
 
-        ac_registered_count: req.body.ac_registered_count
-          ? !isNaN(Number(req.body.ac_registered_count))
-            ? parseInt(req.body.ac_registered_count, 10)
-            : 0
-          : 0,
+//         ac_registered_count: req.body.ac_registered_count
+//           ? !isNaN(Number(req.body.ac_registered_count))
+//             ? parseInt(req.body.ac_registered_count, 10)
+//             : 0
+//           : 0,
 
-        ac_attended_count: req.body.ac_attended_count
-          ? !isNaN(Number(req.body.ac_attended_count))
-            ? parseInt(req.body.ac_attended_count, 10)
-            : 0
-          : 0,
+//         ac_attended_count: req.body.ac_attended_count
+//           ? !isNaN(Number(req.body.ac_attended_count))
+//             ? parseInt(req.body.ac_attended_count, 10)
+//             : 0
+//           : 0,
 
         ac_not_attended_count: req.body.ac_not_attended_count
           ? !isNaN(Number(req.body.ac_not_attended_count))
@@ -145,14 +145,14 @@ export class ActivityController {
     }
   }
 
-  // ✅ ค้นหากิจกรรม
-  async searchActivityController(req: Request, res: Response): Promise<void> {
-    try {
-      const { ac_name } = req.query;
-      if (!ac_name) {
-        res.status(400).json({ error: "Missing 'ac_name' parameter" });
-        return;
-      }
+//   // ✅ ค้นหากิจกรรม
+//   async searchActivityController(req: Request, res: Response): Promise<void> {
+//     try {
+//       const { ac_name } = req.query;
+//       if (!ac_name) {
+//         res.status(400).json({ error: "Missing 'ac_name' parameter" });
+//         return;
+//       }
 
       const activities = await this.activityService.searchActivityService(
         ac_name as string,
@@ -194,6 +194,6 @@ export class ActivityController {
   }
 }
 
-// ✅ สร้าง Instance ของ Controller
-const activityService = new ActivityService();
-export const activityController = new ActivityController(activityService);
+// // ✅ สร้าง Instance ของ Controller
+// const activityService = new ActivityService();
+// export const activityController = new ActivityController(activityService);

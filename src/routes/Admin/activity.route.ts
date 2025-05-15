@@ -7,13 +7,33 @@ import {
 } from '../../dtos/Admin/activity.dto';
 import upload from '../../middleware/multer';
 
-const router = Router();
+// const router = Router();
+
+// // router.post(
+// //   "/create-activity",
+// //   validateDTO(CreateActivityDto),
+// //   (req, res, next) =>
+// //     activityController.createActivityController(req, res).catch(next)
+// // );
 
 // router.post(
 //   "/create-activity",
+//   upload.single("ac_image_url"), // ✅ เพิ่ม Multer Middleware สำหรับอัปโหลดไฟล์
 //   validateDTO(CreateActivityDto),
+//   async (req, res, next) => {
+//     try {
+//       await activityController.createActivityController(req, res);
+//     } catch (error) {
+//       next(error);
+//     }
+//   }
+// );
+
+// router.put(
+//   "/update-activity/:id",
+//   validateDTO(UpdateActivityDto),
 //   (req, res, next) =>
-//     activityController.createActivityController(req, res).catch(next)
+//     activityController.updateActivityController(req, res).catch(next)
 // );
 
 router.post(
@@ -55,4 +75,4 @@ router.get("/get-enrolled-studentslist/:id", (req, res, next) => {
   activityController.getEnrolledStudentsListController(req, res).catch(next);
 });
 
-export default router;
+// export default router;

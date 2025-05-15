@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  ManyToOne,
   JoinColumn,
 } from 'typeorm';
 import { Users } from './Users'; // Import Entity ของ User ที่สร้างไว้
@@ -43,7 +44,7 @@ export class UserActivity {
 
   @ManyToOne(() => User, (user) => user.userActivities, { onDelete: "CASCADE" })
   @JoinColumn({ name: "u_id" })
-  user!: User;
+  user!: Users;
 
   @ManyToOne(() => Activity, (activity) => activity.ac_id, {
     onUpdate: 'NO ACTION',

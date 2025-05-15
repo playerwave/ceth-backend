@@ -4,12 +4,12 @@ import { Activity } from "../../entity/Activity";
 import logger from "../../middleware/logger";
 import { UserActivity } from "../../entity/UserActivity";
 
-export class ActivityDao {
-  private activityRepository: Repository<Activity> | null = null;
+// export class ActivityDao {
+//   private activityRepository: Repository<Activity> | null = null;
 
-  constructor() {
-    this.initializeRepository();
-  }
+//   constructor() {
+//     this.initializeRepository();
+//   }
 
   // ✅ ใช้ async function เพื่อรอการเชื่อมต่อฐานข้อมูล
   private async initializeRepository(): Promise<void> {
@@ -65,11 +65,11 @@ export class ActivityDao {
     }
   }
 
-  // async updateActivityDao(
-  //   activityId: number,
-  //   activityData: Partial<Activity>
-  // ): Promise<Activity> {
-  //   this.checkRepository();
+//   // async updateActivityDao(
+//   //   activityId: number,
+//   //   activityData: Partial<Activity>
+//   // ): Promise<Activity> {
+//   //   this.checkRepository();
 
   //   try {
   //     logger.info("🔄 Updating activity with ID:", activityId);

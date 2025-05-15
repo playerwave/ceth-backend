@@ -91,9 +91,23 @@ export class ActivityDao {
     this.checkRepository();
 
     try {
+<<<<<<< HEAD
       const query = this.activityRepository!.createQueryBuilder(
         "activity"
       ).leftJoinAndSelect("activity.assessment", "assessment");
+=======
+      const query = `
+      SELECT 
+        a.ac_id, a.ac_name, a.ac_type, a.ac_description, 
+        a.ac_start_time, a.ac_end_time, a.ac_seat, 
+        u.u_soft_hours, u.u_hard_hours
+      FROM users u
+      JOIN useractivity ua ON u.u_id = ua.u_id
+      JOIN activity a ON ua.ac_id = a.ac_id
+      WHERE u.u_id = $1
+      ORDER BY a.ac_start_time ASC;
+    `;
+>>>>>>> origin/student_dashboard
 
       query.where("activity.ac_id = :id", { id: activityId });
 
