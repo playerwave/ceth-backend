@@ -16,8 +16,8 @@ const app = express();
 const port = 3001;
 const usersService = new UsersService();
 app.use(cors({
-  origin: 'http://localhost:3000', // ปรับให้ตรงกับที่ Frontend ของคุณ
-  credentials: true, // ให้สามารถส่ง cookies ได้
+  origin: 'http://localhost:3000',
+  credentials: true, 
 }));
 
 app.use(express.urlencoded({ extended: true }));

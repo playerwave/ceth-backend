@@ -44,11 +44,6 @@ export class UsersService {
 
   initializePassport() {
     passport.use('local', new Strategy(async (username, password, cb) => {
-      console.log("username: ", username);
-      console.log("password: ", password);
-      // if (!username || !password) {
-      //   return cb("Not found Username or Password")
-      // }
       try {
         const findUsername = await this.usersDao.getUsersname(username);
         if (findUsername.length > 0) {
@@ -77,14 +72,14 @@ export class UsersService {
     }))
 
     passport.serializeUser((user: Users | any, cb) => {
-      cb(null, user.users_id);  // เก็บเฉพาะ user ID ใน session
+      cb(null, user.users_id); 
     });
 
     passport.deserializeUser(async (users_id: number, cb) => {
       try {
         const userData = await this.usersDao.getUserByID(users_id);
         if (userData && userData.length > 0) {
-          cb(null, userData[0]);  // ส่งข้อมูลผู้ใช้กลับมาที่ req.user
+          cb(null, userData[0]);
         } else {
           cb("User not found");
         }

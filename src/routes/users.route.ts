@@ -35,7 +35,7 @@ async function Admin(req: Request, res: Response, next: NextFunction): Promise<a
   const RolesUsers = users.roles_id
   const Roles = parseInt(rolesAdmin[0].roles_id, 10);
   console.log("Roles: ", Roles)
-  console.log("Type of Roles: ", typeof Roles); // ตรวจสอบประเภทของ Roles
+  console.log("Type of Roles: ", typeof Roles);
 
   if (RolesUsers === Roles) {
     return next()
@@ -128,19 +128,19 @@ router.post("/login", (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate("local", (err: any, user: Users | false, info: any) => {
     const users = req.user as Users
     if (err) {
-      return res.status(500).json({ message: "Internal server error", user: users });
+      return res.status(500).json({ message: "ไม่มีชื่อผู้ใช้นี้ในระบบ", user: users });
     }
 
     if (!user) {
-      return res.status(401).json({ message: "Login failed", user: users });
+      return res.status(401).json({ message: "เข้าสู่ระบบล้มเหลว !", user: users });
     }
 
     req.logIn(user, (err: any) => {
       if (err) {
-        return res.status(500).json({ message: "Error logging in", user: users });
+        return res.status(500).json({ message: "! เกิดข้อผิดพลาดในการเข้าสู่ระบบ", user: users });
       }
       console.log('Logged in user:', req.user); // ดูค่าของ req.user
-      return res.status(200).json({ message: "Login successful", user: users });
+      return res.status(200).json({ message: "เข้าสู่ระบบสำเร็จ !", user: users });
     });
   })(req, res, next);
 });
