@@ -28,8 +28,8 @@ export class Users {
   @JoinColumn({ name: 'roles_id' })
   roles!: Roles;
 
-  // @Column()
-  // roles_id!: number;
+  @Column()
+  roles_id!: number;
 
   @OneToMany(() => Students, (students) => students.users)
   students!: Students[];

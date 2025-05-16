@@ -14,13 +14,49 @@ const loginLimit = rateLimit({
   headers: true
 })
 
+async function Admin(req: Request, res: Response, next: NextFunction): Promise<any> {
+  const users = req.user as Users
+  if (!users || !users.roles_id) {
+    return res.status(401).json({
+      user: null,
+      notification: `Unauthorized access. Please log in.`
+    })
+  }
+
+  const rolesAdmin = await usersController.rolesAdmin(req, res);
+
+  if (!rolesAdmin) {
+    return res.status(401).json({
+      user: null,
+      notification: `Error fetching role information.`
+    });
+  }
+
+  const RolesUsers = users.roles_id
+  const Roles = parseInt(rolesAdmin[0].roles_id, 10);
+  console.log("Roles: ", Roles)
+  console.log("Type of Roles: ", typeof Roles); // ตรวจสอบประเภทของ Roles
+
+  if (RolesUsers === Roles) {
+    return next()
+  } else {
+    return req.logOut((err) => {
+      if (err) return next(err);
+      console.log(req.user)
+    });
+  }
+
+}
+
 router.get("/", (req: Request, res: Response) => {
   console.log(req.user)
+  const user = req.user as Users
+  console.log("user roles id : ", user.roles_id)
   const users = req.user as Users
   if (req.isAuthenticated()) {
     res.status(200).json({
       message: "Home Page",
-      user: users,
+      user: users.username,
       activities: [
         {
           title: "Yoga Class",
@@ -46,7 +82,7 @@ router.get("/", (req: Request, res: Response) => {
   }
 });
 
-router.get("/users", async (req: Request, res: Response) => {
+router.get("/users", Admin, async (req: Request, res: Response) => {
   const users = req.user as Users
   const getUsers = await usersController.getUsers(req, res)
   if (req.isAuthenticated()) {

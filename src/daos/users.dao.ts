@@ -74,4 +74,16 @@ export class UsersDao {
       throw new Error(`Error form Users Dao Function -> addUsers : ${error}`);
     }
   }
+
+  async rolesAdmin(): Promise<Users[]> {
+    if (!this.usersRepository) {
+      throw new Error("Repository is not initialized");
+    } try {
+      const sql = `SELECT roles_id FROM roles WHERE roles_name::text LIKE '%Admin%'`
+      const result = await this.usersRepository.query(sql)
+      return result
+    } catch (error) {
+      throw new Error(`Error form Users Dao Function -> rolesAdmin : ${error}`);
+    }
+  }
 }

@@ -12,6 +12,10 @@ export class UsersService {
     return await this.usersDao.getUsers();
   }
 
+  async rolesAdmin(): Promise<Users[]> {
+    return await this.usersDao.rolesAdmin();
+  }
+
   async register(username: string, password: string): Promise<boolean> {
     try {
       const findUsername = await this.usersDao.getUsersname(username);

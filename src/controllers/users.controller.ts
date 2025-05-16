@@ -9,6 +9,15 @@ export class UsersController {
     return xss(input);
   }
 
+  rolesAdmin = async (req: Request, res: Response): Promise<any> => {
+    try {
+      const rolesAdmin = await this.usersService.rolesAdmin();
+      return rolesAdmin
+    } catch (error) {
+      res.status(500).json(`Error fetching Users data : ${error}`);
+    }
+  };
+
   getUsers = async (req: Request, res: Response): Promise<any> => {
     try {
       const users = await this.usersService.getUsers();
