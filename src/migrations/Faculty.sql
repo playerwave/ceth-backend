@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS faculty (
+  faculty_id SERIAL PRIMARY KEY,
+  faculty_name VARCHAR(255) UNIQUE NOT NULL
+);

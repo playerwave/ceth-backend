@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS students (
+  students_id SERIAL PRIMARY KEY,
+  users_id INT NOT NULL,
+  first_name VARCHAR(255) NOT NULL,
+  last_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  risk_status VARCHAR(10) NOT NULL CHECK (risk_status IN ('Normal', 'Risk')),
+  education_status VARCHAR(20) NOT NULL CHECK (education_status IN ('Studying', 'Graduate')),
+  soft_hours INT NOT NULL DEFAULT 0,
+  hard_hours INT NOT NULL DEFAULT 0,
+  faculty_id INT NOT NULL,
+  department_id INT NOT NULL,
+  grade_id INT NOT NULL,
+  eventcoop_id INT NOT NULL,
+  CONSTRAINT fk_users FOREIGN KEY (users_id) REFERENCES users(users_id),
+  CONSTRAINT fk_faculty FOREIGN KEY (faculty_id) REFERENCES faculty(faculty_id),
+  CONSTRAINT fk_department FOREIGN KEY (department_id) REFERENCES department(department_id),
+  CONSTRAINT fk_grade FOREIGN KEY (grade_id) REFERENCES grade(grade_id),
+  CONSTRAINT fk_eventcoop FOREIGN KEY (eventcoop_id) REFERENCES eventcoop(eventcoop_id)
+);

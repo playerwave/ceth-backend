@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS grade (
+  grade_id SERIAL PRIMARY KEY,
+  level INT UNIQUE NOT NULL CHECK (level IN (1,2,3,4))
+);
