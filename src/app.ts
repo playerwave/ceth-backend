@@ -9,6 +9,8 @@ import dotenv from 'dotenv'
 import flash from 'connect-flash';
 import http, { IncomingMessage, ServerResponse } from 'http'
 import helmet from 'helmet';
+import departmentRoute from '../src/routes/department.route'
+import facultyRoute from '../src/routes/faculty.route'
 
 
 dotenv.config();
@@ -17,7 +19,7 @@ const port = 3001;
 const usersService = new UsersService();
 app.use(cors({
   origin: 'http://localhost:3000',
-  credentials: true, 
+  credentials: true,
 }));
 
 app.use(express.urlencoded({ extended: true }));
@@ -58,6 +60,8 @@ http.createServer((req: IncomingMessage, res: ServerResponse) => {
 app.use(helmet.frameguard({ action: "deny" }))
 
 app.use("/", usersRoute);
+app.use("/department", departmentRoute)
+app.use("/faculty", facultyRoute)
 
 app.listen(port, () => {
   console.log(`Server runing on port: http://localhost:${port}`);

@@ -92,13 +92,13 @@ router.get("/users", Admin, async (req: Request, res: Response) => {
       usersData: getUsers,
       notification: "The data connection was successful."
     })
-  } else[
+  } else {
     res.status(401).json({
       page: "Users Page",
       user: null,
       notification: `Error fetching Users data`
     })
-  ]
+  }
 })
 
 router.get("/logout", (req: Request, res: Response, next: NextFunction) => {
