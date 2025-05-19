@@ -60,15 +60,15 @@ router.get("/data", Admin, async (req: Request, res: Response) => {
     }
 })
 
-router.post("/addNameFaculty", Admin, (req: Request, res: Response) => {
+router.post("/addNameFaculty", Admin, async (req: Request, res: Response) => {
     return facultyController.addFaculty(req, res);
 });
 
-router.put("/editNameFaculty/:faculty_id", Admin, (req: Request, res: Response) => {
+router.put("/editNameFaculty/:faculty_id", Admin, async (req: Request, res: Response) => {
     return facultyController.updateFacultyByName(req, res);
 });
 
-router.delete("/deleteFaculty/:faculty_id", Admin, (req: Request, res: Response) => {
+router.delete("/deleteFaculty/:faculty_id", Admin, async (req: Request, res: Response) => {
     return facultyController.deleteFaculty(req, res)
 });
 

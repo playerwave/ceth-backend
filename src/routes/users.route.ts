@@ -48,7 +48,7 @@ async function Admin(req: Request, res: Response, next: NextFunction): Promise<a
 
 }
 
-router.get("/", (req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   console.log(req.user)
   const user = req.user as Users
   console.log("user roles id : ", user.roles_id)
@@ -101,7 +101,7 @@ router.get("/users", Admin, async (req: Request, res: Response) => {
   }
 })
 
-router.get("/logout", (req: Request, res: Response, next: NextFunction) => {
+router.get("/logout", async (req: Request, res: Response, next: NextFunction) => {
   const users = req.user as Users;
   req.logOut((err) => {
     if (err) return next(err);
@@ -110,13 +110,13 @@ router.get("/logout", (req: Request, res: Response, next: NextFunction) => {
   console.log(req.user)
 });
 
-router.get("/login", (req: Request, res: Response) => {
+router.get("/login", async (req: Request, res: Response) => {
   res.status(200).json({
     message: "Welcome to the Login Page",
   });
 });
 
-router.get("/register", (req: Request, res: Response) => {
+router.get("/register", async (req: Request, res: Response) => {
   res.status(200).json({ message: "Register Page" });
 });
 
@@ -124,7 +124,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
   await usersController.register(req, res)
 })
 
-router.post("/login", (req: Request, res: Response, next: NextFunction) => {
+router.post("/login", async (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate("local", (err: any, user: Users | false, info: any) => {
     const users = req.user as Users
     if (err) {

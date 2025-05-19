@@ -7,12 +7,12 @@ export class Grade {
   @PrimaryGeneratedColumn()
   grade_id!: number;
 
-  @Column({ type: "enum", enum: [1, 2, 3, 4] })
-  level?: number;
+  @Column({ type: 'enum', enum: [1, 2, 3, 4], unique: true })
+  level!: 1 | 2 | 3 | 4;
 
   @OneToMany(() => EventCoop, (eventCoop) => eventCoop.grade)
-  eventCoops?: EventCoop[];
+  eventCoop?: EventCoop[];
 
-  @OneToMany(() => Students, (students) => students.users)
+  @OneToMany(() => Students, (students) => students.grade)
   students!: Students[];
 }

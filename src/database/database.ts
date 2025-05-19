@@ -1,14 +1,27 @@
 import { createConnection } from "typeorm";
 import dotenv from "dotenv";
-import { Department } from "../entity/Department";
-import { EventCoop } from "../entity/EventCoop";
-import { Grade } from "../entity/Grade";
 import { Roles } from "../entity/Roles";
 import { Users } from "../entity/Users";
+import { Department } from "../entity/Department";
+import { Grade } from "../entity/Grade";
+import { EventCoop } from "../entity/EventCoop";
 import { Faculty } from "../entity/Faculty";
-import { Teacher } from "../entity/Teacher";
 import { Students } from "../entity/Students";
-
+import { Teacher } from "../entity/Teacher";
+import { Building } from "../entity/Building";
+import { Room } from "../entity/Room";
+import { Food } from "../entity/Food";
+import { ActivityFood } from "../entity/ActivityFood";
+import { QuestionType } from "../entity/QuestionType";
+import { Question } from "../entity/Question";
+import { Choice } from "../entity/Choice";
+import { SetNumber } from "../entity/SetNumber";
+import { Assessment } from "../entity/Assessment";
+import { Answer } from "../entity/Answer";
+import { Activity } from "../entity/Activity";
+import { Join } from "../entity/Join";
+import { ActivityDetail } from "../entity/ActivityDetail";
+import { Certificate } from '../entity/Certificate'
 dotenv.config();
 
 export const connectDatabase = async () => {
@@ -21,14 +34,28 @@ export const connectDatabase = async () => {
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       entities: [
-        Department,
-        EventCoop,
-        Grade,
         Roles,
-        Faculty,
         Users,
+        Department,
+        Grade,
+        EventCoop,
+        Faculty,
         Students,
         Teacher,
+        Building,
+        Room,
+        Food,
+        ActivityFood,
+        QuestionType,
+        Question,
+        Choice,
+        SetNumber,
+        Assessment,
+        Answer,
+        Activity,
+        Join,
+        ActivityDetail,
+        Certificate
       ],
       synchronize: true,
       logging: true,

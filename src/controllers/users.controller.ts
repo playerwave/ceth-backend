@@ -34,7 +34,7 @@ export class UsersController {
     try {
       const register = await this.usersService.register(usernameSanitize, passwordSanitize);
       if (register) {
-        res.status(200).json({ message: "ลงทะเบียนสำเร็จ !" });
+        res.status(201).json({ message: "ลงทะเบียนสำเร็จ !" });
       } else {
         res.status(409).json({ message: "มีผู้ใช้นี้แล้ว !" });
       }

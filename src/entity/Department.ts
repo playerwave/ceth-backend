@@ -12,21 +12,23 @@ import { Students } from "./Students";
 import { Faculty } from "./Faculty";
 
 @Entity()
-@Unique(["department_name"])
 export class Department {
   @PrimaryGeneratedColumn()
   department_id!: number;
 
-  @Column({ type: "varchar", length: 255 })
+  @Column({ type: "varchar", length: 255, unique: true })
   department_name?: string;
 
   @OneToMany(() => EventCoop, (eventCoop) => eventCoop.department)
-  eventCoops?: EventCoop[];
+  eventCoop?: EventCoop[];
 
-  @OneToMany(() => Students, (students) => students.users)
-  students!: Students[];
+  @OneToMany(() => Students, (students) => students.department)
+  students?: Students[];
 
   @ManyToOne(() => Faculty, (faculty) => faculty.department)
   @JoinColumn({ name: 'faculty_id' })
   faculty!: Faculty;
+
+  @Column()
+  faculty_id!: number;
 }

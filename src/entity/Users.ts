@@ -12,12 +12,11 @@ import { Students } from "./Students";
 import { Teacher } from "./Teacher";
 
 @Entity()
-@Unique(["username"])
 export class Users {
   @PrimaryGeneratedColumn()
   users_id!: number;
 
-  @Column({ type: "varchar", length: 255 })
+  @Column({ type: "varchar", length: 255, unique: true })
   username?: string;
 
   @Column({ type: "varchar", length: 255 })

@@ -1,11 +1,24 @@
 import { FacultyDao } from "../daos/faculty.dao";
 import { Faculty } from "../entity/Faculty";
+import redis from "../config/redis";
+import { json } from "stream/consumers";
+
 
 export class FacultyService {
     private facultyDao = new FacultyDao()
 
     async getFaculty(): Promise<Faculty[]> {
-        return await this.facultyDao.getFaculty();
+        const cacheKey = "faculty:all";
+
+        const cachedData = await redis.get(cacheKey);
+        if (cachedData) {
+            console.log("Returning cached faculty data");
+            return JSON.parse(cachedData)
+        }
+
+        const facultyData = await this.facultyDao.getFaculty();
+        await redis.set(cacheKey, JSON.stringify(facultyData), "EX", 60)
+        return facultyData
     }
 
     async addFaculty(faculty_name: string): Promise<boolean> {
@@ -16,6 +29,7 @@ export class FacultyService {
                 return false;
             } else {
                 await this.facultyDao.addFaculty(faculty_name)
+                await redis.del("faculty:all");
                 return true
             }
         } catch (error) {
@@ -31,6 +45,7 @@ export class FacultyService {
                 return false;
             } else {
                 await this.facultyDao.updateFacultyByName(faculty_id, faculty_name)
+                await redis.del("faculty:all");
                 return true
             }
         } catch (error) {
@@ -41,7 +56,7 @@ export class FacultyService {
     async deleteFaculty(faculty_id: number): Promise<boolean> {
         try {
             const result = await this.facultyDao.deleteFaculty(faculty_id);
-
+            await redis.del("faculty:all");
             if (result && result.length > 0) {
                 return true;
             } else {

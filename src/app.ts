@@ -11,6 +11,10 @@ import http, { IncomingMessage, ServerResponse } from 'http'
 import helmet from 'helmet';
 import departmentRoute from '../src/routes/department.route'
 import facultyRoute from '../src/routes/faculty.route'
+import compression from "compression";
+import sdpy from 'spdy';
+import fs from "fs";
+import path from "path";
 
 
 dotenv.config();
@@ -22,6 +26,7 @@ app.use(cors({
   credentials: true,
 }));
 
+app.use(compression());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 usersService.initializePassport();
@@ -63,6 +68,15 @@ app.use("/", usersRoute);
 app.use("/department", departmentRoute)
 app.use("/faculty", facultyRoute)
 
+const options = {
+  key: fs.readFileSync(path.join(__dirname, "certs", "server.key")),
+  cert: fs.readFileSync(path.join(__dirname, "certs", "server.crt")),
+};
+
 app.listen(port, () => {
   console.log(`Server runing on port: http://localhost:${port}`);
 });
+
+// sdpy.createServer(options, app).listen(port, () => {
+//   console.log(`HTTP/2 server running on port https://localhost:${port}`);
+// })

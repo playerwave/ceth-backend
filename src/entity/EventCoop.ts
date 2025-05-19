@@ -1,9 +1,10 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  OneToMany,
+    Entity,
+    PrimaryGeneratedColumn,
+    Column,
+    ManyToOne,
+    OneToMany,
+    JoinColumn
 } from "typeorm";
 import { Department } from "./Department";
 import { Grade } from "./Grade";
@@ -11,18 +12,26 @@ import { Students } from "./Students";
 
 @Entity()
 export class EventCoop {
-  @PrimaryGeneratedColumn()
-  eventcoop_id!: number;
+    @PrimaryGeneratedColumn()
+    eventcoop_id!: number;
 
-  @ManyToOne(() => Department, (department) => department.eventCoops)
-  department?: Department;
+    @ManyToOne(() => Department, (department) => department.eventCoop)
+    @JoinColumn({ name: 'department_id' })
+    department!: Department;
 
-  @ManyToOne(() => Grade, (grade) => grade.eventCoops)
-  grade?: Grade;
+    @Column()
+    department_id!: number;
 
-  @Column({ type: "timestamp" })
-  date?: Date;
+    @ManyToOne(() => Grade, (grade) => grade.eventCoop)
+    @JoinColumn({ name: 'grade_id' })
+    grade!: Grade;
 
-  @OneToMany(() => Students, (students) => students.users)
-  students!: Students[];
+    @Column()
+    grade_id!: number;
+
+    @Column({ type: "timestamp" })
+    date?: Date;
+
+    @OneToMany(() => Students, (students) => students.eventCoop)
+    students!: Students[];
 }

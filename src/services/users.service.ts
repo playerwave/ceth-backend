@@ -4,17 +4,41 @@ import { Users } from "../entity/Users";
 import bcrypt from 'bcrypt'
 import { Strategy } from "passport-local";
 import passport from "passport";
+import redis from "../config/redis";
 
 export class UsersService {
   private usersDao = new UsersDao();
 
   async getUsers(): Promise<Users[]> {
-    return await this.usersDao.getUsers();
+    const cacheKey = "users:all";
+
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      console.log("Returning cached users data");
+      return JSON.parse(cachedData);
+    }
+
+    const usersData = await this.usersDao.getUsers();
+    await redis.set(cacheKey, JSON.stringify(usersData), "EX", 60);
+
+    return usersData;
   }
 
   async rolesAdmin(): Promise<Users[]> {
-    return await this.usersDao.rolesAdmin();
+    const cacheKey = "roles:admin";
+
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      console.log("Returning cached rolesAdmin data");
+      return JSON.parse(cachedData);
+    }
+
+    const rolesAdminData = await this.usersDao.rolesAdmin();
+    await redis.set(cacheKey, JSON.stringify(rolesAdminData), "EX", 60);
+
+    return rolesAdminData;
   }
+
 
   async register(username: string, password: string): Promise<boolean> {
     try {
@@ -34,6 +58,7 @@ export class UsersService {
           })
         })
         await this.usersDao.addUsers(username, hash)
+        await redis.del("users:all");
         return true;
       }
 
@@ -72,7 +97,7 @@ export class UsersService {
     }))
 
     passport.serializeUser((user: Users | any, cb) => {
-      cb(null, user.users_id); 
+      cb(null, user.users_id);
     });
 
     passport.deserializeUser(async (users_id: number, cb) => {
