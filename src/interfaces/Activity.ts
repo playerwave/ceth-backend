@@ -28,4 +28,5 @@ export interface Activity {
   last_update_activity_date?: Date | null;
   url?: string | null;
   assessment_id?: number | null; // foreign key
+  room_id?: number | null;       // foreign key 
 }

@@ -5,5 +5,5 @@ export interface Room {
   floor: string;
   seat_number: number;
   building_id: number;
-  status: "ใช้งานอยู่" | "ว่าง";
+  status: "Active" | "Available";
 }

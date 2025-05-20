@@ -31,5 +31,7 @@ CREATE TABLE activity (
   last_update_activity_date TIMESTAMP DEFAULT NOW(),
   url VARCHAR(255),
   assessment_id INT,
-  CONSTRAINT fk_assessment FOREIGN KEY (assessment_id) REFERENCES assessment(assessment_id)
+  room_id INT,
+  CONSTRAINT fk_assessment FOREIGN KEY (assessment_id) REFERENCES assessment(assessment_id),
+  CONSTRAINT fk_room FOREIGN KEY (room_id) REFERENCES room(room_id)
 );
