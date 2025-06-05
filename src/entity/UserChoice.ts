@@ -1,5 +1,5 @@
 import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from "typeorm";
-import { User } from "./User"; // Import Entity ของ User ที่สร้างไว้
+import { User } from "./Users"; // Import Entity ของ User ที่สร้างไว้
 import { Choice } from "./Choice"; // Import Entity ของ Choice ที่สร้างไว้
 
 @Entity("userchoice")

@@ -2,7 +2,7 @@ import { createConnection } from "typeorm";
 import dotenv from "dotenv";
 
 //import Entity
-import { User } from "../entity/User";
+import { User } from "../entity/Users";
 import { Activity } from "../entity/Activity";
 import { Assessment } from "../entity/Assessment";
 import { UserActivity } from "../entity/UserActivity";

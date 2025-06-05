@@ -1,27 +1,36 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
-import { Activity } from "./Activity";
+
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { Join } from "./Join";
+import { SetNumber } from "./SetNumber";
 
 @Entity("assessment")
 export class Assessment {
   @PrimaryGeneratedColumn()
-  as_id!: number;
+  assessment_id!: number;
 
-  @Column({ type: "varchar", length: 255, nullable: false })
-  as_name!: string;
+  @ManyToOne(() => Join, (join) => join.assessments, { nullable: false })
+  @JoinColumn({ name: "join_id" })
+  join!: Join;
 
-  @Column({ type: "varchar", length: 100, nullable: false })
-  as_type!: string;
+  @Column({ type: "varchar", length: 255 })
+  assessment_name!: string;
 
-  @Column({ type: "text", nullable: false })
-  as_description!: string;
+  @Column({ type: "text", nullable: true })
+  description?: string;
 
-  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
-  as_create_date!: Date;
+  @Column({ type: "timestamp" })
+  create_date!: Date;
 
-  @Column({ type: "timestamp", nullable: true, onUpdate: "CURRENT_TIMESTAMP" })
-  as_last_update?: Date;
+  @Column({ type: "timestamp" })
+  last_update!: Date;
 
-  // ✅ เปลี่ยนจาก ManyToMany เป็น OneToMany
-  @OneToMany(() => Activity, (activity) => activity.assessment)
-  activities!: Activity[];
+  @Column({ type: "varchar", length: 20 })
+  assessment_status: "Not finished" | "Finished" | "Unsuccessful" = "Not finished";
+
+  @ManyToOne(() => SetNumber, (setNumber) => setNumber.assessments, { nullable: false })
+  @JoinColumn({ name: "set_number_id" })
+  set_number!: SetNumber;
+
+  @Column({ type: "varchar", length: 10, default: "Active" })
+  status: "Active" | "Inactive" = "Active";
 }

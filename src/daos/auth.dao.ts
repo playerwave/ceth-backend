@@ -1,7 +1,7 @@
 // ✅ auth.dao.ts
 import { Repository } from "typeorm";
 import { connectDatabase } from "../db/database";
-import { User } from "../entity/User";
+import { User } from "../entity/Users";
 import logger from "../utils/logger";
 
 export class AuthDao {

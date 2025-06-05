@@ -2,7 +2,7 @@ import { Repository, getRepository, Equal } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { UserActivity } from "../../entity/UserActivity";
 import { Activity } from "../../entity/Activity";
-import { User } from "../../entity/User";
+import { User } from "../../entity/Users";
 import logger from "../../utils/logger";
 
 export class ActivityDao {

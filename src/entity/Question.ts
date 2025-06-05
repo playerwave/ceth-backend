@@ -1,13 +1,27 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { QuestionType } from "./QuestionType";
+import { SetNumber } from "./SetNumber";
 
 @Entity("question")
 export class Question {
   @PrimaryGeneratedColumn()
-  q_id!: number;
+  question_id!: number;
 
-  @Column({ type: "varchar", length: 100 })
-  q_type?: string;
+  @Column("text")
+  question_text!: string;
 
-  @Column({ type: "varchar", length: 100 })
-  q_answer?: string;
+  @ManyToOne(() => QuestionType, (questionType) => questionType.questions, {
+    nullable: false,
+  })
+  @JoinColumn({ name: "question_type_id" })
+  question_type!: QuestionType;
+
+  @Column({ type: "int", nullable: false })
+  question_number!: number;
+
+  @ManyToOne(() => SetNumber, (setNumber) => setNumber.questions, {
+    nullable: false,
+  })
+  @JoinColumn({ name: "set_number_id" })
+  set_number!: SetNumber;
 }
