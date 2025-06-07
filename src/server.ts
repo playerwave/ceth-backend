@@ -9,15 +9,16 @@ import { validationResult } from "express-validator";
 import cookieParser from "cookie-parser";
 
 //import authRoute
-import authRoute from "./routes/auth.route";
+// import authRoute from "./routes/auth.route";
 
 //import admin routes
 // import userRoute from "./routes/Test/user.route";
-import adminActivityRoute from "./routes/Admin/activity.route";
-import adminAssessmentRoute from "./routes/Admin/assessment.route";
+import teacherActivityRoute from "./routes/Teacher/activity.route";
+// import adminActivityRoute from "./routes/Admin/activity.route";
+// import adminAssessmentRoute from "./routes/Admin/assessment.route";
 
 //import student routes
-import studentActivityRoute from "./routes/Student/activity.route";
+// import studentActivityRoute from "./routes/Student/activity.route";
 
 dotenv.config();
 
@@ -48,15 +49,15 @@ app.use(requestLogger); // Log รายละเอียด Request (Params, Q
 /* Router(api) */
 
 // api ของ role annonymus (usecase 6 ,7)
-app.use("/api/auth", authRoute); //api authenticate login, logout, checkAuth บลาๆ
+// app.use("/api/auth", authRoute); //api authenticate login, logout, checkAuth บลาๆ
 
 // api ของ role admin (usecase 8,9,10,11,12)
 // app.use("/api/user", userRoute);
-app.use("/api/admin/activity", adminActivityRoute);
-app.use("/api/admin/assessment", adminAssessmentRoute);
+app.use("/api/teacher/activity", teacherActivityRoute);
+// app.use("/api/admin/assessment", adminAssessmentRoute);
 
 //api ของ role student (usecase 1,2,3,4,5)
-app.use("/api/student/activity", studentActivityRoute);
+// app.use("/api/student/activity", studentActivityRoute);
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 

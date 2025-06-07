@@ -1,162 +1,162 @@
-import { Request, Response } from "express";
-import { ActivityService } from "../../services/Student/activity.service";
-import { UserActivity } from "../../entity/UserActivity";
-import { Activity } from "../../entity/Activity";
-import { getRepository } from "typeorm";
-import logger from "../../utils/logger";
+// import { Request, Response } from "express";
+// import { ActivityService } from "../../services/Student/activity.service";
+// import { UserActivity } from "../../entity/UserActivity";
+// import { Activity } from "../../entity/Activity";
+// import { getRepository } from "typeorm";
+// import logger from "../../utils/logger";
 
-export class ActivityController {
-  constructor(private activityService: ActivityService) {}
+// export class ActivityController {
+//   constructor(private activityService: ActivityService) {}
 
-  async getStudentActivitiesController(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      const userId = Number(req.params.id);
+//   async getStudentActivitiesController(
+//     req: Request,
+//     res: Response
+//   ): Promise<void> {
+//     try {
+//       const userId = Number(req.params.id);
 
-      console.log("typeof userId in Controller: ", typeof userId);
+//       console.log("typeof userId in Controller: ", typeof userId);
 
-      const activities = await this.activityService.getStudentActivitiesService(
-        userId
-      );
-      res.status(200).json(activities);
-    } catch (error) {
-      logger.error("❌ Error in getStudentActivitiesController(Student)", {
-        error,
-      });
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
+//       const activities = await this.activityService.getStudentActivitiesService(
+//         userId
+//       );
+//       res.status(200).json(activities);
+//     } catch (error) {
+//       logger.error("❌ Error in getStudentActivitiesController(Student)", {
+//         error,
+//       });
+//       res.status(500).json({ error: "Internal Server Error" });
+//     }
+//   }
 
-  async getActivityByIdController(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = Number(req.query.userId);
+//   async getActivityByIdController(req: Request, res: Response): Promise<void> {
+//     try {
+//       const userId = Number(req.query.userId);
 
-      console.log("userId in getActivityByIdController: ", userId);
+//       console.log("userId in getActivityByIdController: ", userId);
 
-      const activity = await this.activityService.getActivityByIdService(
-        req.params.id,
-        userId
-      );
-      if (!activity) {
-        res.status(404).json({ error: "Activity not found" });
-        return;
-      }
-      console.log("🔍 Activity Response:", JSON.stringify(activity, null, 2));
-      res.status(200).json(activity);
-    } catch (error) {
-      logger.error("❌ Error in getActivityByIdController(Admin)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
+//       const activity = await this.activityService.getActivityByIdService(
+//         req.params.id,
+//         userId
+//       );
+//       if (!activity) {
+//         res.status(404).json({ error: "Activity not found" });
+//         return;
+//       }
+//       console.log("🔍 Activity Response:", JSON.stringify(activity, null, 2));
+//       res.status(200).json(activity);
+//     } catch (error) {
+//       logger.error("❌ Error in getActivityByIdController(Admin)", { error });
+//       res.status(500).json({ error: "Internal Server Error" });
+//     }
+//   }
 
-  async studentEnrollActivityController(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      const userId = parseInt(req.params.id, 10);
-      const activityId = parseInt(req.body.activityId, 10);
-      const food = req.body.food;
+//   async studentEnrollActivityController(
+//     req: Request,
+//     res: Response
+//   ): Promise<void> {
+//     try {
+//       const userId = parseInt(req.params.id, 10);
+//       const activityId = parseInt(req.body.activityId, 10);
+//       const food = req.body.food;
 
-      if (isNaN(userId) || isNaN(activityId)) {
-        throw new Error("Invalid user ID or activity ID.");
-      }
+//       if (isNaN(userId) || isNaN(activityId)) {
+//         throw new Error("Invalid user ID or activity ID.");
+//       }
 
-      const activity = await this.activityService.studentEnrollActivityService(
-        userId,
-        activityId,
-        food
-      );
+//       const activity = await this.activityService.studentEnrollActivityService(
+//         userId,
+//         activityId,
+//         food
+//       );
 
-      console.log("User successfully registered for the activity.");
-      res
-        .status(200)
-        .json({ message: "Registration successful", activity: activity });
-    } catch (error) {
-      console.error("Error registering user for activity:", error);
-      res.status(500).json({ error: "Failed to register user for activity." });
-    }
-  }
+//       console.log("User successfully registered for the activity.");
+//       res
+//         .status(200)
+//         .json({ message: "Registration successful", activity: activity });
+//     } catch (error) {
+//       console.error("Error registering user for activity:", error);
+//       res.status(500).json({ error: "Failed to register user for activity." });
+//     }
+//   }
 
-  async getEnrolledActivitiesController(
-    req: Request,
-    res: Response
-  ): Promise<Response> {
-    const userId = parseInt(req.params.id, 10);
-    if (!userId) {
-      return res.status(400).json({ error: "Invalid user ID." });
-    }
-    try {
-      const result = await this.activityService.getEnrolledActivitiesService(
-        userId
-      );
+//   async getEnrolledActivitiesController(
+//     req: Request,
+//     res: Response
+//   ): Promise<Response> {
+//     const userId = parseInt(req.params.id, 10);
+//     if (!userId) {
+//       return res.status(400).json({ error: "Invalid user ID." });
+//     }
+//     try {
+//       const result = await this.activityService.getEnrolledActivitiesService(
+//         userId
+//       );
 
-      console.log("✅ Data to be sent:", JSON.stringify(result, null, 2));
+//       console.log("✅ Data to be sent:", JSON.stringify(result, null, 2));
 
-      return res
-        .status(200)
-        .header("Cache-Control", "no-store") // ✅ ปิด Cache
-        .json(result);
-    } catch (error) {
-      console.error(`❌ Error in fetchEnrolledActivities: ${error}`);
-      return res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
+//       return res
+//         .status(200)
+//         .header("Cache-Control", "no-store") // ✅ ปิด Cache
+//         .json(result);
+//     } catch (error) {
+//       console.error(`❌ Error in fetchEnrolledActivities: ${error}`);
+//       return res.status(500).json({ error: "Internal Server Error" });
+//     }
+//   }
 
-  async searchActivityController(req: Request, res: Response): Promise<void> {
-    try {
-      const { ac_name } = req.query;
-      if (!ac_name) {
-        res.status(400).json({ error: "Missing 'ac_name' parameter" });
-        return;
-      }
+//   async searchActivityController(req: Request, res: Response): Promise<void> {
+//     try {
+//       const { ac_name } = req.query;
+//       if (!ac_name) {
+//         res.status(400).json({ error: "Missing 'ac_name' parameter" });
+//         return;
+//       }
 
-      const activities = await this.activityService.searchActivityService(
-        ac_name as string
-      );
-      if (activities.length === 0) {
-        res.status(404).json({ message: "No activities found" });
-        return;
-      }
+//       const activities = await this.activityService.searchActivityService(
+//         ac_name as string
+//       );
+//       if (activities.length === 0) {
+//         res.status(404).json({ message: "No activities found" });
+//         return;
+//       }
 
-      res.status(200).json(activities);
-    } catch (error) {
-      logger.error("❌ Error in searchActivityController(Student)", { error });
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
+//       res.status(200).json(activities);
+//     } catch (error) {
+//       logger.error("❌ Error in searchActivityController(Student)", { error });
+//       res.status(500).json({ error: "Internal Server Error" });
+//     }
+//   }
 
-  async unEnrollActivityController(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = parseInt(req.params.id, 10);
-      const activityId = parseInt(req.body.activityId, 10);
+//   async unEnrollActivityController(req: Request, res: Response): Promise<void> {
+//     try {
+//       const userId = parseInt(req.params.id, 10);
+//       const activityId = parseInt(req.body.activityId, 10);
 
-      console.log(userId);
+//       console.log(userId);
 
-      if (isNaN(userId) || isNaN(activityId)) {
-        res.status(400).json({ error: "Invalid userId or activityId" });
-        return;
-      }
+//       if (isNaN(userId) || isNaN(activityId)) {
+//         res.status(400).json({ error: "Invalid userId or activityId" });
+//         return;
+//       }
 
-      const success = await this.activityService.unEnrollActivityService(
-        userId,
-        activityId
-      );
-      if (success) {
-        res
-          .status(200)
-          .json({ message: "Successfully unenrolled from activity" });
-      } else {
-        res.status(404).json({ error: "Activity registration not found" });
-      }
-    } catch (error) {
-      console.error("❌ Error in unEnrollActivityController:", error);
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
-}
+//       const success = await this.activityService.unEnrollActivityService(
+//         userId,
+//         activityId
+//       );
+//       if (success) {
+//         res
+//           .status(200)
+//           .json({ message: "Successfully unenrolled from activity" });
+//       } else {
+//         res.status(404).json({ error: "Activity registration not found" });
+//       }
+//     } catch (error) {
+//       console.error("❌ Error in unEnrollActivityController:", error);
+//       res.status(500).json({ error: "Internal Server Error" });
+//     }
+//   }
+// }
 
-const activityService = new ActivityService();
-export const activityController = new ActivityController(activityService);
+// const activityService = new ActivityService();
+// export const activityController = new ActivityController(activityService);

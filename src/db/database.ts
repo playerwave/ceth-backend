@@ -1,20 +1,33 @@
 import { createConnection } from "typeorm";
 import dotenv from "dotenv";
 
-//import Entity
-import { User } from "../entity/Users";
-import { Activity } from "../entity/Activity";
-import { Assessment } from "../entity/Assessment";
-import { UserActivity } from "../entity/UserActivity";
-import { EventCoop } from "../entity/EventCoop";
-import { Certificate } from "../entity/Certificate";
-import { Question } from "../entity/Question";
-import { Choice } from "../entity/Choice";
-import { UserChoice } from "../entity/UserChoice";
+
+//import entity
+import { Roles } from "../entity/roles.entity";
+import { Users } from "../entity/users.entity";
+import { Department } from "../entity/department.entity";
+import { Grade } from "../entity/grade.entity";
+import { EventCoop } from "../entity/eventcoop.entity";
+import { Faculty } from "../entity/faculty.entity";
+import { Students } from "../entity/students.entity";
+import { Teacher } from "../entity/teacher.entity";
+import { Building } from "../entity/building.entity";
+import { Room } from "../entity/room.entity";
+import { Food } from "../entity/food.entity";
+import { ActivityFood } from "../entity/activity.food.entity";
+import { QuestionType } from "../entity/questiontype.entity";
+import { Question } from "../entity/question.entity";
+import { Choice } from "../entity/choice.entity";
+import { SetNumber } from "../entity/setNumbers.entity";
+import { Assessment } from "../entity/assessment.entity";
+import { Answer } from "../entity/answer.entity";
+import { Activity } from "../entity/activity.entity";
+import { Join } from "../entity/join.entity";
+import { ActivityDetail } from "../entity/activitydetail.entity";
+import { Certificate } from "../entity/certificate.entity";
 
 dotenv.config();
 
-// ✅ ฟังก์ชันเชื่อมต่อฐานข้อมูล
 export const connectDatabase = async () => {
   try {
     const connection = await createConnection({
@@ -25,20 +38,33 @@ export const connectDatabase = async () => {
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       entities: [
-        User,
-        Activity,
-        Assessment,
-        UserActivity,
+        Roles,
+        Users,
+        Department,
+        Grade,
         EventCoop,
-        Certificate,
-        Choice,
-        UserChoice,
+        Faculty,
+        Students,
+        Teacher,
+        Building,
+        Room,
+        Food,
+        ActivityFood,
+        QuestionType,
         Question,
+        Choice,
+        SetNumber,
+        Assessment,
+        Answer,
+        Activity,
+        Join,
+        ActivityDetail,
+        Certificate
       ],
-      // synchronize: true,
-      logging: false, // เปิด log การเชื่อมต่อเพื่อดูข้อความ error
+      synchronize: false,
+      logging: true,
       ssl: {
-        rejectUnauthorized: false, // หากไม่ต้องการให้เกิดข้อผิดพลาดจาก certificate
+        rejectUnauthorized: false,
       },
     });
     console.log("Database connected successfully");
