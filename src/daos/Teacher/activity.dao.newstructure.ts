@@ -26,8 +26,10 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  public async createActivityDao(data: Partial<Activity>, foodIds: number[] = []): Promise<Activity>
- {
+  public async createActivityDao(
+    data: Partial<Activity>,
+    foodIds: number[] = []
+  ): Promise<Activity> {
     this.checkConnection();
 
     const queryRunner = this.dataSource!.createQueryRunner();
@@ -80,17 +82,15 @@ export class ActivityDao extends ErrorHandledDao {
 
       // Insert ActivityFood
       if (foodIds.length > 0) {
-  const values = foodIds.map(
-    (foodId) => `(${newActivity.activity_id}, ${foodId})`
-  );
-  const insertFoodSQL = `
+        const values = foodIds.map(
+          (foodId) => `(${newActivity.activity_id}, ${foodId})`
+        );
+        const insertFoodSQL = `
     INSERT INTO activity_food (activity_id, food_id)
     VALUES ${values.join(", ")}
   `;
-  await queryRunner.query(insertFoodSQL);
-}
-
-
+        await queryRunner.query(insertFoodSQL);
+      }
 
       await queryRunner.commitTransaction();
       return newActivity;
@@ -101,5 +101,41 @@ export class ActivityDao extends ErrorHandledDao {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  public async getAllActivitiesDao(): Promise<Activity[]> {
+    this.checkConnection();
+
+    const activities = await this.dataSource!.getRepository(Activity).find({
+      where: { status: "Active" }, // ดึงเฉพาะที่ยังไม่ soft delete
+      order: { create_activity_date: "DESC" },
+    });
+
+    return activities;
+  }
+
+  // ค้นหากิจกรรมตาม id
+  public async findById(id: number): Promise<Activity | null> {
+    this.checkConnection();
+
+    const result = await this.dataSource!.getRepository(Activity).findOne({
+      where: { activity_id: id },
+    });
+
+    return result;
+  }
+
+  // อัปเดตข้อมูลกิจกรรม (ใช้สำหรับ soft delete)
+  public async save(activity: Activity): Promise<Activity> {
+    this.checkConnection();
+
+    return this.dataSource!.getRepository(Activity).save(activity);
+  }
+
+  // ลบกิจกรรม (ใช้สำหรับ hard delete)
+  public async delete(id: number): Promise<void> {
+    this.checkConnection();
+
+    await this.dataSource!.getRepository(Activity).delete({ activity_id: id });
   }
 }

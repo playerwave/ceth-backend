@@ -24,8 +24,26 @@ dotenv.config();
 
 const app = express();
 
-app.use(express.json({ limit: "10mb" }));
-app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
+// app.use(express.json({ limit: "10mb" }));
+// app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
+
+// 👇 ใช้เฉพาะ method ที่ต้องมี body เท่านั้น
+app.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH"].includes(req.method)) {
+    express.json({ limit: "10mb" })(req, res, next);
+  } else {
+    next();
+  }
+});
+
+// 👇 ใช้ urlencoded เฉพาะ method ที่จำเป็น
+app.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH"].includes(req.method)) {
+    bodyParser.urlencoded({ limit: "10mb", extended: true })(req, res, next);
+  } else {
+    next();
+  }
+});
 
 // ใช้ CORS
 app.use(

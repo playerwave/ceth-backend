@@ -22,9 +22,7 @@ import upload from "../../middleware/multer";
 import { wrapAsync } from "../../utils/wrapAsync";
 
 // import DTO
-import {
-  CreateActivityDto,
-} from "../../dtos/Teacher/activity.dto";
+import { CreateActivityDto } from "../../dtos/Teacher/activity.dto";
 
 const router = Router();
 
@@ -43,14 +41,14 @@ router.post(
 //   wrapAsync(activityController.update)
 // );
 
-// // DELETE METHOD
-// router.delete("/delete-activity/:id", wrapAsync(activityController.delete));
+// DELETE METHOD
+router.delete("/delete-activity/:id", wrapAsync(activityController.delete));
 
 // // GET METHOD
 
 // // เรียกดู activity ทั้งแบบที่เป็น Public และ Private และยังไม่ถึงเวลาปิดให้ทำแบบประเมิน
 // // แต่เอาจริงน่าจะเปลี่ยนเป็นอะไรสักอย่างที่สื่อความหมายมากกว่านี้
-// router.get("/get-activities", wrapAsync(activityController.getAll));
+router.get("/get-activities", wrapAsync(activityController.getAll));
 
 // // เรียกดูรายกิจกรรม
 // router.get("/get-activity/:id", wrapAsync(activityController.getById));
