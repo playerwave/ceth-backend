@@ -1,7 +1,7 @@
 import { Repository, getRepository, Equal } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { UserActivity } from "../../entity/UserActivity";
-import { Activity } from "../../entity/Activity";
+import { Activity } from "../../entity/activity.entity";
 import { User } from "../../entity/Users";
 import logger from "../../utils/logger";
 

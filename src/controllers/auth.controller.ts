@@ -1,47 +1,47 @@
-// import { Request, Response } from "express";
-// import AuthService from "../services/auth.service";
-// import { AuthRequest } from "../middleware/verifyToken";
-// import logger from "../utils/logger";
+// src/controllers/users.controller.ts
+import { Request, Response } from "express";
+import xss from "xss";
+import { AuthService } from "../services/auth.service";
+import { ErrorHandledController } from "./error.handled.controller";
 
-// export default class AuthController {
-//   constructor(private authService: AuthService) {}
+export class AuthController extends ErrorHandledController {
+  constructor(private readonly authService: AuthService = new AuthService()) {
+    super();
+  }
 
-//   login = async (req: Request, res: Response): Promise<void> => {
-//     try {
-//       const { email } = req.body;
-//       console.log("login controller: ", email);
-//       const result = await this.authService.login({ email }, res);
-//       res.status(200).json({ user: result }); // ✅ ส่ง user กลับไปใน key "user"
-//     } catch (error) {
-//       logger.error("❌ Error in login (AuthController)", { error });
-//       res.status(400).json({ message: (error as Error).message });
-//     }
-//   };
+  public async register(req: Request, res: Response): Promise<void> {
+    try {
+      const data = this.parseUserPayload(req.body);
+      const registered = await this.authService.register(
+        data.username,
+        data.password
+      );
 
-//   checkAuth = async (req: Request, res: Response): Promise<void> => {
-//     try {
-//       const result = await this.authService.checkAuth(req);
-//       res.status(200).json(result);
-//     } catch (error) {
-//       res.status(401).json({ message: (error as Error).message });
-//     }
-//   };
+      if (!registered) {
+        res.status(409).json({ message: "มีผู้ใช้นี้แล้ว!" });
+        return;
+      }
 
-//   // logout = (_req: Request, res: Response): void => {
-//   //   this.authService.logout(res);
-//   //   res.status(200).json({ message: "Logged out successfully" });
-//   // };
+      res.status(201).json({ message: "ลงทะเบียนสำเร็จ!" });
+    } catch (error) {
+      this.handleError("UsersController.register", error, res);
+    }
+  }
 
-//   logout = async (req: AuthRequest, res: Response): Promise<void> => {
-//     try {
-//       await this.authService.logout(req, res); // ส่ง req ด้วย
-//       res.status(200).json({ message: "Logged out successfully" });
-//     } catch (error) {
-//       logger.error("❌ Error in logout (AuthController)", { error });
-//       res.status(500).json({ message: "Logout failed", error });
-//     }
-//   };
-// }
+  private parseUserPayload(body: any): {
+    username: string;
+    password: string;
+    roles_id: number;
+  } {
+    return {
+      username: xss(body.username),
+      password: xss(body.password),
+      roles_id: parseInt(xss(body.roles_id), 10),
+    };
+  }
+}
 
-// const authService = new AuthService();
-// export const authController = new AuthController(authService);
+const controller = new AuthController();
+export const authController = {
+  register: controller.register.bind(controller),
+};

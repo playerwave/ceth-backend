@@ -5,17 +5,37 @@ import { connectDatabase } from "./db/database";
 import bodyParser from "body-parser";
 import "reflect-metadata";
 import { httpLogger, requestLogger, errorLogger } from "./utils/logger";
-import { validationResult } from "express-validator";
+// import { validationResult } from "express-validator";
 import cookieParser from "cookie-parser";
+import session from "express-session";
+import passport from "passport";
+
+import { UsersService } from "./services/user.service";
 
 //import authRoute
 // import authRoute from "./routes/auth.route";
 
-//import admin routes
-// import userRoute from "./routes/Test/user.route";
+//import teacher routes
+import userRoute from "./routes/user.route";
 import teacherActivityRoute from "./routes/Teacher/activity.route";
+import teacherRoomRoute from "./routes/Teacher/room.route";
+import teacherBuildingRoute from "./routes/Teacher/building.route";
+import teacherRoute from "./routes/Teacher/teacher.route";
 // import adminActivityRoute from "./routes/Admin/activity.route";
 // import adminAssessmentRoute from "./routes/Admin/assessment.route";
+
+//import student routes
+import studentRoute from "./routes/Student/students.route";
+import studentGradeRoute from "./routes/Student/grade.route";
+
+//import visitor routes
+import visitorRoute from "./routes/user.route";
+
+// import role
+import roleRoute from "./routes/roles.route";
+
+//import department routes
+import departmentRoute from "./routes/department.route";
 
 //import student routes
 // import studentActivityRoute from "./routes/Student/activity.route";
@@ -26,6 +46,22 @@ const app = express();
 
 // app.use(express.json({ limit: "10mb" }));
 // app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
+
+// ✅ เรียก initializePassport
+const usersService = new UsersService();
+usersService.initializePassport(); // 👈 ต้องมี
+
+// ✅ ใช้ session-based auth
+app.use(
+  session({
+    secret: "secret-key",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false },
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 // 👇 ใช้เฉพาะ method ที่ต้องมี body เท่านั้น
 app.use((req, res, next) => {
@@ -70,12 +106,26 @@ app.use(requestLogger); // Log รายละเอียด Request (Params, Q
 // app.use("/api/auth", authRoute); //api authenticate login, logout, checkAuth บลาๆ
 
 // api ของ role admin (usecase 8,9,10,11,12)
-// app.use("/api/user", userRoute);
+app.use("/api/teacher/user", userRoute);
 app.use("/api/teacher/activity", teacherActivityRoute);
+app.use("/api/teacher/room", teacherRoomRoute);
+app.use("/api/teacher/building", teacherBuildingRoute);
+app.use("/api/teacher", teacherRoute);
 // app.use("/api/admin/assessment", adminAssessmentRoute);
 
 //api ของ role student (usecase 1,2,3,4,5)
-// app.use("/api/student/activity", studentActivityRoute);
+// app.use("/api/student/activity");
+app.use("/api/student", studentRoute);
+app.use("/api/student/grade", studentGradeRoute);
+
+// api ของ visitor
+app.use("/api/visitor", visitorRoute);
+
+// api ของ role
+app.use("/api/role", roleRoute);
+
+//api ของ department
+app.use("/api/department", departmentRoute);
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 

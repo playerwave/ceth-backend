@@ -114,6 +114,87 @@ export class ActivityDao extends ErrorHandledDao {
     return activities;
   }
 
+  public async updateActivityDao(
+    activity_id: number,
+    data: Partial<Activity>,
+    foodIds: number[] = []
+  ): Promise<Activity> {
+    this.checkConnection();
+
+    const queryRunner = this.dataSource!.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // ✅ อัปเดตข้อมูลกิจกรรม
+      const updateFields = [
+        "activity_name",
+        "presenter_company_name",
+        "type",
+        "description",
+        "seat",
+        "recieve_hours",
+        "event_format",
+        "special_start_register_date",
+        "start_register_date",
+        "end_register_date",
+        "start_activity_date",
+        "end_activity_date",
+        "image_url",
+        "activity_status",
+        "activity_state",
+        "status",
+        "last_update_activity_date",
+        "url",
+        "assessment_id",
+        "room_id",
+      ];
+
+      const setClause = updateFields
+        .map((field, index) => `${field} = $${index + 1}`)
+        .join(", ");
+
+      const values = updateFields.map((field) => (data as any)[field] ?? null);
+
+      await queryRunner.query(
+        `UPDATE activity SET ${setClause} WHERE activity_id = $${
+          updateFields.length + 1
+        }`,
+        [...values, activity_id]
+      );
+
+      // ✅ ลบข้อมูลอาหารเดิม
+      await queryRunner.query(
+        `DELETE FROM activity_food WHERE activity_id = $1`,
+        [activity_id]
+      );
+
+      // ✅ เพิ่มข้อมูลอาหารใหม่ (ถ้ามี)
+      if (foodIds.length > 0) {
+        const values = foodIds
+          .map((foodId) => `(${activity_id}, ${foodId})`)
+          .join(", ");
+        await queryRunner.query(
+          `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`
+        );
+      }
+
+      await queryRunner.commitTransaction();
+
+      // ✅ ดึงข้อมูลกิจกรรมล่าสุดกลับมา
+      const updated = await this.findById(activity_id);
+      if (!updated) throw new Error("ไม่พบกิจกรรมหลังอัปเดต");
+
+      return updated;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logDbError("updateActivityDao", error);
+      throw new Error("❌ Failed to update activity");
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   // ค้นหากิจกรรมตาม id
   public async findById(id: number): Promise<Activity | null> {
     this.checkConnection();

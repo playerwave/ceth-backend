@@ -7,14 +7,11 @@ import {
   RequestHandler,
 } from "express";
 
-// import controller
-// import { activityController } from "../../controllers/Admin/activity.controller";
-
 // import controller เพื่อทดสอบโครงสร้างใหม่
 import { activityController } from "../../controllers/Teacher/activity.controller.newstructure";
 
 // import validate function & middleware
-import { validateDTO } from "../../middleware/validateDTO";
+import { validateDTO } from "../../middleware/validateDTO.validator";
 import { requestValidator } from "../../middleware/requestValidator";
 import upload from "../../middleware/multer";
 
@@ -22,7 +19,8 @@ import upload from "../../middleware/multer";
 import { wrapAsync } from "../../utils/wrapAsync";
 
 // import DTO
-import { CreateActivityDto } from "../../dtos/Teacher/activity.dto";
+import { CreateActivityDto } from "../../dtos/activity/create-activity.dto";
+import { UpdateActivityDto } from "../../dtos/activity/update-activity.dto";
 
 const router = Router();
 
@@ -35,11 +33,11 @@ router.post(
 );
 
 // PUT METHOD
-// router.put(
-//   "/update-activity/:id",
-//   validateDTO(UpdateActivityDto),
-//   wrapAsync(activityController.update)
-// );
+router.put(
+  "/update-activity/:id",
+  validateDTO(UpdateActivityDto),
+  wrapAsync(activityController.update)
+);
 
 // DELETE METHOD
 router.delete("/delete-activity/:id", wrapAsync(activityController.delete));

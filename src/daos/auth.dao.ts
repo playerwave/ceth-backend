@@ -1,70 +1,71 @@
-// // ✅ auth.dao.ts
-// import { Repository } from "typeorm";
-// import { connectDatabase } from "../db/database";
-// import { Users } from "../entity/users.entity";
-// import logger from "../utils/logger";
+import { DataSource, Repository } from "typeorm";
+import { Users } from "../entity/users.entity";
+import { connectDatabase } from "../db/database";
+import { ErrorHandledDao } from "./error.handled.dao";
 
-// export class AuthDao {
-//   private userRepository: Repository<Users> | null = null;
+export class AuthDao extends ErrorHandledDao {
+  private dataSource: DataSource | null = null;
+  private usersRepository: Repository<Users> | null = null;
 
-//   constructor() {
-//     this.initializeRepository();
-//   }
+  constructor() {
+    super();
+    this.initialize();
+  }
 
-//   private async initializeRepository(): Promise<void> {
-//     try {
-//       const connection = await connectDatabase();
-//       this.userRepository = connection.getRepository(Users);
-//       console.log("✅ User Repository initialized");
-//     } catch (error) {
-//       console.error("❌ Error initializing AuthDao:", error);
-//     }
-//   }
+  private async initialize(): Promise<void> {
+    try {
+      this.dataSource = await connectDatabase();
+      this.usersRepository = this.dataSource.getRepository(Users);
+      console.log("✅ UsersDao initialized");
+    } catch (error) {
+      this.logDbError("initialize", error);
+    }
+  }
 
-//   private checkRepository(): void {
-//     if (!this.userRepository) {
-//       throw new Error("Database connection is not established");
-//     }
-//   }
+  private checkConnection(): void {
+    if (!this.dataSource?.isInitialized || !this.usersRepository) {
+      throw new Error("❌ Users repository is not initialized");
+    }
+  }
 
-//   async findUserByEmail(email: string): Promise<Users | null> {
-//     console.log("login dao");
-//     this.checkRepository();
-//     try {
-//       console.log("dao: ", email);
+  public async register(username: string, password: string): Promise<void> {
+    this.checkConnection();
+    const roles = await this.usersRepository!.query(
+      `SELECT roles_id FROM roles WHERE roles_name::text LIKE '%Student%'`
+    );
+    if (roles.length === 0 || typeof roles[0].roles_id !== "number") {
+      throw new Error("Role 'Student' not found or invalid");
+    }
+    const roleId = roles[0].roles_id;
+    await this.usersRepository!.insert({
+      username,
+      password,
+      roles_id: roleId,
+    });
+  }
 
-//       const result = await this.userRepository!.findOne({
-//         where: { u_email: email },
-//       });
+  public async getUsersByUsername(username: string): Promise<Users[]> {
+    this.checkConnection();
+    return await this.usersRepository!.find({
+      where: { username },
+    });
+  }
 
-//       console.log(result);
-//       return result;
-//     } catch (error) {
-//       logger.error("❌ Error in findUserByEmail:", error);
-//       throw new Error("Failed to find user by email");
-//     }
-//   }
+  public async getUsersById(users_id: number): Promise<Users[]> {
+    this.checkConnection();
+    return await this.usersRepository!.createQueryBuilder("users")
+      .innerJoinAndSelect("users.roles", "roles")
+      .where("users.users_id = :users_id", { users_id })
+      .getMany();
+  }
 
-//   async findUserById(id: string): Promise<Users | null> {
-//     this.checkRepository();
-//     try {
-//       const result = await this.userRepository!.findOne({
-//         where: { u_id: Number(id) },
-//       });
-//       return result;
-//     } catch (error) {
-//       logger.error("❌ Error in findUserById:", error);
-//       throw new Error("Failed to find user by id");
-//     }
-//   }
-
-//   // async logout(): Promise<void> {
-//   //   // ถ้าอยาก log ว่ามีการ logout ก็ทำได้ตรงนี้
-//   //   console.log("📤 User logged out (DAO logic placeholder)");
-//   // }
-
-//   async logout(userId: number): Promise<void> {
-//     console.log(`📤 User with ID ${userId} has logged out.`);
-//     // future: บันทึกลง table log หรือ update last_logout ได้ที่นี่
-//   }
-// }
+  public async getIdByUsername(
+    username: string
+  ): Promise<{ users_id: number }[]> {
+    this.checkConnection();
+    return await this.usersRepository!.query(
+      `SELECT users_id FROM users WHERE username = $1`,
+      [username.trim()]
+    );
+  }
+}

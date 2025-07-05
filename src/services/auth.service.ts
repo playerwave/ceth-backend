@@ -1,80 +1,127 @@
-// // ✅ auth.service.ts
-// import bcrypt from "bcryptjs";
-// import jwt from "jsonwebtoken";
-// import { Response, Request } from "express";
-// import { AuthDao } from "../daos/auth.dao";
-// import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
-// import logger from "../utils/logger";
-// import { AuthRequest } from "../middleware/verifyToken";
+import { AuthDao } from "../daos/auth.dao";
+import { StudentsDao } from "../daos/Student/student.dao";
+import { Users } from "../entity/users.entity";
+import redis from "../config/redis";
+import bcrypt from "bcrypt";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import { ErrorHandledService } from "./error.handled.service";
 
-// export default class AuthService {
-//   private authDao = new AuthDao();
+declare global {
+  namespace Express {
+    interface User {
+      users_id: number;
+    }
+  }
+}
 
-//   async login({ email }: { email: string }, res: Response) {
-//     console.log("login service: ", email);
-//     try {
-//       console.log("attemp login service");
+export interface PassportUser {
+  users_id: number;
+}
 
-//       if (email !== "unizalgroup@gmail.com") {
-//         if (!email.endsWith("@go.buu.ac.th")) {
-//           throw new Error("Email domain must be @go.buu.ac.th");
-//         }
-//       }
+export class AuthService extends ErrorHandledService {
+  constructor(
+    private readonly authDao: AuthDao = new AuthDao(),
+    private readonly studentsDao: StudentsDao = new StudentsDao()
+  ) {
+    super();
+  }
 
-//       const user = await this.authDao.findUserByEmail(email);
-//       if (!user) {
-//         logger.warn("❌ Invalid credentials - user not found", { email });
-//         throw new Error("Invalid credentials");
-//       }
+  public async register(username: string, password: string): Promise<boolean> {
+    if (await this.existsUsername(username)) return false;
+    const hash = await this.hashPassword(password);
 
-//       generateTokenAndSetCookie(res, user.u_id);
-//       logger.info("✅ Login successful", { userId: user.u_id });
+    await this.authDao.register(username, hash);
+    const userId = await this.getUserId(username);
+    if (userId === null) return false;
 
-//       return { ...user, password: undefined };
-//     } catch (error) {
-//       logger.error("❌ Error in login(AuthService)", error);
-//       throw error;
-//     }
-//   }
+    await this.studentsDao.add(userId);
+    try {
+      await redis.del("users:all");
+    } catch (err) {
+      console.error("Redis delete error for users:all:", err);
+    }
+    return true;
+  }
 
-//   async checkAuth(req: Request) {
-//     try {
-//       const token = req.cookies.token;
-//       if (!token) {
-//         logger.warn("❌ No token provided in checkAuth");
-//         throw new Error("Unauthorized");
-//       }
+  public initializePassport(): void {
+    passport.use(
+      "local",
+      new LocalStrategy(
+        async (
+          username: string,
+          password: string,
+          done: (
+            error: Error | null,
+            user?: Users | false,
+            info?: { message: string }
+          ) => void
+        ) => {
+          try {
+            const findUsername = await this.authDao.getUsersByUsername(
+              username
+            );
+            if (!findUsername.length) {
+              return done(null, false, { message: "ไม่มีชื่อผู้ใช้นี้" });
+            }
 
-//       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-//         id: string;
-//       };
+            const user = findUsername[0];
+            if (!user.password) {
+              return done(null, false, { message: "ไม่พบรหัสผ่าน" });
+            }
 
-//       const user = await this.authDao.findUserById(decoded.id);
-//       if (!user) {
-//         logger.warn("❌ User not found in checkAuth", { userId: decoded.id });
-//         throw new Error("User not found");
-//       }
+            const result = await bcrypt.compare(password, user.password);
+            return done(null, result ? user : false);
+          } catch (error) {
+            return done(
+              error instanceof Error
+                ? error
+                : new Error(`Error from passport local login: ${error}`)
+            );
+          }
+        }
+      )
+    );
 
-//       logger.info("✅ Authenticated successfully", { userId: decoded.id });
-//       return user;
-//     } catch (error) {
-//       logger.error("❌ Error in checkAuth(AuthService)", error);
-//       throw error;
-//     }
-//   }
+    passport.serializeUser(
+      (user: Users, done: (err: Error | null, id?: number) => void) => {
+        done(null, user.users_id);
+      }
+    );
 
-//   // async logout(res: Response): Promise<void> {
-//   //   res.clearCookie("token");
-//   //   await this.authDao.logout(); // ✅ แค่เรียกเฉย ๆ ไม่มี last_logout
-//   // }
+    passport.deserializeUser(
+      async (
+        id: number,
+        done: (err: Error | null, user?: Users | false | null) => void
+      ) => {
+        try {
+          const userData = await this.authDao.getUsersById(id);
+          if (!userData.length) return done(null, false);
+          done(null, userData[0]);
+        } catch (err) {
+          done(
+            err instanceof Error
+              ? err
+              : new Error(`Error in deserializeUser: ${err}`)
+          );
+        }
+      }
+    );
+  }
 
-//   async logout(req: AuthRequest, res: Response): Promise<void> {
-//     const userId = req.userId;
-//     if (!userId) {
-//       throw new Error("Unauthorized: No user id in request");
-//     }
+  private async existsUsername(username: string): Promise<boolean> {
+    const found = await this.authDao.getUsersByUsername(username);
+    return found.length > 0;
+  }
 
-//     res.clearCookie("token");
-//     await this.authDao.logout(Number(userId)); // ส่ง userId เข้า DAO
-//   }
-// }
+  private async getUserId(username: string): Promise<number | null> {
+    const found = await this.authDao.getIdByUsername(username);
+    const id = found[0]?.users_id;
+    return typeof id === "number" && !isNaN(id) ? id : null;
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+  }
+}

@@ -1,6 +1,6 @@
 // src/controllers/Admin/activity.controller.ts
 import { Request, Response } from "express";
-import { ActivityService } from "../../services/Teacher/activity.service.newstructure";
+import { ActivityService } from "../../services/Teacher/activity.service";
 import { ErrorHandledController } from "../error.handled.controller";
 
 export class ActivityController extends ErrorHandledController {
@@ -11,7 +11,7 @@ export class ActivityController extends ErrorHandledController {
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseActivityPayload(req.body);
-      const result = await this.activityService.createActivityService(data);
+      const result = await this.activityService.createActivity(data);
       res.status(201).json(result);
     } catch (error) {
       this.handleError("ActivityController.create", error, res);
@@ -20,10 +20,30 @@ export class ActivityController extends ErrorHandledController {
 
   public async getAll(req: Request, res: Response): Promise<void> {
     try {
-      const activities = await this.activityService.getAllActivitiesService();
+      const activities = await this.activityService.getAllActivities();
       res.status(200).json(activities);
     } catch (error) {
       this.handleError("ActivityController.getAll", error, res);
+    }
+  }
+
+  public async update(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.id);
+      const data = this.parseActivityPayload(req.body);
+      const result = await this.activityService.updateActivity(id, data);
+
+      if (!result) {
+        res.status(404).json({ message: "Activity not found" });
+        return;
+      }
+
+      res.status(200).json({
+        message: "Activity updated successfully",
+        data: result,
+      });
+    } catch (error) {
+      this.handleError("ActivityController.update", error, res);
     }
   }
 
@@ -34,9 +54,9 @@ export class ActivityController extends ErrorHandledController {
 
       let result;
       if (forceDelete) {
-        result = await this.activityService.hardDeleteActivityService(id);
+        result = await this.activityService.hardDeleteActivity(id);
       } else {
-        result = await this.activityService.softDeleteActivityService(id);
+        result = await this.activityService.softDeleteActivity(id);
       }
 
       if (!result) {
@@ -112,7 +132,7 @@ const controller = new ActivityController(activityService);
 
 export const activityController = {
   create: controller.create.bind(controller),
-  // update: controller.update.bind(controller),
+  update: controller.update.bind(controller),
   delete: controller.delete.bind(controller),
   getAll: controller.getAll.bind(controller),
   // getById: controller.getById.bind(controller),
