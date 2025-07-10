@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import xss from "xss";
 import { AuthService } from "../services/auth.service";
 import { ErrorHandledController } from "./error.handled.controller";
+import { Users } from "../entity/users.entity";
 
 export class AuthController extends ErrorHandledController {
   constructor(private readonly authService: AuthService = new AuthService()) {
@@ -28,6 +29,26 @@ export class AuthController extends ErrorHandledController {
     }
   }
 
+  public async validateUser(
+    username: string,
+    password: string
+  ): Promise<Users | null> {
+    try {
+      return await this.authService.validateUser(username, password);
+    } catch (error) {
+      // ถ้า error จริง ให้ throw ขึ้นไปให้ router จัดการ
+      throw error;
+    }
+  }
+
+  public async findById(userId: number): Promise<Users | null> {
+    try {
+      return await this.authService.findById(userId);
+    } catch (error) {
+      throw error;
+    }
+  }
+
   private parseUserPayload(body: any): {
     username: string;
     password: string;
@@ -44,4 +65,6 @@ export class AuthController extends ErrorHandledController {
 const controller = new AuthController();
 export const authController = {
   register: controller.register.bind(controller),
+  validateUser: controller.validateUser.bind(controller),
+  findById: controller.findById.bind(controller),
 };

@@ -7,15 +7,31 @@ const router = Router();
 const rolesController = new RolesController();
 
 // ✅ GET: บทบาททั้งหมด + count
-router.get("/data", Admin, wrapAsync(rolesController.getAll));
+router.get(
+  "/data",
+  Admin,
+  wrapAsync(rolesController.getAll.bind(rolesController))
+);
 
 // ✅ POST: เพิ่มบทบาทใหม่
-router.post("/add", Admin, wrapAsync(rolesController.create));
+router.post(
+  "/add",
+  Admin,
+  wrapAsync(rolesController.create.bind(rolesController))
+);
 
 // ✅ PUT: แก้ไขบทบาทตาม id
-router.put("/edit/:roles_id", Admin, wrapAsync(rolesController.update));
+router.put(
+  "/edit/:roles_id",
+  Admin,
+  wrapAsync(rolesController.update.bind(rolesController))
+);
 
 // ✅ DELETE: ลบบทบาทตาม id
-router.delete("/delete/:roles_id", Admin, wrapAsync(rolesController.delete));
+router.delete(
+  "/delete/:roles_id",
+  Admin,
+  wrapAsync(rolesController.delete.bind(rolesController))
+);
 
 export default router;

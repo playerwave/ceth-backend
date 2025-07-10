@@ -62,6 +62,12 @@ export class Activity {
   @Column({ type: "timestamp" })
   end_activity_date?: Date;
 
+  @Column({ type: "timestamp" })
+  start_assessment?: Date;
+
+  @Column({ type: "timestamp" })
+  end_assessment?: Date;
+
   @Column({ type: "varchar", length: 255, nullable: true })
   image_url?: string;
 

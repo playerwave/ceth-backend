@@ -4,44 +4,6 @@ import { Users } from "../entity/users.entity";
 
 const usersController = new UsersController();
 
-// export async function Admin(
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ): Promise<any> {
-//   const users = req.user as Users;
-//   if (!users || !users.roles_id) {
-//     return res.status(401).json({
-//       user: null,
-//       notification: `Unauthorized access. Please log in.`,
-//     });
-//   }
-
-//   const isAdmin = await usersController.rolesAdmin();
-
-//   if (!isAdmin) {
-//     return res.status(401).json({
-//       user: null,
-//       notification: `Error fetching role information.`,
-//     });
-//   }
-
-//   const RolesUsers = users.roles_id;
-//   const Roles = isAdmin[0].roles_id;
-
-//   console.log("Roles: ", Roles);
-//   console.log("Type of Roles: ", typeof Roles);
-
-//   if (RolesUsers === Roles) {
-//     return next();
-//   } else {
-//     return req.logOut((err) => {
-//       if (err) return next(err);
-//       console.log(req.user);
-//     });
-//   }
-// }
-
 export async function Admin(
   req: Request,
   res: Response,

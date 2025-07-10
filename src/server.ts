@@ -30,6 +30,7 @@ import studentGradeRoute from "./routes/Student/grade.route";
 
 //import visitor routes
 import visitorRoute from "./routes/user.route";
+import authRoute from "./routes/auth.route";
 
 // import role
 import roleRoute from "./routes/roles.route";
@@ -119,7 +120,7 @@ app.use("/api/student", studentRoute);
 app.use("/api/student/grade", studentGradeRoute);
 
 // api ของ visitor
-app.use("/api/visitor", visitorRoute);
+app.use("/api/auth", authRoute);
 
 // api ของ role
 app.use("/api/role", roleRoute);
