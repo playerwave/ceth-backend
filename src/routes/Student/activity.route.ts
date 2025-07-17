@@ -35,3 +35,38 @@
 // );
 
 // export default router;
+
+import { Router } from "express";
+import { activityController } from "../../controllers/Student/activity.controller";
+import { wrapAsync } from "../../utils/wrapAsync";
+
+const router = Router();
+
+// ✅ POST METHOD
+router.post(
+  "/student-enroll-activity/:id",
+  wrapAsync(activityController.enrollActivity)
+);
+
+// ✅ DELETE METHOD
+router.delete(
+  "/unenroll-activity/:id",
+  wrapAsync(activityController.unEnrollActivity)
+);
+
+// ✅ GET METHODS
+router.get(
+  "/get-student-activities/:id",
+  wrapAsync(activityController.getStudentActivities)
+);
+
+router.get(
+  "/get-enrolled-activities/:id",
+  wrapAsync(activityController.getEnrolledActivities)
+);
+
+router.get("/get-activity/:id", wrapAsync(activityController.getActivityById));
+
+router.get("/searchActivity", wrapAsync(activityController.searchActivity));
+
+export default router;

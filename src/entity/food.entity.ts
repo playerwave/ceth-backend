@@ -10,7 +10,7 @@ import { Faculty } from "./faculty.entity";
 import { ActivityFood } from "./activity.food.entity";
 @Entity()
 export class Food {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn("increment")
   food_id!: number;
 
   @Column({ type: "varchar", length: 255 })

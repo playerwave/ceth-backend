@@ -121,7 +121,6 @@ router.post(
 // 🔐 GET: Users (Admin-only)
 router.get(
   "/get-users",
-  Admin,
   wrapAsync(usersController.getAll.bind(usersController))
 );
 

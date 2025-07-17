@@ -33,12 +33,14 @@
 // src/middleware/verifyToken.ts
 import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
+import logger from "../utils/logger";
 
 export const verifyToken: RequestHandler = (req, res, next) => {
-  const token = req.cookies.token as string | undefined;
+  const token = req.cookies.token as string;
 
   if (!token) {
     res.status(401).json({ message: "No token provided" });
+    logger.error("No token provided in request");
     return;
   }
 
@@ -51,11 +53,24 @@ export const verifyToken: RequestHandler = (req, res, next) => {
     };
 
     // ✨ เพิ่มตรงนี้ → inject userId เข้า req
-    (req as any).userId = payload.id;
+    // (req as any).userId = payload.id;
+
+    (req as any).user = {
+      users_id: payload.id,
+      roles_id: payload.roles_id,
+    };
 
     next();
-  } catch {
-    res.status(401).json({ message: "Invalid or expired token" });
+  } catch (err) {
+    // res.status(401).json({ message: "Invalid or expired token" });
+    // return;
+    if (err instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ message: "Token expired" });
+    } else if (err instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ message: "Malformed or invalid token" });
+    } else {
+      res.status(401).json({ message: "Unauthorized access" });
+    }
     return;
   }
 };

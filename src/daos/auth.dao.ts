@@ -119,23 +119,49 @@ export class AuthDao extends ErrorHandledDao {
   /**
    * ดึงข้อมูลผู้ใช้ตาม username (สำหรับ validateUser)
    */
-  public async getUsersByUsername(username: string): Promise<Users[]> {
+  // public async getUsersByUsername(username: string): Promise<Users[]> {
+  //   this.checkConnection();
+  //   return this.usersRepository.find({
+  //     where: { username: username.trim() },
+  //   });
+  // }
+
+  public async getUsersByUsername(username: string): Promise<Users | null> {
     this.checkConnection();
-    return this.usersRepository.find({
-      where: { username: username.trim() },
-    });
+    return this.usersRepository
+      .createQueryBuilder("users")
+      .innerJoinAndSelect("users.roles", "roles") // ✅ JOIN roles → ดึง role_name ได้
+      .where("users.username = :username", { username: username.trim() })
+      .select([
+        "users.users_id",
+        "users.username",
+        "users.password",
+        "users.roles_id",
+        "roles.roles_id",
+        "roles.roles_name",
+      ])
+      .getOne(); // ✅ return แค่คนเดียว
   }
 
   /**
    * ดึงข้อมูลผู้ใช้ตาม ID (สำหรับ findById)
    */
-  public async getUsersById(users_id: number): Promise<Users[]> {
+  // public async getUsersById(users_id: number): Promise<Users[]> {
+  //   this.checkConnection();
+  //   return this.usersRepository
+  //     .createQueryBuilder("users")
+  //     .innerJoinAndSelect("users.roles", "roles")
+  //     .where("users.users_id = :users_id", { users_id })
+  //     .getMany();
+  // }
+
+  public async getUsersById(users_id: number): Promise<Users | null> {
     this.checkConnection();
     return this.usersRepository
       .createQueryBuilder("users")
-      .innerJoinAndSelect("users.roles", "roles")
+      .innerJoinAndSelect("users.roles", "roles") // ✅ JOIN ให้ได้ roles.role_name
       .where("users.users_id = :users_id", { users_id })
-      .getMany();
+      .getOne(); // ✅ return คนเดียวเท่านั้น
   }
 
   /**

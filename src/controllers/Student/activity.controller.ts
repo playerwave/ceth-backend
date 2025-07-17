@@ -160,3 +160,176 @@
 
 // const activityService = new ActivityService();
 // export const activityController = new ActivityController(activityService);
+
+// src/controllers/Student/activity.controller.ts
+import { Request, Response } from "express";
+import { ActivityService } from "../../services/Student/activity.service";
+import { ErrorHandledController } from "../error.handled.controller";
+import logger from "../../utils/logger";
+
+export class ActivityController extends ErrorHandledController {
+  constructor(private readonly activityService: ActivityService) {
+    super();
+  }
+
+  public async getStudentActivities(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const userId = this.parseId(req.params.id);
+      const result = await this.activityService.getStudentActivitiesService(
+        userId
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError(
+        "StudentActivityController.getStudentActivities",
+        error,
+        res
+      );
+    }
+  }
+
+  public async getActivityById(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = this.parseOptionalInt(req.query.userId);
+      const id = this.parseId(req.params.id);
+
+      const activity = await this.activityService.getActivityByIdService(
+        id,
+        userId
+      );
+      if (!activity) {
+        res.status(404).json({ error: "Activity not found" });
+        return;
+      }
+
+      res.status(200).json(activity);
+    } catch (error) {
+      this.handleError("StudentActivityController.getActivityById", error, res);
+    }
+  }
+
+  public async enrollActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = this.parseId(req.params.id);
+      const activityId = this.parseId(req.body.activityId);
+      const food = this.parseFoodInput(req.body.food);
+
+      const result = await this.activityService.studentEnrollActivityService(
+        userId,
+        activityId,
+        food
+      );
+
+      res
+        .status(200)
+        .json({ message: "Registration successful", activity: result });
+    } catch (error) {
+      this.handleError("StudentActivityController.enrollActivity", error, res);
+    }
+  }
+
+  public async getEnrolledActivities(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const userId = this.parseId(req.params.id);
+      const result = await this.activityService.getEnrolledActivitiesService(
+        userId
+      );
+      res.status(200).header("Cache-Control", "no-store").json(result);
+    } catch (error) {
+      this.handleError(
+        "StudentActivityController.getEnrolledActivities",
+        error,
+        res
+      );
+    }
+  }
+
+  public async searchActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const { ac_name } = req.query;
+      if (!ac_name || typeof ac_name !== "string") {
+        res
+          .status(400)
+          .json({ error: "Missing or invalid 'ac_name' parameter" });
+        return;
+      }
+
+      const result = await this.activityService.searchActivityService(ac_name);
+      if (result.length === 0) {
+        res.status(404).json({ message: "No activities found" });
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError("StudentActivityController.searchActivity", error, res);
+    }
+  }
+
+  public async unEnrollActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = this.parseId(req.params.id);
+      const activityId = this.parseId(req.body.activityId);
+
+      const success = await this.activityService.unEnrollActivityService(
+        userId,
+        activityId
+      );
+      if (success) {
+        res
+          .status(200)
+          .json({ message: "Successfully unenrolled from activity" });
+      } else {
+        res.status(404).json({ error: "Activity registration not found" });
+      }
+    } catch (error) {
+      this.handleError(
+        "StudentActivityController.unEnrollActivity",
+        error,
+        res
+      );
+    }
+  }
+
+  // 🔧 Utility Parsing Methods
+  private parseId(value: any): number {
+    const id = parseInt(value, 10);
+    if (isNaN(id)) throw new Error("Invalid ID format");
+    return id;
+  }
+
+  private parseOptionalInt(value: any): number | null {
+    return !isNaN(Number(value)) ? parseInt(value, 10) : null;
+  }
+
+  private parseFoodInput(input: any): string[] {
+    if (!input) return [];
+    if (Array.isArray(input)) return input;
+    if (typeof input === "string") {
+      try {
+        return JSON.parse(input);
+      } catch {
+        return [input];
+      }
+    }
+    return [];
+  }
+}
+
+const activityService = new ActivityService();
+const controller = new ActivityController(activityService);
+
+export const activityController = {
+  getStudentActivities: controller.getStudentActivities.bind(controller),
+  getActivityById: controller.getActivityById.bind(controller),
+  enrollActivity: controller.enrollActivity.bind(controller),
+  getEnrolledActivities: controller.getEnrolledActivities.bind(controller),
+  searchActivity: controller.searchActivity.bind(controller),
+  unEnrollActivity: controller.unEnrollActivity.bind(controller),
+};

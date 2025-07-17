@@ -3,7 +3,7 @@
 import redis from "../config/redis";
 import { FacultyDao } from "../daos/faculty.dao";
 import { RoomDao } from "../daos/Teacher/room.dao";
-import { FoodDao } from "../daos/food.dao";
+import { FoodDao } from "../daos/Teacher/food.dao";
 import { Faculty } from "../entity/faculty.entity";
 import { ErrorHandledService } from "./error.handdled.service";
 

@@ -1,440 +1,106 @@
-import { Repository, getRepository, Equal } from "typeorm";
-import { connectDatabase } from "../../db/database";
-import { UserActivity } from "../../entity/UserActivity";
+import { DataSource } from "typeorm";
 import { Activity } from "../../entity/activity.entity";
-import { User } from "../../entity/Users";
-import logger from "../../utils/logger";
+import { Join } from "../../entity/join.entity";
+import { connectDatabase } from "../../db/database";
+import { ErrorHandledDao } from "../error.handled.dao";
 
-export class ActivityDao {
-  private activityRepository: Repository<Activity> | null = null;
+export class ActivityDao extends ErrorHandledDao {
+  private dataSource: DataSource | null = null;
 
   constructor() {
-    this.initializeRepository();
+    super();
+    this.initialize();
   }
 
-  // ✅ ใช้ async function เพื่อรอการเชื่อมต่อฐานข้อมูล
-  private async initializeRepository(): Promise<void> {
+  private async initialize(): Promise<void> {
     try {
-      const connection = await connectDatabase();
-      this.activityRepository = connection.getRepository(Activity);
-      console.log("✅ Activity Repository initialized");
+      this.dataSource = await connectDatabase();
+      console.log("✅ StudentActivityDao initialized");
     } catch (error) {
-      console.error("❌ Error initializing ActivityDao(Admin):", error);
+      this.logDbError("initialize", error);
     }
   }
 
-  private checkRepository(): void {
-    if (!this.activityRepository) {
-      throw new Error("Database connection is not established");
+  private checkConnection(): void {
+    if (!this.dataSource) {
+      throw new Error("❌ Database connection is not established");
     }
   }
 
-  // async getStudentActivitiesDao(userId: number): Promise<Activity[]> {
-  //   this.checkRepository();
+  // 🔹 กิจกรรมทั้งหมดที่นักศึกษายังไม่ได้สมัคร (public, active, ไม่หมดเวลา)
+  public async getAvailableActivities(studentId: number): Promise<Activity[]> {
+    this.checkConnection();
 
-  //   try {
-  //     logger.info(
-  //       "📌 Fetching all public activities that user has not registered for"
-  //     );
-
-  //     // ใช้ `new Date()` เพื่อให้เป็นเวลาปัจจุบันในการเปรียบเทียบ
-  //     const currentDate = new Date();
-
-  //     return await this.activityRepository!.createQueryBuilder("activity")
-  //       .leftJoin("activity.userActivities", "useractivity")
-  //       .where("activity.ac_status = 'Public'") // กรองกิจกรรมที่มีสถานะเป็น Public
-  //       .andWhere(
-  //         "(useractivity.u_id IS NULL OR useractivity.u_id != :userId)",
-  //         { userId }
-  //       )
-  //       // กรองกิจกรรมที่ userId ยังไม่ได้ลงทะเบียน
-  //       .andWhere(
-  //         "(activity.ac_registered_count < activity.ac_seat OR activity.ac_seat IS NULL)"
-  //       ) // กรองกิจกรรมที่มีการลงทะเบียนน้อยกว่า ac_seat หรือ ac_seat เป็น NULL
-  //       .andWhere("activity.ac_end_register > :currentDate", { currentDate }) // กรองกิจกรรมที่ ac_end_register ยังไม่ผ่านวันที่ปัจจุบัน
-  //       .andWhere(
-  //         "(activity.ac_registered_count IS NULL OR activity.ac_registered_count < activity.ac_seat)"
-  //       ) // กรองกิจกรรมที่ ac_registered_count น้อยกว่า ac_seat หรือ ac_seat เป็น NULL
-  //       .getMany();
-  //   } catch (error) {
-  //     logger.error("❌ Error in getStudentActivitiesDao(Student):", error);
-  //     throw new Error("Failed to get all activities");
-  //   }
-  // }
-
-  // async getStudentActivitiesDao(userId: number): Promise<Activity[]> {
-  //   this.checkRepository();
-
-  //   try {
-  //     logger.info(
-  //       "📌 Fetching public activities that user has NOT registered for"
-  //     );
-
-  //     const currentDate = new Date();
-
-  //     const query = this.activityRepository!.createQueryBuilder("activity")
-  //       .leftJoin("activity.userActivities", "ua", "ua.u_id = :userId", {
-  //         userId,
-  //       }) // join เฉพาะ row ที่เป็นของ userId
-  //       .where("activity.ac_status = 'Public'")
-  //       .andWhere("ua.ac_id IS NULL") // ✅ ถ้า join แล้วไม่เจอแสดงว่ายังไม่ลงทะเบียน
-  //       .andWhere(
-  //         "(activity.ac_registered_count IS NULL OR activity.ac_seat IS NULL OR activity.ac_registered_count < activity.ac_seat)"
-  //       )
-  //       .andWhere("activity.ac_end_register > :currentDate", { currentDate });
-
-  //     const activities = await query.getMany();
-
-  //     logger.info(
-  //       `✅ Found ${activities.length} activities student has NOT registered for`
-  //     );
-
-  //     return activities;
-  //   } catch (error) {
-  //     logger.error("❌ Error in getStudentActivitiesDao(Student):", error);
-  //     throw new Error("Failed to get available activities");
-  //   }
-  // }
-
-  async getStudentActivitiesDao(userId: number): Promise<Activity[]> {
-    this.checkRepository();
-
-    try {
-      logger.info(`📌 Fetching public activities for userId: ${userId}`);
-
-      const currentDate = new Date();
-
-      const query = this.activityRepository!.createQueryBuilder("activity")
-        .leftJoin("activity.userActivities", "ua", "ua.u_id = :userId", {
-          userId,
-        }) // join เฉพาะ row ที่เป็นของ userId
-        .where("activity.ac_status = 'Public'")
-        .andWhere("ua.ac_id IS NULL") // ✅ ถ้า join แล้วไม่เจอแสดงว่ายังไม่ลงทะเบียน
-        .andWhere(
-          "(activity.ac_registered_count IS NULL OR activity.ac_seat IS NULL OR activity.ac_registered_count < activity.ac_seat)"
+    const query = `
+      SELECT a.*
+      FROM activity a
+      WHERE a.activity_status = 'Public'
+        AND a.status = 'Active'
+        AND NOT EXISTS (
+          SELECT 1 FROM join j
+          WHERE j.activity_id = a.activity_id
+            AND j.student_id = $1
         )
-        .andWhere("activity.ac_end_register > :currentDate", { currentDate });
+      ORDER BY a.create_activity_date DESC
+    `;
 
-      const activities = await query.getMany();
-
-      logger.info(
-        `✅ Found ${activities.length} activities student has NOT registered for (userId: ${userId})`
-      );
-
-      return activities;
-    } catch (error) {
-      logger.error("❌ Error in getStudentActivitiesDao(Student):", error);
-      throw new Error("Failed to get available activities");
-    }
+    const result = await this.dataSource!.query(query, [studentId]);
+    return result;
   }
 
-  // async getActivityByIdDao(activityId: number): Promise<Activity | null> {
-  //   this.checkRepository();
-
-  //   try {
-  //     const activity = await this.activityRepository!.createQueryBuilder(
-  //       "activity"
-  //     )
-  //       .leftJoinAndSelect("activity.assessment", "assessment") // ✅ ดึง assessment ด้วย
-  //       .where("activity.ac_id = :id", { id: activityId })
-  //       .getOne();
-
-  //     console.log("🟢 DAO Response:", JSON.stringify(activity, null, 2)); // ✅ ตรวจสอบข้อมูลที่ถูกดึงมา
-
-  //     return activity;
-  //   } catch (error) {
-  //     logger.error(
-  //       `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
-  //       error
-  //     );
-  //     throw new Error("Failed to get activity by id");
-  //   }
-  // }
-
-  async getActivityByIdDao(
+  // 🔹 ดึงกิจกรรมตาม ID พร้อมบอกว่านักศึกษาเคย join หรือยัง
+  public async findActivityWithJoinStatus(
     activityId: number,
-    userId?: number
-  ): Promise<any | null> {
-    this.checkRepository();
+    studentId: number | null
+  ): Promise<Activity | null> {
+    this.checkConnection();
 
-    try {
-      const query = this.activityRepository!.createQueryBuilder(
-        "activity"
-      ).leftJoinAndSelect("activity.assessment", "assessment");
+    const query = `
+      SELECT a.*,
+        CASE WHEN j.join_id IS NOT NULL THEN true ELSE false END AS is_joined
+      FROM activity a
+      LEFT JOIN join j ON a.activity_id = j.activity_id
+        AND j.student_id = $1
+      WHERE a.activity_id = $2
+    `;
 
-      query.where("activity.ac_id = :id", { id: activityId });
-
-      const activity = await query.getOne();
-
-      let uac_selected_food = null;
-
-      console.log("userId in getActivityByIdDao: ", userId);
-
-      if (userId) {
-        const userActivity = await getRepository(UserActivity)
-          .createQueryBuilder("userActivity")
-          .where("userActivity.ac_id = :activityId", { activityId })
-          .andWhere("userActivity.u_id = :userId", { userId })
-          .getOne();
-
-        uac_selected_food = userActivity?.uac_selected_food || null;
-
-        console.log("userActivity in getActivityByIdDao: ", userActivity);
-      }
-
-      const result = { ...activity, uac_selected_food };
-
-      console.log("🟢 DAO Response:", JSON.stringify(result, null, 2));
-
-      return result;
-    } catch (error) {
-      logger.error(
-        `❌ Error in getActivityByIdDao(Admin) ${activityId}:`,
-        error
-      );
-      throw new Error("Failed to get activity by id");
-    }
+    const result = await this.dataSource!.query(query, [
+      studentId ?? -1,
+      activityId,
+    ]);
+    return result[0] ?? null;
   }
 
-  // async studentEnrollActivityDao(
-  //   userId: number,
-  //   activityId: number,
-  //   food?: string
-  // ): Promise<void> {
-  //   const userActivityRepository = getRepository(UserActivity);
-  //   const userRepository = getRepository(User);
-  //   const activityRepository = getRepository(Activity);
+  // 🔹 ดึงกิจกรรมที่นักศึกษาเคยสมัครไว้แล้ว
+  public async getEnrolledActivities(studentId: number): Promise<Activity[]> {
+    this.checkConnection();
 
-  //   const user = await userRepository.findOneBy({ u_id: userId });
-  //   const activity = await activityRepository.findOneBy({ ac_id: activityId });
+    const query = `
+      SELECT a.*
+      FROM activity a
+      INNER JOIN join j ON j.activity_id = a.activity_id
+      WHERE j.student_id = $1
+      ORDER BY a.start_activity_date DESC
+    `;
 
-  //   if (!user || !activity) {
-  //     throw new Error("User or activity not found.");
-  //   }
-
-  //   // ✅ ตรวจสอบว่า ac_registered_count >= ac_seat หรือไม่
-  //   if (
-  //     activity.ac_seat !== null &&
-  //     activity.ac_seat !== undefined &&
-  //     activity.ac_registered_count !== undefined &&
-  //     activity.ac_seat !== 0 &&
-  //     activity.ac_registered_count >= activity.ac_seat
-  //   ) {
-  //     throw new Error("Activity is full. Cannot register.");
-  //   }
-
-  //   const existingRegistration = await userActivityRepository.findOne({
-  //     where: { user: user, activity: activity },
-  //   });
-
-  //   if (existingRegistration) {
-  //     throw new Error("User has already registered for this activity.");
-  //   }
-
-  //   // ✅ ใช้ instance แทน `create()`
-  //   const userActivity = new UserActivity();
-  //   userActivity.user = user;
-  //   userActivity.activity = activity;
-  //   userActivity.uac_checkin = undefined;
-  //   userActivity.uac_checkout = undefined;
-  //   userActivity.uac_take_assessment = false;
-
-  //   await userActivityRepository.save(userActivity);
-
-  //   await activityRepository.update(activity.ac_id, {
-  //     ac_registered_count: () => "ac_registered_count + 1",
-  //   });
-  // }
-
-  async studentEnrollActivityDao(
-    userId: number,
-    activityId: number,
-    food?: string
-  ): Promise<void> {
-    const userActivityRepository = getRepository(UserActivity);
-    const userRepository = getRepository(User);
-    const activityRepository = getRepository(Activity);
-
-    const user = await userRepository.findOneBy({ u_id: userId });
-    const activity = await activityRepository.findOneBy({ ac_id: activityId });
-
-    if (!user || !activity) {
-      throw new Error("User or activity not found.");
-    }
-
-    if (
-      activity.ac_seat !== null &&
-      activity.ac_seat !== undefined &&
-      activity.ac_registered_count !== undefined &&
-      activity.ac_seat !== 0 &&
-      activity.ac_registered_count >= activity.ac_seat
-    ) {
-      throw new Error("Activity is full. Cannot register.");
-    }
-
-    const existingRegistration = await userActivityRepository.findOne({
-      where: { user: user, activity: activity },
-    });
-
-    if (existingRegistration) {
-      throw new Error("User has already registered for this activity.");
-    }
-
-    console.log("food: ", food);
-
-    const userActivity = new UserActivity();
-    userActivity.user = user;
-    userActivity.activity = activity;
-    userActivity.uac_checkin = undefined;
-    userActivity.uac_checkout = undefined;
-    userActivity.uac_take_assessment = false;
-    userActivity.uac_selected_food = food || undefined; // ✅ บันทึกอาหารที่เลือก
-
-    console.log("UserActivity in studentEnrollActivityDao: ", userActivity);
-
-    await userActivityRepository.save(userActivity);
-
-    await activityRepository.update(activity.ac_id, {
-      ac_registered_count: () => "ac_registered_count + 1",
-    });
+    const result = await this.dataSource!.query(query, [studentId]);
+    return result;
   }
 
-  // async getEnrolledActivitiesDao(u_id: number): Promise<any[]> {
-  //   // ✅ เปลี่ยนเป็น any[] เพื่อให้รองรับ soft_hours, hard_hours
-  //   if (!this.activityRepository) {
-  //     throw new Error("Repository is not initialized");
-  //   }
-  //   try {
-  //     const query = `
-  //     SELECT
-  //       a.ac_id, a.ac_name, a.ac_company_lecturer ,a.ac_description, a.ac_type,
-  //       a.ac_start_time, a.ac_end_time, a.ac_seat, a.ac_status, a.ac_registered_count
-  //     FROM users u
-  //     JOIN user_activity ua ON u.u_id = ua.u_id
-  //     JOIN activity a ON ua.ac_id = a.ac_id
-  //     WHERE u.u_id = $1
-  //     ORDER BY a.ac_start_time ASC;
-  //   `;
+  // 🔹 ค้นหากิจกรรมจากชื่อ (เฉพาะ public, active)
+  public async searchActivitiesByName(ac_name: string): Promise<Activity[]> {
+    this.checkConnection();
 
-  //     const result = await this.activityRepository.query(query, [u_id]);
+    const query = `
+      SELECT *
+      FROM activity
+      WHERE activity_status = 'Public'
+        AND status = 'Active'
+        AND activity_name ILIKE $1
+      ORDER BY create_activity_date DESC
+    `;
 
-  //     return result;
-  //   } catch (error) {
-  //     console.error(`❌ Error in fetchEnrolledActivities Dao: ${error}`);
-  //     throw new Error("Failed to fetch enrolled activities");
-  //   }
-  // }
-
-  async getEnrolledActivitiesDao(userId: number): Promise<Activity[]> {
-    this.checkRepository();
-
-    try {
-      logger.info(`📌 Fetching enrolled activities for student ID: ${userId}`);
-
-      return await this.activityRepository!.createQueryBuilder("activity")
-        .innerJoin("activity.userActivities", "useractivity")
-        .where("useractivity.u_id = :userId", { userId }) // ✅ กรองกิจกรรมที่นิสิตลงทะเบียน
-        .orderBy("activity.ac_start_time", "ASC") // ✅ เรียงลำดับตามเวลาเริ่มต้น
-        .getMany();
-    } catch (error) {
-      logger.error("❌ Error in getEnrolledActivitiesDao:", error);
-      throw new Error("Failed to fetch enrolled activities");
-    }
-  }
-
-  // async unEnrollActivityDao(
-  //   userId: number,
-  //   activityId: number
-  // ): Promise<boolean> {
-  //   try {
-  //     const userActivityRepository = getRepository(UserActivity);
-
-  //     // ค้นหาข้อมูลการลงทะเบียนก่อน
-
-  //     console.log(userId);
-  //     console.log(activityId);
-
-  //     const userActivity = await userActivityRepository.findOne({
-  //       where: {
-  //         user: Equal(userId),
-  //         activity: Equal(activityId),
-  //       },
-  //       relations: ["user", "activity"],
-  //     });
-
-  //     if (!userActivity) {
-  //       console.warn("⚠️ User is not enrolled in this activity.");
-  //       return false;
-  //     }
-
-  //     // ลบข้อมูลการลงทะเบียน
-  //     await userActivityRepository.remove(userActivity);
-
-  //     return true;
-  //   } catch (error) {
-  //     console.error("❌ Error in unEnrollActivity DAO:", error);
-  //     throw new Error("Failed to unenroll from activity");
-  //   }
-  // }
-
-  async searchActivityDao(ac_name: string): Promise<Activity[]> {
-    this.checkRepository();
-
-    try {
-      const query =
-        "SELECT * FROM activity WHERE ac_name ILIKE '%' || $1 || '%' ORDER BY ac_id ASC";
-      return await this.activityRepository!.query(query, [ac_name]);
-    } catch (error) {
-      logger.error(`❌ Error in searchActivity:`, error);
-      throw new Error(`Error fetching activities: ${error}`);
-    }
-  }
-
-  async unEnrollActivityDao(
-    userId: number,
-    activityId: number
-  ): Promise<boolean> {
-    try {
-      const userActivityRepository = getRepository(UserActivity);
-      const activityRepository = getRepository(Activity);
-
-      console.log(userId);
-      console.log(activityId);
-
-      // ✅ ค้นหาข้อมูลการลงทะเบียนก่อน
-      const userActivity = await userActivityRepository.findOne({
-        where: {
-          user: Equal(userId),
-          activity: Equal(activityId),
-        },
-        relations: ["user", "activity"],
-      });
-
-      if (!userActivity) {
-        console.warn("⚠️ User is not enrolled in this activity.");
-        return false;
-      }
-
-      // ✅ ลบข้อมูลการลงทะเบียน
-      await userActivityRepository.remove(userActivity);
-      console.log("✅ Unenrolled successfully.");
-
-      // ✅ ลด `ac_registered_count` ของ activity นั้นลง 1
-      await activityRepository
-        .createQueryBuilder()
-        .update(Activity)
-        .set({
-          ac_registered_count: () => "GREATEST(ac_registered_count - 1, 0)",
-        }) // ป้องกันค่าติดลบ
-        .where("ac_id = :activityId", { activityId })
-        .execute();
-
-      console.log("✅ Updated ac_registered_count for activity:", activityId);
-
-      return true;
-    } catch (error) {
-      console.error("❌ Error in unEnrollActivity DAO:", error);
-      throw new Error("Failed to unenroll from activity");
-    }
+    const result = await this.dataSource!.query(query, [`%${ac_name}%`]);
+    return result;
   }
 }

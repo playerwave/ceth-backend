@@ -21,6 +21,9 @@ import teacherActivityRoute from "./routes/Teacher/activity.route";
 import teacherRoomRoute from "./routes/Teacher/room.route";
 import teacherBuildingRoute from "./routes/Teacher/building.route";
 import teacherRoute from "./routes/Teacher/teacher.route";
+import teacherFoodRoute from "./routes/Teacher/food.route";
+import teacherAssessmentRoute from "./routes/Teacher/assessment.route";
+import teacherSetNumberRoute from "./routes/Teacher/setNumber.route";
 // import adminActivityRoute from "./routes/Admin/activity.route";
 // import adminAssessmentRoute from "./routes/Admin/assessment.route";
 
@@ -38,6 +41,9 @@ import roleRoute from "./routes/roles.route";
 //import department routes
 import departmentRoute from "./routes/department.route";
 
+//import faculty routes
+import facultyRoute from "./routes/faculty.route";
+
 //import student routes
 // import studentActivityRoute from "./routes/Student/activity.route";
 
@@ -53,16 +59,16 @@ const usersService = new UsersService();
 usersService.initializePassport(); // 👈 ต้องมี
 
 // ✅ ใช้ session-based auth
-app.use(
-  session({
-    secret: "secret-key",
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false },
-  })
-);
-app.use(passport.initialize());
-app.use(passport.session());
+// app.use(
+//   session({
+//     secret: "secret-key",
+//     resave: false,
+//     saveUninitialized: false,
+//     cookie: { secure: false, sameSite: "lax" },
+//   })
+// );
+// app.use(passport.initialize());
+// app.use(passport.session());
 
 // 👇 ใช้เฉพาะ method ที่ต้องมี body เท่านั้น
 app.use((req, res, next) => {
@@ -112,7 +118,9 @@ app.use("/api/teacher/activity", teacherActivityRoute);
 app.use("/api/teacher/room", teacherRoomRoute);
 app.use("/api/teacher/building", teacherBuildingRoute);
 app.use("/api/teacher", teacherRoute);
-// app.use("/api/admin/assessment", adminAssessmentRoute);
+app.use("/api/teacher/food", teacherFoodRoute);
+app.use("/api/teacher/assessment", teacherAssessmentRoute);
+app.use("/api/teacher/setNumber", teacherSetNumberRoute);
 
 //api ของ role student (usecase 1,2,3,4,5)
 // app.use("/api/student/activity");
@@ -122,11 +130,9 @@ app.use("/api/student/grade", studentGradeRoute);
 // api ของ visitor
 app.use("/api/auth", authRoute);
 
-// api ของ role
 app.use("/api/role", roleRoute);
-
-//api ของ department
 app.use("/api/department", departmentRoute);
+app.use("/api/faculty", facultyRoute);
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 

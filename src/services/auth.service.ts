@@ -187,15 +187,26 @@ export class AuthService extends ErrorHandledService {
    * ตรวจสอบ credential
    * คืน Users object ถ้าถูกต้อง, หรือ null ถ้าไม่ถูก
    */
+  // public async validateUser(
+  //   username: string,
+  //   password: string
+  // ): Promise<Users | null> {
+  //   const rows = await this.authDao.getUsersByUsername(username);
+  //   if (!rows.length) return null;
+
+  //   const user = rows[0];
+  //   if (!user.password) return null;
+
+  //   const matched = await bcrypt.compare(password, user.password);
+  //   return matched ? user : null;
+  // }
+
   public async validateUser(
     username: string,
     password: string
   ): Promise<Users | null> {
-    const rows = await this.authDao.getUsersByUsername(username);
-    if (!rows.length) return null;
-
-    const user = rows[0];
-    if (!user.password) return null;
+    const user = await this.authDao.getUsersByUsername(username);
+    if (!user || !user.password) return null;
 
     const matched = await bcrypt.compare(password, user.password);
     return matched ? user : null;
@@ -204,16 +215,25 @@ export class AuthService extends ErrorHandledService {
   /**
    * ดึงข้อมูลผู้ใช้ตาม ID
    */
+  // public async findById(userId: number): Promise<Users | null> {
+  //   const rows = await this.authDao.getUsersById(userId);
+  //   return rows.length ? rows[0] : null;
+  // }
+
   public async findById(userId: number): Promise<Users | null> {
-    const rows = await this.authDao.getUsersById(userId);
-    return rows.length ? rows[0] : null;
+    return await this.authDao.getUsersById(userId); // ✅ ไม่เปลี่ยนชื่อเหมือนเดิมเป๊ะ!
   }
 
   /*** helper functions ***/
 
+  // private async existsUsername(username: string): Promise<boolean> {
+  //   const rows = await this.authDao.getUsersByUsername(username);
+  //   return rows.length > 0;
+  // }
+
   private async existsUsername(username: string): Promise<boolean> {
-    const rows = await this.authDao.getUsersByUsername(username);
-    return rows.length > 0;
+    const user = await this.authDao.getUsersByUsername(username);
+    return user !== null;
   }
 
   private async getUserId(username: string): Promise<number | null> {
