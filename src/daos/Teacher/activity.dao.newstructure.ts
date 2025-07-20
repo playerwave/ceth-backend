@@ -37,6 +37,8 @@ export class ActivityDao extends ErrorHandledDao {
     await queryRunner.startTransaction();
 
     try {
+      console.log("Creating activity with data:", data);
+
       // Insert Activity
       const result = await queryRunner.query(
         `
@@ -58,7 +60,7 @@ export class ActivityDao extends ErrorHandledDao {
           data.presenter_company_name || null,
           data.type || "Soft",
           data.description || null,
-          data.seat ?? null,
+          data.seat ?? 0,
           data.recieve_hours ?? null,
           data.event_format || "Online",
           new Date(),

@@ -47,6 +47,22 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  public async getActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.id);
+      const activity = await this.activityService.getActivityById(id);
+
+      if (!activity) {
+        res.status(404).json({ message: "Activity not found" });
+        return;
+      }
+
+      res.status(200).json(activity);
+    } catch (error) {
+      this.handleError("ActivityController.getActivity", error, res);
+    }
+  }
+
   public async delete(req: Request, res: Response): Promise<void> {
     try {
       const id = this.parseId(req.params.id);
@@ -135,6 +151,7 @@ export const activityController = {
   update: controller.update.bind(controller),
   delete: controller.delete.bind(controller),
   getAll: controller.getAll.bind(controller),
+  getActivity: controller.getActivity.bind(controller),
   // getById: controller.getById.bind(controller),
   // search: controller.search.bind(controller),
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),

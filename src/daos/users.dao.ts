@@ -9,7 +9,7 @@ export class UsersDao extends ErrorHandledDao {
 
   constructor() {
     super();
-    this.initialize();
+    // this.initialize();
   }
 
   private async initialize(): Promise<void> {
@@ -22,19 +22,28 @@ export class UsersDao extends ErrorHandledDao {
     }
   }
 
-  private checkConnection(): void {
+  // private checkConnection(): void {
+  //   if (!this.dataSource?.isInitialized || !this.usersRepository) {
+  //     throw new Error("❌ Users repository is not initialized");
+  //   }
+  // }
+
+  private async checkConnection(): Promise<void> {
     if (!this.dataSource?.isInitialized || !this.usersRepository) {
-      throw new Error("❌ Users repository is not initialized");
+      await this.initialize(); // พยายามเชื่อมต่อใหม่
+      if (!this.dataSource?.isInitialized || !this.usersRepository) {
+        throw new Error("❌ Users repository is not initialized");
+      }
     }
   }
 
   public async countUsers(): Promise<number> {
-    this.checkConnection();
+    await this.checkConnection();
     return await this.usersRepository!.count();
   }
 
   public async getUsers(page: number, limit: number): Promise<Users[]> {
-    this.checkConnection();
+    await this.checkConnection();
     const offset = (page - 1) * limit;
     return await this.usersRepository!.createQueryBuilder("users")
       .innerJoinAndSelect("users.roles", "roles")
@@ -45,14 +54,14 @@ export class UsersDao extends ErrorHandledDao {
   }
 
   public async getUsersByUsername(username: string): Promise<Users[]> {
-    this.checkConnection();
+    await this.checkConnection();
     return await this.usersRepository!.find({
       where: { username },
     });
   }
 
   public async getUsersById(users_id: number): Promise<Users[]> {
-    this.checkConnection();
+    await this.checkConnection();
     return await this.usersRepository!.createQueryBuilder("users")
       .innerJoinAndSelect("users.roles", "roles")
       .where("users.users_id = :users_id", { users_id })
@@ -62,7 +71,7 @@ export class UsersDao extends ErrorHandledDao {
   public async getIdByUsername(
     username: string
   ): Promise<{ users_id: number }[]> {
-    this.checkConnection();
+    await this.checkConnection();
     return await this.usersRepository!.query(
       `SELECT users_id FROM users WHERE username = $1`,
       [username.trim()]
@@ -72,7 +81,7 @@ export class UsersDao extends ErrorHandledDao {
   public async getRolesIdByUsersId(
     users_id: number
   ): Promise<{ roles_id: number }[]> {
-    this.checkConnection();
+    await this.checkConnection();
     return await this.usersRepository!.query(
       `SELECT roles_id FROM users WHERE users_id = $1`,
       [users_id]
@@ -80,7 +89,7 @@ export class UsersDao extends ErrorHandledDao {
   }
 
   public async register(username: string, password: string): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     const roles = await this.usersRepository!.query(
       `SELECT roles_id FROM roles WHERE roles_name::text LIKE '%Student%'`
     );
@@ -100,7 +109,7 @@ export class UsersDao extends ErrorHandledDao {
     password: string,
     roles_id: number
   ): Promise<Users> {
-    this.checkConnection();
+    await this.checkConnection();
     const result = await this.usersRepository!.createQueryBuilder()
       .insert()
       .into(Users)
@@ -116,7 +125,7 @@ export class UsersDao extends ErrorHandledDao {
     username: string,
     roles_id: number
   ): Promise<Users | null> {
-    this.checkConnection();
+    await this.checkConnection();
 
     // อัปเดตข้อมูล
     await this.usersRepository!.update(users_id, {
@@ -133,7 +142,7 @@ export class UsersDao extends ErrorHandledDao {
   }
 
   public async updatedRoles(users_id: number, roles_id: number): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     await this.usersRepository!.update(users_id, { roles_id });
   }
 
@@ -141,17 +150,17 @@ export class UsersDao extends ErrorHandledDao {
     users_id: number,
     password: string
   ): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     await this.usersRepository!.update(users_id, { password });
   }
 
   public async deleteUsers(users_id: number): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     await this.usersRepository!.delete(users_id);
   }
 
   public async rolesAdmin(): Promise<Users[]> {
-    this.checkConnection();
+    await this.checkConnection();
     return await this.usersRepository!.createQueryBuilder("users")
       .innerJoinAndSelect("users.roles", "roles")
       // .where("roles.roles_name ILIKE :name", { name: "%Admin%" })

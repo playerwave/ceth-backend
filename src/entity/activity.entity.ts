@@ -32,7 +32,7 @@ export class Activity {
   @Column({ type: "text" })
   description?: string;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", default: 0 })
   seat?: number;
 
   @Column({ type: "int" })

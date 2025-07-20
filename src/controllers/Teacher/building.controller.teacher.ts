@@ -17,25 +17,86 @@ export class BuildingController extends ErrorHandledController {
     }
   }
 
+  // public async getAll(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const page = this.parseOptionalInt(req.query.page, 1);
+  //     const limit = this.parseOptionalInt(req.query.limit, 10);
+  //     const result = await this.buildingService.getBuilding(page, limit);
+  //     res.status(200).json({
+  //       message: "ดึงข้อมูลอาคารสำเร็จ",
+  //       pagination: { page, limit },
+  //       data: result,
+  //     });
+  //   } catch (error) {
+  //     this.handleError("BuildingController.getAll", error, res);
+  //   }
+  // }
+
   public async getAll(req: Request, res: Response): Promise<void> {
     try {
       const page = this.parseOptionalInt(req.query.page, 1);
       const limit = this.parseOptionalInt(req.query.limit, 10);
-      const result = await this.buildingService.getBuilding(page, limit);
-      res.status(200).json({
-        message: "ดึงข้อมูลอาคารสำเร็จ",
-        pagination: { page, limit },
-        data: result,
-      });
+
+      const buildings = await this.buildingService.getBuilding(page, limit);
+      res.status(200).json(buildings); // ✅ ส่ง array ล้วนเหมือน RoomController
     } catch (error) {
       this.handleError("BuildingController.getAll", error, res);
     }
   }
 
+  // public async create(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const data = this.parseBuildingPayload(req.body);
+
+  //     const created = await this.buildingService.addBuilding(
+  //       data.faculty_id,
+  //       data.building_name
+  //     );
+
+  //     if (created) {
+  //       res.status(201).json({
+  //         message: "เพิ่มชื่อตึกสำเร็จ !",
+  //         building: created, // คุณสามารถ return building object ถ้าต้องการ
+  //       });
+  //     } else {
+  //       res.status(409).json({
+  //         message: "มีชื่อตึกนี้อยู่ในระบบแล้ว !",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     this.handleError("BuildingController.create", error, res);
+  //   }
+  // }
+
+  // public async update(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const building_id = this.parseId(req.params.building_id);
+  //     const data = this.parseBuildingPayload(req.body);
+
+  //     const updated = await this.buildingService.updatedBuildingByName(
+  //       building_id,
+  //       data.faculty_id,
+  //       data.building_name
+  //     );
+
+  //     if (updated) {
+  //       res.status(200).json({
+  //         message: "แก้ชื่อตึกสำเร็จ !",
+  //         updated: updated,
+  //       });
+  //     } else {
+  //       res.status(409).json({
+  //         message: "มีชื่อตึกนี้อยู่ในระบบแล้ว !",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     this.handleError("BuildingController.update", error, res);
+  //   }
+  // }
+
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseBuildingPayload(req.body);
-
       const created = await this.buildingService.addBuilding(
         data.faculty_id,
         data.building_name
@@ -43,13 +104,11 @@ export class BuildingController extends ErrorHandledController {
 
       if (created) {
         res.status(201).json({
-          message: "เพิ่มชื่อตึกสำเร็จ !",
-          building: created, // คุณสามารถ return building object ถ้าต้องการ
+          message: "เพิ่มชื่อตึกสำเร็จ!",
+          building: created,
         });
       } else {
-        res.status(409).json({
-          message: "มีชื่อตึกนี้อยู่ในระบบแล้ว !",
-        });
+        res.status(409).json({ message: "มีชื่อตึกนี้อยู่ในระบบแล้ว!" });
       }
     } catch (error) {
       this.handleError("BuildingController.create", error, res);
@@ -69,12 +128,12 @@ export class BuildingController extends ErrorHandledController {
 
       if (updated) {
         res.status(200).json({
-          message: "แก้ชื่อตึกสำเร็จ !",
-          updated: updated,
+          message: "แก้ไขชื่อตึกสำเร็จ!",
+          updated,
         });
       } else {
         res.status(409).json({
-          message: "มีชื่อตึกนี้อยู่ในระบบแล้ว !",
+          message: "มีชื่อตึกนี้อยู่ในระบบแล้ว หรือไม่พบตึกที่ต้องการแก้ไข!",
         });
       }
     } catch (error) {

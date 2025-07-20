@@ -48,6 +48,8 @@ router.delete("/delete-activity/:id", wrapAsync(activityController.delete));
 // // แต่เอาจริงน่าจะเปลี่ยนเป็นอะไรสักอย่างที่สื่อความหมายมากกว่านี้
 router.get("/get-activities", wrapAsync(activityController.getAll));
 
+router.get("/get-activity/:id", wrapAsync(activityController.getActivity));
+
 // // เรียกดูรายกิจกรรม
 // router.get("/get-activity/:id", wrapAsync(activityController.getById));
 
