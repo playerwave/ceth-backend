@@ -47,6 +47,8 @@ import facultyRoute from "./routes/faculty.route";
 //import student routes
 // import studentActivityRoute from "./routes/Student/activity.route";
 
+import activityVisitorRoute from './routes/visitor/activity.route'
+
 dotenv.config();
 
 const app = express();
@@ -133,6 +135,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/role", roleRoute);
 app.use("/api/department", departmentRoute);
 app.use("/api/faculty", facultyRoute);
+app.use("/visitor", activityVisitorRoute)
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 
