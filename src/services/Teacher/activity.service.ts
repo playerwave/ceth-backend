@@ -649,6 +649,24 @@ export class ActivityService extends ErrorHandledService {
     return updated;
   }
 
+  public async updateActivityByStatus(activity_id: number, activity_status: string): Promise<boolean> {
+    const find_activity = await this.activityDao.getActivityByID(activity_id)
+    try {
+      if (find_activity.length > 0) {
+        const id = find_activity[0].activity_id;
+        await this.activityDao.updateActyivityByStatus(id, activity_status)
+        await redis.del("activity:all");
+        return true
+      } else {
+        console.log("ไม่พบ Activity นี้")
+        return false
+      }
+    } catch (error) {
+      this.logError("❌ Error in updateActivityByStatus", error);
+      throw error;
+    }
+  }
+
   public async softDeleteActivity(
     activity_id: number
   ): Promise<Activity | null> {

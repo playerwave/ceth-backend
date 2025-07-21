@@ -2,10 +2,15 @@
 import { Request, Response } from "express";
 import { ActivityService } from "../../services/Teacher/activity.service";
 import { ErrorHandledController } from "../error.handled.controller";
+import xss from "xss";
 
 export class ActivityController extends ErrorHandledController {
   constructor(private readonly activityService: ActivityService) {
     super();
+  }
+
+  private sanitize(input: any): string {
+    return xss(input);
   }
 
   public async create(req: Request, res: Response): Promise<void> {
@@ -44,6 +49,24 @@ export class ActivityController extends ErrorHandledController {
       });
     } catch (error) {
       this.handleError("ActivityController.update", error, res);
+    }
+  }
+
+  public async updateActivityByStatus(req: Request, res: Response): Promise<void> {
+    const { activity_id } = req.params;
+    const { activity_status } = req.body
+    console.log(activity_id)
+    const activityIDSanitize = parseInt(this.sanitize(activity_id));
+    const activityStatusSanitize = this.sanitize(activity_status)
+    try {
+      const updated = await this.activityService.updateActivityByStatus(activityIDSanitize, activityStatusSanitize)
+      if (updated) {
+        res.status(200).json({ message: "เปลี่ยนสถานะสำเร็จ" })
+      } else {
+        res.status(404).json({ message: "เกิดข้อผิดพลาดในการแก้ไข" })
+      }
+    } catch (error) {
+      this.handleError("ActivityController.updateActivityByStatus", error, res);
     }
   }
 
@@ -149,6 +172,7 @@ const controller = new ActivityController(activityService);
 export const activityController = {
   create: controller.create.bind(controller),
   update: controller.update.bind(controller),
+  updateByStatus: controller.update.bind(controller),
   delete: controller.delete.bind(controller),
   getAll: controller.getAll.bind(controller),
   getActivity: controller.getActivity.bind(controller),

@@ -63,4 +63,6 @@ router.get("/get-activity/:id", wrapAsync(activityController.getActivity));
 //   wrapAsync(activityController.getEnrolledStudents)
 // );
 
+router.post("/update-activity-status:ac", wrapAsync(activityController.updateByStatus))
+
 export default router;
