@@ -58,6 +58,8 @@ export class ActivityController extends ErrorHandledController {
     console.log(activity_id)
     const activityIDSanitize = parseInt(this.sanitize(activity_id));
     const activityStatusSanitize = this.sanitize(activity_status)
+    // const id = this.parseId(req.params.id);
+    // const data = this.parseActivityStatus(req.body);
     try {
       const updated = await this.activityService.updateActivityByStatus(activityIDSanitize, activityStatusSanitize)
       if (updated) {
@@ -145,6 +147,13 @@ export class ActivityController extends ErrorHandledController {
     };
   }
 
+  private parseActivityStatus(body: any): any {
+    return {
+      activity_status: body.activity_status || "Private",
+
+    };
+  }
+
   private parseOptionalInt(
     value: any,
     fallback: number | null = null
@@ -172,7 +181,7 @@ const controller = new ActivityController(activityService);
 export const activityController = {
   create: controller.create.bind(controller),
   update: controller.update.bind(controller),
-  updateByStatus: controller.update.bind(controller),
+  updateByStatus: controller.updateActivityByStatus.bind(controller),
   delete: controller.delete.bind(controller),
   getAll: controller.getAll.bind(controller),
   getActivity: controller.getActivity.bind(controller),
