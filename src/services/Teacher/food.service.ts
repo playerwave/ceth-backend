@@ -69,6 +69,23 @@ export class FoodService extends ErrorHandledService {
     }
   }
 
+  public async getFoodById(food_id: number): Promise<Food | null> {
+    try {
+      const found = await this.foodDao.getFoodByID(food_id);
+      if (!found.length) {
+        this.logInfo("❌ Food not found", { food_id });
+        return null;
+      }
+
+      const food = found[0];
+      this.logInfo("🍽️ Food retrieved", { food_id });
+      return food;
+    } catch (error) {
+      this.logError("❌ Error in getFoodById", error);
+      throw error;
+    }
+  }
+
   public async addFood(
     food_name: string,
     status: string,

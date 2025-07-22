@@ -174,6 +174,16 @@ export class FoodController extends ErrorHandledController {
     }
   }
 
+  public async getOne(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.food_id);
+      const food = await this.foodService.getFoodById(id);
+      res.status(200).json(food);
+    } catch (error) {
+      this.handleError("FoodController.getOne", error, res);
+    }
+  }
+
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseFoodPayload(req.body);

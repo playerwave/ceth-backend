@@ -54,6 +54,12 @@ router.get(
   wrapAsync(foodController.getAll.bind(foodController))
 );
 
+router.get(
+  "/get-food/:food_id",
+  verifyToken,
+  wrapAsync(foodController.getOne.bind(foodController))
+);
+
 // ✅ GET /count → จำนวนอาหารทั้งหมด
 router.get("/count", verifyToken, wrapAsync(foodController.count));
 
