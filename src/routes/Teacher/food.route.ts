@@ -76,14 +76,14 @@ router.put(
   "/update-food/:food_id",
   verifyToken,
   // validateDTO(UpdateFoodDto),
-  wrapAsync(foodController.update)
+  wrapAsync(foodController.update.bind(foodController))
 );
 
 // ✅ DELETE /delete-food/:food_id → ลบอาหาร
 router.delete(
   "/delete-food/:food_id",
   verifyToken,
-  wrapAsync(foodController.delete)
+  wrapAsync(foodController.delete.bind(foodController))
 );
 
 export default router;

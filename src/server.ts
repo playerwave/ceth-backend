@@ -28,6 +28,7 @@ import teacherSetNumberRoute from "./routes/Teacher/setNumber.route";
 // import adminAssessmentRoute from "./routes/Admin/assessment.route";
 
 //import student routes
+// import studentActivityRoute from "./routes/Student/activity.route";
 import studentRoute from "./routes/Student/students.route";
 import studentGradeRoute from "./routes/Student/grade.route";
 
@@ -47,7 +48,7 @@ import facultyRoute from "./routes/faculty.route";
 //import student routes
 // import studentActivityRoute from "./routes/Student/activity.route";
 
-import activityVisitorRoute from './routes/visitor/activity.route'
+import activityVisitorRoute from "./routes/visitor/activity.route";
 
 dotenv.config();
 
@@ -125,7 +126,7 @@ app.use("/api/teacher/assessment", teacherAssessmentRoute);
 app.use("/api/teacher/setNumber", teacherSetNumberRoute);
 
 //api ของ role student (usecase 1,2,3,4,5)
-// app.use("/api/student/activity");
+// app.use("/api/student/activity", studentActivityRoute);
 app.use("/api/student", studentRoute);
 app.use("/api/student/grade", studentGradeRoute);
 
@@ -135,7 +136,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/role", roleRoute);
 app.use("/api/department", departmentRoute);
 app.use("/api/faculty", facultyRoute);
-app.use("/visitor", activityVisitorRoute)
+app.use("/visitor", activityVisitorRoute);
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 
