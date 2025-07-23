@@ -13,10 +13,29 @@ export class ActivityController extends ErrorHandledController {
     return xss(input);
   }
 
+  // public async create(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const data = this.parseActivityPayload(req.body);
+  //     const result = await this.activityService.createActivity(data);
+  //     res.status(201).json(result);
+  //   } catch (error) {
+  //     this.handleError("ActivityController.create", error, res);
+  //   }
+  // }
+
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseActivityPayload(req.body);
-      const result = await this.activityService.createActivity(data);
+
+      // ✅ รองรับ selectedFoods หรือ foodIds
+      const foodIds: number[] =
+        req.body.selectedFoods || req.body.foodIds || [];
+
+      const result = await this.activityService.createActivity({
+        ...data,
+        foodIds, // ✅ ส่งต่อชื่อเดียวกันไป service
+      });
+
       res.status(201).json(result);
     } catch (error) {
       this.handleError("ActivityController.create", error, res);
@@ -52,20 +71,26 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
-  public async updateActivityByStatus(req: Request, res: Response): Promise<void> {
+  public async updateActivityByStatus(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     const { activity_id } = req.params;
-    const { activity_status } = req.body
-    console.log(activity_id)
+    const { activity_status } = req.body;
+    console.log(activity_id);
     const activityIDSanitize = parseInt(this.sanitize(activity_id));
-    const activityStatusSanitize = this.sanitize(activity_status)
+    const activityStatusSanitize = this.sanitize(activity_status);
     // const id = this.parseId(req.params.id);
     // const data = this.parseActivityStatus(req.body);
     try {
-      const updated = await this.activityService.updateActivityByStatus(activityIDSanitize, activityStatusSanitize)
+      const updated = await this.activityService.updateActivityByStatus(
+        activityIDSanitize,
+        activityStatusSanitize
+      );
       if (updated) {
-        res.status(200).json({ message: "เปลี่ยนสถานะสำเร็จ" })
+        res.status(200).json({ message: "เปลี่ยนสถานะสำเร็จ" });
       } else {
-        res.status(404).json({ message: "เกิดข้อผิดพลาดในการแก้ไข" })
+        res.status(404).json({ message: "เกิดข้อผิดพลาดในการแก้ไข" });
       }
     } catch (error) {
       this.handleError("ActivityController.updateActivityByStatus", error, res);
@@ -150,7 +175,6 @@ export class ActivityController extends ErrorHandledController {
   private parseActivityStatus(body: any): any {
     return {
       activity_status: body.activity_status || "Private",
-
     };
   }
 

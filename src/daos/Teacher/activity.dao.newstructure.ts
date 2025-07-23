@@ -108,9 +108,9 @@ export class ActivityDao extends ErrorHandledDao {
   public async getActivityByID(activity_id: number): Promise<Activity[]> {
     this.checkConnection();
     try {
-      const sql = `SELECT * FROM activity WHERE activity_id = $1`
-      const result = await this.dataSource?.query(sql, [activity_id])
-      return result
+      const sql = `SELECT * FROM activity WHERE activity_id = $1`;
+      const result = await this.dataSource?.query(sql, [activity_id]);
+      return result;
     } catch (error) {
       this.logDbError("getActivityByID", error);
       throw new Error("❌ Failed to update activity");
@@ -171,7 +171,8 @@ export class ActivityDao extends ErrorHandledDao {
       const values = updateFields.map((field) => (data as any)[field] ?? null);
 
       await queryRunner.query(
-        `UPDATE activity SET ${setClause} WHERE activity_id = $${updateFields.length + 1
+        `UPDATE activity SET ${setClause} WHERE activity_id = $${
+          updateFields.length + 1
         }`,
         [...values, activity_id]
       );
@@ -208,12 +209,18 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  public async updateActyivityByStatus(activity_id: number, activity_status: string): Promise<Activity[]> {
+  public async updateActyivityByStatus(
+    activity_id: number,
+    activity_status: string
+  ): Promise<Activity[]> {
     this.checkConnection();
     try {
-      const sql = `UPDATE activity SET activity_status = $1 WHERE activity_id = $2;`
-      const result = await this.dataSource?.query(sql, [activity_status, activity_id])
-      return result
+      const sql = `UPDATE activity SET activity_status = $1 WHERE activity_id = $2;`;
+      const result = await this.dataSource?.query(sql, [
+        activity_status,
+        activity_id,
+      ]);
+      return result;
     } catch (error) {
       this.logDbError("updateActyivityByStatus", error);
       throw new Error("❌ Failed to update activity");
@@ -221,11 +228,22 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   // ค้นหากิจกรรมตาม id
+  // public async findById(id: number): Promise<Activity | null> {
+  //   this.checkConnection();
+
+  //   const result = await this.dataSource!.getRepository(Activity).findOne({
+  //     where: { activity_id: id },
+  //   });
+
+  //   return result;
+  // }
+
   public async findById(id: number): Promise<Activity | null> {
     this.checkConnection();
 
     const result = await this.dataSource!.getRepository(Activity).findOne({
       where: { activity_id: id },
+      relations: ["activityFood"], // 👈 ดึง relation มาด้วย
     });
 
     return result;
