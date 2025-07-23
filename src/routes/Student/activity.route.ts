@@ -57,7 +57,7 @@ router.delete(
 // ✅ GET METHODS
 router.get(
   "/get-student-activities/:id",
-  wrapAsync(activityController.getStudentActivities)
+  wrapAsync(activityController.getStudentActivities.bind(activityController))
 );
 
 router.get(

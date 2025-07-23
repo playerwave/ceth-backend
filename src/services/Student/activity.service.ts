@@ -1,5 +1,5 @@
 import { ActivityDao } from "../../daos/Student/activity.dao";
-import { JoinDao } from "../../daos/Student/join.dao";
+import { JoinDao } from "../../daos/join.dao";
 import { Activity } from "../../entity/activity.entity";
 import { Join } from "../../entity/join.entity";
 import redis from "../../config/redis";
