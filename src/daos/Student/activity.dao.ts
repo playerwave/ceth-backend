@@ -28,36 +28,45 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   // 🔹 กิจกรรมทั้งหมดที่นักศึกษายังไม่ได้สมัคร (public, active, ไม่หมดเวลา)
+  //   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
+  //     this.checkConnection();
+
+  //     const query = `
+  //   SELECT a.*
+  //   FROM activity a
+  //   WHERE a.activity_status = 'Public'
+  //     AND a.status = 'Active'
+  //     AND NOT EXISTS (
+  //       SELECT 1
+  //       FROM activity_detail ad
+  //       JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+  //       WHERE ad.activity_id = a.activity_id
+  //         AND j.students_id = $1
+  //     )
+  //   ORDER BY a.create_activity_date DESC
+  // `;
+
+  //     const result = await this.dataSource!.query(query, [studentId]);
+  //     return result;
+  //   }
+
   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
     this.checkConnection();
 
-    // const query = `
-    //   SELECT a.*
-    //   FROM activity a
-    //   WHERE a.activity_status = 'Public'
-    //     AND a.status = 'Active'
-    //     AND NOT EXISTS (
-    //       SELECT 1 FROM join j
-    //       WHERE j.activity_id = a.activity_id
-    //         AND j.student_id = $1
-    //     )
-    //   ORDER BY a.create_activity_date DESC
-    // `;
-
     const query = `
-  SELECT a.*
-  FROM activity a
-  WHERE a.activity_status = 'Public'
-    AND a.status = 'Active'
-    AND NOT EXISTS (
-      SELECT 1
-      FROM activity_detail ad
-      JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
-      WHERE ad.activity_id = a.activity_id
-        AND j.students_id = $1
-    )
-  ORDER BY a.create_activity_date DESC
-`;
+    SELECT a.*
+    FROM activity a
+    WHERE a.activity_status = 'Public'
+      AND a.status = 'Active'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM activity_detail ad
+        JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+        WHERE ad.activity_id = a.activity_id
+          AND j.students_id = $1
+      )
+    ORDER BY a.create_activity_date DESC
+  `;
 
     const result = await this.dataSource!.query(query, [studentId]);
     return result;
@@ -85,9 +94,10 @@ export class ActivityDao extends ErrorHandledDao {
     const query = `
       SELECT a.*
       FROM activity a
-INNER JOIN activity_detail ad ON ad.activity_id = a.activity_id
-INNER JOIN "join" j ON j.activity_detail_id = ad.activity_detail_id
-WHERE j.students_id = $1
+      INNER JOIN activity_detail ad ON ad.activity_id = a.activity_id
+      INNER JOIN "join" j ON j.activity_detail_id = ad.activity_detail_id
+      WHERE j.students_id = $1
+        AND a.activity_status = 'Public'
       ORDER BY a.start_activity_date DESC
     `;
 
