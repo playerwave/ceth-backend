@@ -63,29 +63,6 @@ export class ActivityDao extends ErrorHandledDao {
     return result;
   }
 
-  // 🔹 ดึงกิจกรรมตาม ID พร้อมบอกว่านักศึกษาเคย join หรือยัง
-  public async findActivityWithJoinStatus(
-    activityId: number,
-    studentId: number | null
-  ): Promise<Activity | null> {
-    this.checkConnection();
-
-    const query = `
-      SELECT a.*,
-        CASE WHEN j.join_id IS NOT NULL THEN true ELSE false END AS is_joined
-      FROM activity a
-      LEFT JOIN join j ON a.activity_id = j.activity_id
-        AND j.student_id = $1
-      WHERE a.activity_id = $2
-    `;
-
-    const result = await this.dataSource!.query(query, [
-      studentId ?? -1,
-      activityId,
-    ]);
-    return result[0] ?? null;
-  }
-
   // 🔹 ดึงกิจกรรมที่นักศึกษาเคยสมัครไว้แล้ว
   public async getEnrolledActivities(studentId: number): Promise<Activity[]> {
     this.checkConnection();
@@ -117,5 +94,37 @@ export class ActivityDao extends ErrorHandledDao {
 
     const result = await this.dataSource!.query(query, [`%${ac_name}%`]);
     return result;
+  }
+
+  public async findActivityWithJoinStatus(
+    activityId: number,
+    studentId?: number | null
+  ): Promise<Activity | null> {
+    this.checkConnection();
+  
+    let query: string;
+    let params: any[];
+  
+    if (studentId) {
+      query = `
+        SELECT a.*,
+          CASE WHEN j.join_id IS NOT NULL THEN true ELSE false END AS is_joined
+        FROM activity a
+        LEFT JOIN "join" j ON a.activity_id = j.activity_id
+          AND j.students_id = $1
+        WHERE a.activity_id = $2
+      `;
+      params = [studentId, activityId];
+    } else {
+    query = `
+  SELECT a.*, false AS is_joined
+  FROM activity a
+  WHERE a.activity_id = $1
+`;
+      params = [activityId];
+    }
+  
+    const result = await this.dataSource!.query(query, params);
+    return result[0] ?? null;
   }
 }
