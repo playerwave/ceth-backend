@@ -5,11 +5,11 @@ const router = Router();
 const activityController = new ActivityController();
 
 router.get("/count", async (req: Request, res: Response) => {
-    await activityController.countActivity(req, res)
-})
+  await activityController.countActivity(req, res);
+});
 
-router.get("/", async (req: Request, res: Response) => {
-    await activityController.getAllActivityByVisitor(req, res)
-})
+router.get("/get-visitor-activities", async (req: Request, res: Response) => {
+  await activityController.getAllActivityByVisitor(req, res);
+});
 
-export default router
+export default router;

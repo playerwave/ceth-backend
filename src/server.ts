@@ -136,7 +136,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/role", roleRoute);
 app.use("/api/department", departmentRoute);
 app.use("/api/faculty", facultyRoute);
-app.use("/visitor", activityVisitorRoute);
+app.use("/api/visitor", activityVisitorRoute);
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 
