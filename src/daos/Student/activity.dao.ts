@@ -64,14 +64,30 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   // 🔹 ดึงกิจกรรมที่นักศึกษาเคยสมัครไว้แล้ว
+  // public async getEnrolledActivities(studentId: number): Promise<Activity[]> {
+  //   this.checkConnection();
+
+  //   const query = `
+  //     SELECT a.*
+  //     FROM activity a
+  //     INNER JOIN join j ON j.activity_id = a.activity_id
+  //     WHERE j.student_id = $1
+  //     ORDER BY a.start_activity_date DESC
+  //   `;
+
+  //   const result = await this.dataSource!.query(query, [studentId]);
+  //   return result;
+  // }
+
   public async getEnrolledActivities(studentId: number): Promise<Activity[]> {
     this.checkConnection();
 
     const query = `
       SELECT a.*
       FROM activity a
-      INNER JOIN join j ON j.activity_id = a.activity_id
-      WHERE j.student_id = $1
+INNER JOIN activity_detail ad ON ad.activity_id = a.activity_id
+INNER JOIN "join" j ON j.activity_detail_id = ad.activity_detail_id
+WHERE j.students_id = $1
       ORDER BY a.start_activity_date DESC
     `;
 
@@ -101,10 +117,10 @@ export class ActivityDao extends ErrorHandledDao {
     studentId?: number | null
   ): Promise<Activity | null> {
     this.checkConnection();
-  
+
     let query: string;
     let params: any[];
-  
+
     if (studentId) {
       query = `
         SELECT a.*,
@@ -116,14 +132,14 @@ export class ActivityDao extends ErrorHandledDao {
       `;
       params = [studentId, activityId];
     } else {
-    query = `
+      query = `
   SELECT a.*, false AS is_joined
   FROM activity a
   WHERE a.activity_id = $1
 `;
       params = [activityId];
     }
-  
+
     const result = await this.dataSource!.query(query, params);
     return result[0] ?? null;
   }
