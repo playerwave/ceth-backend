@@ -133,24 +133,157 @@ export class ActivityDao extends ErrorHandledDao {
 
     if (studentId) {
       query = `
-        SELECT a.*,
-          CASE WHEN j.join_id IS NOT NULL THEN true ELSE false END AS is_joined
-        FROM activity a
-        LEFT JOIN "join" j ON a.activity_id = j.activity_id
-          AND j.students_id = $1
-        WHERE a.activity_id = $2
-      `;
+          SELECT a.*,
+            CASE WHEN j.join_id IS NOT NULL THEN true ELSE false END AS is_joined
+          FROM activity a
+          LEFT JOIN "join" j ON a.activity_id = j.activity_id
+            AND j.students_id = $1
+          WHERE a.activity_id = $2
+        `;
       params = [studentId, activityId];
     } else {
       query = `
-  SELECT a.*, false AS is_joined
-  FROM activity a
-  WHERE a.activity_id = $1
-`;
+    SELECT a.*, false AS is_joined
+    FROM activity a
+    WHERE a.activity_id = $1
+  `;
       params = [activityId];
     }
 
     const result = await this.dataSource!.query(query, params);
     return result[0] ?? null;
+  }
+
+  public async findJoinByStudentAndActivity(
+    studentId: number,
+    activityDetailId: number // ต้องเป็น activity_detail_id
+  ): Promise<Join | null> {
+    this.checkConnection();
+
+    try {
+      const result = await this.dataSource!.getRepository(Join).findOne({
+        where: {
+          students_id: studentId,
+          activity_detail_id: activityDetailId,
+        },
+      });
+      return result;
+    } catch (error) {
+      this.logDbError("findJoinByStudentAndActivity", error);
+      throw error;
+    }
+  }
+
+  // public async getActivityDetailIdByActivityId(
+  //   activityId: number
+  // ): Promise<{ activity_detail_id: number } | null> {
+  //   this.checkConnection();
+  //   const result = await this.dataSource!.query(
+  //     `SELECT activity_detail_id FROM activity_detail WHERE activity_id = $1 LIMIT 1`,
+  //     [activityId]
+  //   );
+  //   return result[0] ?? null;
+  // }
+
+  public async getActivityDetailIdByActivityId(
+    activityId: number
+  ): Promise<{ activity_detail_id: number } | null> {
+    this.checkConnection();
+
+    // ลอง log activityId ที่รับเข้ามา (ช่วย debug)
+    console.log(
+      "[DAO] getActivityDetailIdByActivityId: activityId =",
+      activityId
+    );
+
+    const result = await this.dataSource!.query(
+      `SELECT activity_detail_id FROM activity_detail WHERE activity_id = $1 LIMIT 1`,
+      [activityId]
+    );
+
+    if (!result[0]) {
+      // เพิ่ม log error เพื่อช่วย debug
+      console.error(
+        `[DAO] ไม่พบ activity_detail_id สำหรับ activity_id = ${activityId}`
+      );
+      return null;
+    }
+
+    return result[0];
+  }
+
+  public async getAvailableActivityDetailId(
+    activityId: number,
+    studentId: number
+  ): Promise<{ activity_detail_id: number } | null> {
+    this.checkConnection();
+    const result = await this.dataSource!.query(
+      `SELECT ad.activity_detail_id
+       FROM activity_detail ad
+       LEFT JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id AND j.students_id = $2
+       WHERE ad.activity_id = $1 AND j.join_id IS NULL
+       LIMIT 1`,
+      [activityId, studentId]
+    );
+    if (!result[0]) {
+      console.error(
+        `[DAO] ไม่พบ activity_detail_id สำหรับ activity_id = ${activityId} และ students_id = ${studentId}`
+      );
+      return null;
+    }
+    return result[0];
+  }
+
+  // public async createJoin(
+  //   studentId: number,
+  //   activityId: number,
+  //   teacherId: number // ต้องส่ง teacherId มาด้วย
+  // ): Promise<Join> {
+  //   this.checkConnection();
+
+  //   // 1. หา activity_detail_id จาก activity_id
+  //   const activityDetailResult = await this.dataSource!.query(
+  //     `SELECT activity_detail_id FROM activity_detail WHERE activity_id = $1 LIMIT 1`,
+  //     [activityId]
+  //   );
+  //   const activityDetailId = activityDetailResult[0]?.activity_detail_id;
+  //   if (!activityDetailId) throw new Error("Activity detail not found");
+
+  //   // 2. สร้างข้อมูล join (ลงทะเบียนกิจกรรม)
+  //   const result = await this.dataSource!.query(
+  //     `INSERT INTO "join" (students_id, activity_detail_id, teacher_id, join_date, status)
+  //      VALUES ($1, $2, $3, $4, $5)
+  //      RETURNING *`,
+  //     [
+  //       studentId,
+  //       activityDetailId,
+  //       teacherId,
+  //       new Date(), // join_date เป็น timestamp
+  //       "Pending", // หรือ 'Completed', 'Cancelled' ตามต้องการ
+  //     ]
+  //   );
+  //   return result[0];
+  // }
+
+  public async createJoin(
+    studentId: number,
+    activityDetailId: number,
+    foodChoices: string[] // หรือ teacherId ถ้าต้องการ
+  ): Promise<Join> {
+    this.checkConnection();
+
+    // สร้าง join record
+    const result = await this.dataSource!.query(
+      `INSERT INTO "join" (students_id, activity_detail_id, join_date, status)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [
+        studentId,
+        activityDetailId,
+        new Date(), // join_date
+        "Pending", // หรือ 'Completed', 'Cancelled'
+      ]
+    );
+    return result[0];
   }
 }

@@ -168,7 +168,14 @@ export class ActivityDao extends ErrorHandledDao {
         .map((field, index) => `${field} = $${index + 1}`)
         .join(", ");
 
-      const values = updateFields.map((field) => (data as any)[field] ?? null);
+      const values = updateFields.map((field) => {
+        const value = (data as any)[field];
+        // ✅ จัดการ seat field ให้เป็น 0 แทน null
+        if (field === 'seat' && (value === null || value === undefined)) {
+          return 0;
+        }
+        return value ?? null;
+      });
 
       await queryRunner.query(
         `UPDATE activity SET ${setClause} WHERE activity_id = $${

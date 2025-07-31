@@ -44,7 +44,7 @@ const router = Router();
 
 // ✅ POST METHOD
 router.post(
-  "/student-enroll-activity/:id",
+  "/student-enroll-activity/:activityId/:studentId",
   wrapAsync(activityController.enrollActivity)
 );
 

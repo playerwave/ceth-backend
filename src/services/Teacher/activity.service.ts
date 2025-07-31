@@ -615,8 +615,7 @@ export class ActivityService extends ErrorHandledService {
 
     const updatedData: Partial<Activity> = {
       ...input,
-      seat:
-        input.event_format === "Online" ? input.seat ?? undefined : undefined,
+      seat: input.seat ?? 0, // ✅ ใช้ 0 แทน undefined สำหรับ seat
       recieve_hours: hrs ?? undefined,
       assessment_id: aid,
       room_id:

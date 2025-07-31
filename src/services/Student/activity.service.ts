@@ -43,24 +43,112 @@ export class ActivityService extends ErrorHandledService {
     }
   }
 
+  // public async studentEnrollActivityService(
+  //   studentId: number,
+  //   activityId: number,
+  //   foodChoices: string[]
+  // ): Promise<Join> {
+  //   try {
+  //     // 1. หา activity_detail_id จาก activityId
+  //     const activityDetailResult =
+  //       await this.activityDao.getActivityDetailIdByActivityId(activityId);
+  //     const activityDetailId = activityDetailResult?.activity_detail_id;
+  //     if (!activityDetailId) throw new Error("Activity detail not found");
+
+  //     // 2. ตรวจสอบว่าสมัครซ้ำหรือยัง
+  //     const existing = await this.joinDao.findJoinByStudentAndActivity(
+  //       studentId,
+  //       activityDetailId
+  //     );
+  //     if (existing) throw new Error("Already enrolled in this activity");
+
+  //     // 3. สร้าง join ใหม่
+  //     const join = await this.joinDao.createJoin(
+  //       studentId,
+  //       activityDetailId,
+  //       foodChoices
+  //     );
+
+  //     await redis.del(`join:${studentId}`);
+  //     this.logInfo("✅ Student enrolled in activity", {
+  //       studentId,
+  //       activityId,
+  //     });
+  //     return join;
+  //   } catch (error) {
+  //     this.logError("❌ Error in studentEnrollActivityService", error);
+  //     throw error;
+  //   }
+  // }
+
+  // public async studentEnrollActivityService(
+  //   studentId: number,
+  //   activityId: number,
+  //   foodChoices: string[]
+  // ): Promise<Join> {
+  //   try {
+  //     // ใช้ฟังก์ชันใหม่
+  //     const activityDetailResult =
+  //       await this.activityDao.getAvailableActivityDetailId(activityId, studentId);
+  //     const activityDetailId = activityDetailResult?.activity_detail_id;
+  //     if (!activityDetailId) throw new Error("Activity detail not found");
+
+  //     // ตรวจสอบว่าสมัครซ้ำหรือยัง
+  //     const existing = await this.joinDao.findJoinByStudentAndActivity(
+  //       studentId,
+  //       activityDetailId
+  //     );
+  //     if (existing) throw new Error("Already enrolled in this activity");
+
+  //     // สร้าง join ใหม่ (ต้องแก้ createJoin ให้รับ activityDetailId)
+  //     const join = await this.joinDao.createJoin(
+  //       studentId,
+  //       activityDetailId,
+  //       foodChoices // หรือ teacherId ถ้าต้องการ
+  //     );
+
+  //     await redis.del(`join:${studentId}`);
+  //     this.logInfo("✅ Student enrolled in activity", {
+  //       studentId,
+  //       activityId,
+  //     });
+  //     return join;
+  //   } catch (error) {
+  //     this.logError("❌ Error in studentEnrollActivityService", error);
+  //     throw error;
+  //   }
+  // }
+
   public async studentEnrollActivityService(
     studentId: number,
     activityId: number,
     foodChoices: string[]
   ): Promise<Join> {
     try {
+      // 1. หา activity_detail_id ที่ยังไม่มี join สำหรับ student นี้
+      const activityDetailResult =
+        await this.activityDao.getAvailableActivityDetailId(
+          activityId,
+          studentId
+        );
+      const activityDetailId = activityDetailResult?.activity_detail_id;
+      if (!activityDetailId) throw new Error("Activity detail not found");
+
+      // 2. ตรวจสอบว่าสมัครซ้ำหรือยัง
       const existing = await this.joinDao.findJoinByStudentAndActivity(
         studentId,
-        activityId
+        activityDetailId
       );
       if (existing) throw new Error("Already enrolled in this activity");
 
+      // 3. สร้าง join ใหม่
       const join = await this.joinDao.createJoin(
         studentId,
-        activityId,
-        foodChoices
+        activityDetailId,
+        foodChoices // หรือ teacherId ถ้าต้องการ
       );
 
+      // 4. ลบ cache
       await redis.del(`join:${studentId}`);
       this.logInfo("✅ Student enrolled in activity", {
         studentId,

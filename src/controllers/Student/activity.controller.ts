@@ -211,14 +211,34 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  // public async enrollActivity(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const userId = this.parseId(req.params.id);
+  //     const activityId = this.parseId(req.body.activityId);
+  //     const food = this.parseFoodInput(req.body.food);
+
+  //     const result = await this.activityService.studentEnrollActivityService(
+  //       userId,
+  //       activityId,
+  //       food
+  //     );
+
+  //     res
+  //       .status(200)
+  //       .json({ message: "Registration successful", activity: result });
+  //   } catch (error) {
+  //     this.handleError("StudentActivityController.enrollActivity", error, res);
+  //   }
+  // }
+
   public async enrollActivity(req: Request, res: Response): Promise<void> {
     try {
-      const userId = this.parseId(req.params.id);
-      const activityId = this.parseId(req.body.activityId);
+      const activityId = this.parseId(req.params.activityId);
+      const studentId = this.parseId(req.params.studentId);
       const food = this.parseFoodInput(req.body.food);
 
       const result = await this.activityService.studentEnrollActivityService(
-        userId,
+        studentId,
         activityId,
         food
       );

@@ -152,7 +152,7 @@ export class ActivityController extends ErrorHandledController {
       presenter_company_name: body.presenter_company_name || "",
       type: body.type || "Soft", // ENUM('Soft', 'Hard')
       description: body.description || "",
-      seat: this.parseOptionalInt(body.seat),
+      seat: this.parseOptionalInt(body.seat) ?? 0, // ✅ ใช้ 0 แทน null
       recieve_hours: this.parseOptionalInt(body.recieve_hours),
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
