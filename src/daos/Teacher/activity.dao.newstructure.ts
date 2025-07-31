@@ -2,6 +2,7 @@ import { DataSource } from "typeorm";
 import { Activity } from "../../entity/activity.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
+import { formatTimeToLocal } from "../../utils/formatTimeToLocal";
 
 export class ActivityDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;
@@ -26,6 +27,11 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  private formatDateToLocalString(date: Date): string {
+    // ✅ ใช้ formatTimeToLocal utility แทนการแปลงเอง
+    return formatTimeToLocal(date, "Asia/Bangkok");
+  }
+
   public async createActivityDao(
     data: Partial<Activity>,
     foodIds: number[] = []
@@ -37,7 +43,22 @@ export class ActivityDao extends ErrorHandledDao {
     await queryRunner.startTransaction();
 
     try {
-      console.log("Creating activity with data:", data);
+      // ✅ Log ข้อมูลก่อนบันทึกลง Database
+      console.log("🔍 === CREATE ACTIVITY - DATA BEFORE SAVE ===");
+      console.log(
+        "📅 special_start_register_date:",
+        data.special_start_register_date
+      );
+      console.log("📅 start_register_date:", data.start_register_date);
+      console.log("📅 end_register_date:", data.end_register_date);
+      console.log("📅 start_activity_date:", data.start_activity_date);
+      console.log("📅 end_activity_date:", data.end_activity_date);
+      console.log("📅 start_assessment:", data.start_assessment);
+      console.log("📅 end_assessment:", data.end_assessment);
+      console.log("⏰ recieve_hours:", data.recieve_hours);
+      console.log("🏢 room_id:", data.room_id);
+      console.log("📊 assessment_id:", data.assessment_id);
+      console.log("🔍 === END LOG ===");
 
       // Insert Activity
       const result = await queryRunner.query(
@@ -64,11 +85,21 @@ export class ActivityDao extends ErrorHandledDao {
           data.recieve_hours ?? null,
           data.event_format || "Online",
           new Date(),
-          data.special_start_register_date || null,
-          data.start_register_date || null,
-          data.end_register_date || null,
-          data.start_activity_date || null,
-          data.end_activity_date || null,
+          data.special_start_register_date instanceof Date
+            ? this.formatDateToLocalString(data.special_start_register_date)
+            : data.special_start_register_date || null,
+          data.start_register_date instanceof Date
+            ? this.formatDateToLocalString(data.start_register_date)
+            : data.start_register_date || null,
+          data.end_register_date instanceof Date
+            ? this.formatDateToLocalString(data.end_register_date)
+            : data.end_register_date || null,
+          data.start_activity_date instanceof Date
+            ? this.formatDateToLocalString(data.start_activity_date)
+            : data.start_activity_date || null,
+          data.end_activity_date instanceof Date
+            ? this.formatDateToLocalString(data.end_activity_date)
+            : data.end_activity_date || null,
           data.image_url || null,
           data.activity_status || "Private",
           data.activity_state || "Not Start",
@@ -79,6 +110,33 @@ export class ActivityDao extends ErrorHandledDao {
           data.room_id ?? null,
         ]
       );
+
+      // ✅ Log ข้อมูลที่จะบันทึกลง Database
+      console.log("🔍 === CREATE ACTIVITY - VALUES TO SAVE ===");
+      console.log(
+        "📅 special_start_register_date (formatted):",
+        result[0]?.special_start_register_date
+      );
+      console.log(
+        "📅 start_register_date (formatted):",
+        result[0]?.start_register_date
+      );
+      console.log(
+        "📅 end_register_date (formatted):",
+        result[0]?.end_register_date
+      );
+      console.log(
+        "📅 start_activity_date (formatted):",
+        result[0]?.start_activity_date
+      );
+      console.log(
+        "📅 end_activity_date (formatted):",
+        result[0]?.end_activity_date
+      );
+      console.log("⏰ recieve_hours:", result[0]?.recieve_hours);
+      console.log("🏢 room_id:", result[0]?.room_id);
+      console.log("📊 assessment_id:", result[0]?.assessment_id);
+      console.log("🔍 === END LOG ===");
 
       const newActivity: Activity = result[0];
 
@@ -140,6 +198,23 @@ export class ActivityDao extends ErrorHandledDao {
     await queryRunner.startTransaction();
 
     try {
+      // ✅ Log ข้อมูลก่อนบันทึกลง Database
+      console.log("🔍 === UPDATE ACTIVITY - DATA BEFORE SAVE ===");
+      console.log(
+        "📅 special_start_register_date:",
+        data.special_start_register_date
+      );
+      console.log("📅 start_register_date:", data.start_register_date);
+      console.log("📅 end_register_date:", data.end_register_date);
+      console.log("📅 start_activity_date:", data.start_activity_date);
+      console.log("📅 end_activity_date:", data.end_activity_date);
+      console.log("📅 start_assessment:", data.start_assessment);
+      console.log("📅 end_assessment:", data.end_assessment);
+      console.log("⏰ recieve_hours:", data.recieve_hours);
+      console.log("🏢 room_id:", data.room_id);
+      console.log("📊 assessment_id:", data.assessment_id);
+      console.log("🔍 === END LOG ===");
+
       // ✅ อัปเดตข้อมูลกิจกรรม
       const updateFields = [
         "activity_name",
@@ -154,6 +229,8 @@ export class ActivityDao extends ErrorHandledDao {
         "end_register_date",
         "start_activity_date",
         "end_activity_date",
+        "start_assessment", // ✅ เพิ่ม start_assessment
+        "end_assessment", // ✅ เพิ่ม end_assessment
         "image_url",
         "activity_status",
         "activity_state",
@@ -171,11 +248,29 @@ export class ActivityDao extends ErrorHandledDao {
       const values = updateFields.map((field) => {
         const value = (data as any)[field];
         // ✅ จัดการ seat field ให้เป็น 0 แทน null
-        if (field === 'seat' && (value === null || value === undefined)) {
+        if (field === "seat" && (value === null || value === undefined)) {
           return 0;
+        }
+        // ✅ จัดการ date fields ให้ใช้ formatDateToLocalString
+        if (value instanceof Date) {
+          return this.formatDateToLocalString(value);
         }
         return value ?? null;
       });
+
+      // ✅ Log ข้อมูลที่จะบันทึกลง Database
+      console.log("🔍 === UPDATE ACTIVITY - VALUES TO SAVE ===");
+      console.log("📅 special_start_register_date (formatted):", values[7]);
+      console.log("📅 start_register_date (formatted):", values[8]);
+      console.log("📅 end_register_date (formatted):", values[9]);
+      console.log("📅 start_activity_date (formatted):", values[10]);
+      console.log("📅 end_activity_date (formatted):", values[11]);
+      console.log("📅 start_assessment (formatted):", values[12]);
+      console.log("📅 end_assessment (formatted):", values[13]);
+      console.log("⏰ recieve_hours:", values[5]);
+      console.log("🏢 room_id:", values[21]);
+      console.log("📊 assessment_id:", values[20]);
+      console.log("🔍 === END LOG ===");
 
       await queryRunner.query(
         `UPDATE activity SET ${setClause} WHERE activity_id = $${
@@ -234,17 +329,6 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  // ค้นหากิจกรรมตาม id
-  // public async findById(id: number): Promise<Activity | null> {
-  //   this.checkConnection();
-
-  //   const result = await this.dataSource!.getRepository(Activity).findOne({
-  //     where: { activity_id: id },
-  //   });
-
-  //   return result;
-  // }
-
   public async findById(id: number): Promise<Activity | null> {
     this.checkConnection();
 
@@ -252,6 +336,25 @@ export class ActivityDao extends ErrorHandledDao {
       where: { activity_id: id },
       relations: ["activityFood"], // 👈 ดึง relation มาด้วย
     });
+
+    // ✅ Log ข้อมูลที่ดึงออกมาจาก Database
+    if (result) {
+      console.log("🔍 === FIND BY ID - DATA FROM DATABASE ===");
+      console.log(
+        "📅 special_start_register_date:",
+        result.special_start_register_date
+      );
+      console.log("📅 start_register_date:", result.start_register_date);
+      console.log("📅 end_register_date:", result.end_register_date);
+      console.log("📅 start_activity_date:", result.start_activity_date);
+      console.log("📅 end_activity_date:", result.end_activity_date);
+      console.log("📅 start_assessment:", result.start_assessment);
+      console.log("📅 end_assessment:", result.end_assessment);
+      console.log("⏰ recieve_hours:", result.recieve_hours);
+      console.log("🏢 room_id:", result.room_id);
+      console.log("📊 assessment_id:", result.assessment_id);
+      console.log("🔍 === END LOG ===");
+    }
 
     return result;
   }

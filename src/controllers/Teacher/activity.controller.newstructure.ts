@@ -13,16 +13,6 @@ export class ActivityController extends ErrorHandledController {
     return xss(input);
   }
 
-  // public async create(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const data = this.parseActivityPayload(req.body);
-  //     const result = await this.activityService.createActivity(data);
-  //     res.status(201).json(result);
-  //   } catch (error) {
-  //     this.handleError("ActivityController.create", error, res);
-  //   }
-  // }
-
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseActivityPayload(req.body);
@@ -55,6 +45,9 @@ export class ActivityController extends ErrorHandledController {
     try {
       const id = this.parseId(req.params.id);
       const data = this.parseActivityPayload(req.body);
+
+      console.log("Data in controlller: ", data);
+
       const result = await this.activityService.updateActivity(id, data);
 
       if (!result) {
@@ -80,8 +73,6 @@ export class ActivityController extends ErrorHandledController {
     console.log(activity_id);
     const activityIDSanitize = parseInt(this.sanitize(activity_id));
     const activityStatusSanitize = this.sanitize(activity_status);
-    // const id = this.parseId(req.params.id);
-    // const data = this.parseActivityStatus(req.body);
     try {
       const updated = await this.activityService.updateActivityByStatus(
         activityIDSanitize,
@@ -156,11 +147,15 @@ export class ActivityController extends ErrorHandledController {
       recieve_hours: this.parseOptionalInt(body.recieve_hours),
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
-      special_start_register_date: body.special_start_register_date || null,
-      start_register_date: body.start_register_date || null,
-      end_register_date: body.end_register_date || null,
-      start_activity_date: body.start_activity_date || null,
-      end_activity_date: body.end_activity_date || null,
+      special_start_register_date: this.parseDate(
+        body.special_start_register_date
+      ),
+      start_register_date: this.parseDate(body.start_register_date),
+      end_register_date: this.parseDate(body.end_register_date),
+      start_activity_date: this.parseDate(body.start_activity_date),
+      end_activity_date: this.parseDate(body.end_activity_date),
+      start_assessment: this.parseDate(body.start_assessment), // ✅ เพิ่ม start_assessment
+      end_assessment: this.parseDate(body.end_assessment), // ✅ เพิ่ม end_assessment
       image_url: body.image_url || "",
       activity_status: body.activity_status || "Private", // ENUM
       activity_state: body.activity_state || "Not Start", // ENUM
@@ -172,10 +167,43 @@ export class ActivityController extends ErrorHandledController {
     };
   }
 
-  private parseActivityStatus(body: any): any {
-    return {
-      activity_status: body.activity_status || "Private",
-    };
+  private parseDate(dateString: string | null | undefined): Date | null {
+    if (!dateString) return null;
+
+    try {
+      console.log(`🔍 Parsing date: ${dateString}`);
+
+      // ✅ ตรวจสอบว่าเป็น UTC format หรือ local format
+      if (dateString.includes("Z") || dateString.includes("+")) {
+        // เป็น UTC format ให้แปลงเป็น local time
+        const date = new Date(dateString);
+        console.log(
+          `📅 UTC format detected, converted to: ${date.toISOString()}`
+        );
+        return date;
+      } else {
+        // เป็น local format ให้สร้างเป็น local time โดยไม่แปลงเป็น UTC
+        const [datePart, timePart] = dateString.split("T");
+        const [year, month, day] = datePart.split("-");
+        const [hours, minutes, seconds] = timePart.split(":");
+
+        // ✅ สร้าง Date object ใน local timezone โดยตรง
+        const date = new Date();
+        date.setFullYear(parseInt(year));
+        date.setMonth(parseInt(month) - 1);
+        date.setDate(parseInt(day));
+        date.setHours(parseInt(hours));
+        date.setMinutes(parseInt(minutes));
+        date.setSeconds(parseInt(seconds || "0"));
+        date.setMilliseconds(0);
+
+        console.log(`📅 Local format detected, created: ${date.toISOString()}`);
+        return date;
+      }
+    } catch (error) {
+      console.error("❌ Error parsing date:", dateString, error);
+      return null;
+    }
   }
 
   private parseOptionalInt(
@@ -183,19 +211,6 @@ export class ActivityController extends ErrorHandledController {
     fallback: number | null = null
   ): number | null {
     return !isNaN(Number(value)) ? parseInt(value, 10) : fallback;
-  }
-
-  private parseFoodInput(input: any): string[] {
-    if (!input) return [];
-    if (Array.isArray(input)) return input;
-    if (typeof input === "string") {
-      try {
-        return JSON.parse(input);
-      } catch {
-        return [input];
-      }
-    }
-    return [];
   }
 }
 
