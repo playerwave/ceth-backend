@@ -209,15 +209,21 @@ export class ActivityService extends ErrorHandledService {
       ...localInput,
       recieve_hours: hrs ?? undefined,
       seat: input.seat ?? 0,
-      assessment_id: input.assessment_id ?? undefined,
+      assessment_id: input.assessment_id || null, // ✅ ใช้ null แทน undefined
       // Set assessment dates from input (prioritize input over assessment data)
       start_assessment: input.start_assessment ?? null,
       end_assessment: input.end_assessment ?? null,
-      room_id: input.event_format === "Onsite" ? input.room_id : undefined,
+      room_id: input.event_format === "Onsite" ? input.room_id || null : null, // ✅ ใช้ null แทน undefined
       url: input.url ?? undefined,
     };
 
     this.logInfo("🔧 Prepared updatedData (local time applied)", updatedData);
+    console.log("🔍 Service: Final values for DAO:", {
+      assessment_id: updatedData.assessment_id,
+      room_id: updatedData.room_id,
+      assessment_id_type: typeof updatedData.assessment_id,
+      room_id_type: typeof updatedData.room_id,
+    });
 
     console.log("🍽️ Service: Calling updateActivityDao with foods:", foods);
     const updated = await this.activityDao.updateActivityDao(

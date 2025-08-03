@@ -364,14 +364,28 @@ export class ActivityDao extends ErrorHandledDao {
 
       const values = updateFields.map((field) => {
         const value = (data as any)[field];
+
         // ✅ จัดการ seat field ให้เป็น 0 แทน null
-        if (field === "seat" && (value === null || value === undefined)) {
+        if (
+          field === "seat" &&
+          (value === null || value === undefined || isNaN(value))
+        ) {
           return 0;
         }
+
+        // ✅ จัดการ assessment_id และ room_id ให้เป็น null แทน NaN
+        if (
+          (field === "assessment_id" || field === "room_id") &&
+          (value === null || value === undefined || isNaN(value))
+        ) {
+          return null;
+        }
+
         // ✅ จัดการ date fields ให้ใช้ formatDateToLocalString
         if (value instanceof Date) {
           return this.formatDateToLocalString(value);
         }
+
         return value ?? null;
       });
 

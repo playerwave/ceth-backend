@@ -151,6 +151,14 @@ export class ActivityController extends ErrorHandledController {
   }
 
   private parseActivityPayload(body: any): any {
+    // ✅ เพิ่ม debug log
+    console.log("🔍 Parsing activity payload:", {
+      assessment_id: body.assessment_id,
+      room_id: body.room_id,
+      assessment_id_type: typeof body.assessment_id,
+      room_id_type: typeof body.room_id,
+    });
+
     return {
       activity_name: body.activity_name || "ไม่ระบุ",
       presenter_company_name: body.presenter_company_name || "ไม่ระบุ",
@@ -176,8 +184,8 @@ export class ActivityController extends ErrorHandledController {
       status: body.status || "Active", // ENUM default
       last_update_activity_date: new Date(),
       url: body.url || "ไม่ระบุ",
-      assessment_id: this.parseOptionalInt(body.assessment_id),
-      room_id: this.parseOptionalInt(body.room_id),
+      assessment_id: this.parseOptionalInt(body.assessment_id, null),
+      room_id: this.parseOptionalInt(body.room_id, null),
     };
   }
 
@@ -224,7 +232,11 @@ export class ActivityController extends ErrorHandledController {
     value: any,
     fallback: number | null = null
   ): number | null {
-    return !isNaN(Number(value)) ? parseInt(value, 10) : fallback;
+    if (value === null || value === undefined || value === "") {
+      return fallback;
+    }
+    const parsed = parseInt(value, 10);
+    return !isNaN(parsed) ? parsed : fallback;
   }
 }
 
