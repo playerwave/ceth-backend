@@ -174,19 +174,19 @@ export class UpdateActivityDto {
   @IsString()
   @MinLength(5)
   @MaxLength(50)
-  activity_name!: string;
+  activity_name: string = "ไม่ระบุ";
 
   @ValidateIf((o) => o.activity_status === "Public")
   @IsString()
   @MinLength(5)
   @MaxLength(50)
-  presenter_company_name!: string;
+  presenter_company_name: string = "ไม่ระบุ";
 
   @ValidateIf((o) => o.activity_status === "Public")
   @IsString()
   @MinLength(10)
-  @MaxLength(500)
-  description!: string;
+  @MaxLength(2000)
+  description: string = "ไม่ระบุ";
 
   @ValidateIf((o) => o.activity_status === "Public")
   @IsEnum(["Soft", "Hard"])
@@ -215,7 +215,7 @@ export class UpdateActivityDto {
     (o) => o.activity_status === "Public" && o.event_format === "Onsite"
   )
   @IsArray()
-  @ArrayNotEmpty()
+  @ArrayNotEmpty({ message: "ต้องเลือกอาหารอย่างน้อย 1 รายการ" })
   foodIds!: number[];
 
   // ––– seat เฉพาะ Online & Public –––
@@ -277,7 +277,7 @@ export class UpdateActivityDto {
   // ––– อื่นๆ –––
   @ValidateIf((o) => o.activity_status === "Public")
   @Matches(/\.(jpg|png)$/i)
-  image_url?: string;
+  image_url?: string = "ไม่ระบุ";
 
   @IsEnum([
     "Not Start",
@@ -289,12 +289,13 @@ export class UpdateActivityDto {
     "Start Assessment",
     "End Assessment",
   ])
-  activity_state!: string;
+  activity_state: string = "Not Start";
 
   @IsEnum(["Active", "Inactive"])
-  status!: "Active" | "Inactive";
+  status: "Active" | "Inactive" = "Active";
 
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsOptional()
   @IsString()
-  url?: string;
+  url?: string = "ไม่ระบุ";
 }

@@ -1,5 +1,7 @@
 import { ActivityDao } from "../../daos/Teacher/activity.dao.newstructure";
+import { AssessmentDao } from "../../daos/Teacher/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
+import { Assessment } from "../../entity/assessment.entity";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 import { RoomService } from "./room.service";
@@ -7,6 +9,7 @@ import { convertDateFieldsToLocal } from "../../utils/convertDateFieldsToLocal";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
+  private readonly assessmentDao = new AssessmentDao();
   private readonly roomService = new RoomService();
 
   public async createActivity(
@@ -15,17 +18,37 @@ export class ActivityService extends ErrorHandledService {
     try {
       const { foodIds, floor, ...activityData } = input;
 
+      // ดึงข้อมูล Assessment ถ้ามี assessment_id
+      let assessmentData: Assessment | null = null;
+      if (input.assessment_id) {
+        try {
+          const assessments = await this.assessmentDao.getAssessmentByID(
+            input.assessment_id
+          );
+          assessmentData = assessments.length > 0 ? assessments[0] : null;
+          console.log("🔍 Assessment data found:", assessmentData);
+        } catch (error) {
+          console.error("❌ Error fetching assessment:", error);
+        }
+      }
+
       const sanitizedData: Partial<Activity> = {
         ...activityData,
-        seat: input.seat ?? undefined,
-        recieve_hours: input.recieve_hours ?? undefined,
+        activity_name: input.activity_name || "ไม่ระบุ",
+        presenter_company_name: input.presenter_company_name || "ไม่ระบุ",
+        description: input.description || "ไม่ระบุ",
+        seat: input.seat ?? 0,
+        recieve_hours: input.recieve_hours ?? 0,
         special_start_register_date:
-          input.special_start_register_date ?? undefined,
-        start_register_date: input.start_register_date ?? undefined,
-        end_register_date: input.end_register_date ?? undefined,
-        start_activity_date: input.start_activity_date ?? undefined,
-        end_activity_date: input.end_activity_date ?? undefined,
-        url: input.url ?? undefined,
+          input.special_start_register_date ?? new Date(),
+        start_register_date: input.start_register_date ?? new Date(),
+        end_register_date: input.end_register_date ?? new Date(),
+        start_activity_date: input.start_activity_date ?? new Date(),
+        end_activity_date: input.end_activity_date ?? new Date(),
+        // Set assessment dates from input (prioritize input over assessment data)
+        start_assessment: input.start_assessment ?? null,
+        end_assessment: input.end_assessment ?? null,
+        url: input.url || "ไม่ระบุ",
         room_id: input.room_id ?? undefined,
         create_activity_date: new Date(),
         last_update_activity_date: new Date(),
@@ -110,6 +133,20 @@ export class ActivityService extends ErrorHandledService {
       return null;
     }
 
+    // ดึงข้อมูล Assessment ถ้ามี assessment_id
+    let assessmentData: Assessment | null = null;
+    if (input.assessment_id) {
+      try {
+        const assessments = await this.assessmentDao.getAssessmentByID(
+          input.assessment_id
+        );
+        assessmentData = assessments.length > 0 ? assessments[0] : null;
+        console.log("🔍 Assessment data found for update:", assessmentData);
+      } catch (error) {
+        console.error("❌ Error fetching assessment for update:", error);
+      }
+    }
+
     if (input.activity_status === "Public") {
       if (
         input.special_start_register_date &&
@@ -156,6 +193,12 @@ export class ActivityService extends ErrorHandledService {
 
     const foods = input.event_format === "Onsite" ? input.foodIds ?? [] : [];
 
+    console.log("🍽️ Service: Food assignment", {
+      event_format: input.event_format,
+      foodIds: input.foodIds,
+      foods: foods,
+    });
+
     const localInput = convertDateFieldsToLocal({
       ...input,
       last_update_activity_date: new Date(),
@@ -167,12 +210,16 @@ export class ActivityService extends ErrorHandledService {
       recieve_hours: hrs ?? undefined,
       seat: input.seat ?? 0,
       assessment_id: input.assessment_id ?? undefined,
+      // Set assessment dates from input (prioritize input over assessment data)
+      start_assessment: input.start_assessment ?? null,
+      end_assessment: input.end_assessment ?? null,
       room_id: input.event_format === "Onsite" ? input.room_id : undefined,
       url: input.url ?? undefined,
     };
 
     this.logInfo("🔧 Prepared updatedData (local time applied)", updatedData);
 
+    console.log("🍽️ Service: Calling updateActivityDao with foods:", foods);
     const updated = await this.activityDao.updateActivityDao(
       activity_id,
       updatedData,

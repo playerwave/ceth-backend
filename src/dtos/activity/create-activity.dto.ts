@@ -133,66 +133,73 @@ import {
 import { Type } from "class-transformer";
 
 export class CreateActivityDto {
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsString()
   @MinLength(5)
   @MaxLength(50)
-  activity_name!: string;
+  activity_name: string = "ไม่ระบุชื่อกิจกรรม";
 
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsString()
   @MinLength(5)
   @MaxLength(50)
-  presenter_company_name!: string;
+  presenter_company_name: string = "ไม่ระบุชื่อบริษัท/วิทยากร";
 
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsString()
   @MinLength(10)
-  @MaxLength(500)
-  description!: string;
+  @MaxLength(2000)
+  description: string = "ไม่ระบุ";
 
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsEnum(["Soft", "Hard"])
   type!: "Soft" | "Hard";
 
   @IsEnum(["Online", "Onsite", "Course"])
   event_format!: "Online" | "Onsite" | "Course";
 
+  @ValidateIf(
+    (o) => o.activity_status === "Public" && o.event_format === "Online"
+  )
   @IsOptional()
   @IsInt()
-  @ValidateIf((o) => o.event_format === "Online")
   seat?: number;
 
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsInt()
   recieve_hours: number = 0;
 
-  @ValidateIf((o) => o.activity_status !== "Private")
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsDate()
   @Type(() => Date)
   special_start_register_date!: Date;
 
-  @ValidateIf((o) => o.activity_status !== "Private")
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsDate()
   @Type(() => Date)
   start_register_date!: Date;
 
-  @ValidateIf((o) => o.activity_status !== "Private")
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsDate()
   @Type(() => Date)
   end_register_date!: Date;
 
-  @ValidateIf((o) => o.activity_status !== "Private")
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsDate()
   @Type(() => Date)
   start_activity_date!: Date;
 
-  @ValidateIf((o) => o.activity_status !== "Private")
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsDate()
   @Type(() => Date)
   end_activity_date!: Date;
 
   @IsOptional()
-  @ValidateIf((o) => o.activity_status !== "Private" && !!o.image_url)
+  @ValidateIf((o) => o.activity_status === "Public" && !!o.image_url)
   @Matches(/\.(jpg|png)$/i, {
     message: "รองรับเฉพาะไฟล์ .jpg หรือ .png",
   })
-  image_url?: string;
+  image_url?: string = "ไม่ระบุ";
 
   @IsEnum(["Private", "Public"])
   activity_status: "Private" | "Public" = "Private";
@@ -212,23 +219,23 @@ export class CreateActivityDto {
   @IsEnum(["Active", "Inactive"])
   status: "Active" | "Inactive" = "Active";
 
-  @ValidateIf((o) => o.activity_status !== "Private")
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsOptional()
   @IsUrl()
-  url?: string;
+  url?: string = "ไม่ระบุ";
 
-  @ValidateIf((o) => o.activity_status !== "Private")
+  @ValidateIf((o) => o.activity_status === "Public")
   @IsInt()
   assessment_id!: number;
 
   @ValidateIf(
-    (o) => o.event_format === "Onsite" && o.activity_status !== "Private"
+    (o) => o.event_format === "Onsite" && o.activity_status === "Public"
   )
   @IsInt({ message: "ต้องเลือกห้องสำหรับกิจกรรม Onsite" })
   room_id!: number;
 
   @ValidateIf(
-    (o) => o.event_format === "Onsite" && o.activity_status !== "Private"
+    (o) => o.event_format === "Onsite" && o.activity_status === "Public"
   )
   @IsArray()
   @ArrayNotEmpty({ message: "ต้องเลือกอาหารอย่างน้อย 1 รายการ" })

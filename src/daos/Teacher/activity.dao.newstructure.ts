@@ -32,6 +32,158 @@ export class ActivityDao extends ErrorHandledDao {
     return formatTimeToLocal(date, "Asia/Bangkok");
   }
 
+  private sanitizeDate(input: unknown): string {
+    if (input instanceof Date) {
+      return this.formatDateToLocalString(input);
+    }
+
+    if (typeof input === "string" && input.trim() !== "") {
+      const parsed = new Date(input);
+      return isNaN(parsed.getTime())
+        ? this.formatDateToLocalString(new Date())
+        : this.formatDateToLocalString(parsed);
+    }
+
+    return this.formatDateToLocalString(new Date());
+  }
+
+  // public async createActivityDao(
+  //   data: Partial<Activity>,
+  //   foodIds: number[] = []
+  // ): Promise<Activity> {
+  //   this.checkConnection();
+
+  //   const queryRunner = this.dataSource!.createQueryRunner();
+  //   await queryRunner.connect();
+  //   await queryRunner.startTransaction();
+
+  //   try {
+  //     // ✅ Log ข้อมูลก่อนบันทึกลง Database
+  //     console.log("🔍 === CREATE ACTIVITY - DATA BEFORE SAVE ===");
+  //     console.log(
+  //       "📅 special_start_register_date:",
+  //       data.special_start_register_date
+  //     );
+  //     console.log("📅 start_register_date:", data.start_register_date);
+  //     console.log("📅 end_register_date:", data.end_register_date);
+  //     console.log("📅 start_activity_date:", data.start_activity_date);
+  //     console.log("📅 end_activity_date:", data.end_activity_date);
+  //     console.log("📅 start_assessment:", data.start_assessment);
+  //     console.log("📅 end_assessment:", data.end_assessment);
+  //     console.log("⏰ recieve_hours:", data.recieve_hours);
+  //     console.log("🏢 room_id:", data.room_id);
+  //     console.log("📊 assessment_id:", data.assessment_id);
+  //     console.log("🔍 === END LOG ===");
+
+  //     // Insert Activity
+  //     const result = await queryRunner.query(
+  //       `
+  //       INSERT INTO Activity (
+  //         activity_name, presenter_company_name, type, description,
+  //         seat, recieve_hours, event_format, create_activity_date,
+  //         special_start_register_date, start_register_date, end_register_date,
+  //         start_activity_date, end_activity_date, image_url, activity_status,
+  //         activity_state, status, last_update_activity_date, url, room_id,
+  //         assessment_id, start_assessment, end_assessment
+  //       ) VALUES (
+  //         $1, $2, $3, $4, $5, $6, $7, $8,
+  //         $9, $10, $11, $12, $13, $14, $15, $16,
+  //         $17, $18, $19, $20, $21, $22, $23, $24
+  //       ) RETURNING *
+  //       `,
+  //       [
+  //         data.activity_name || "ไม่ระบุ",
+  //         data.presenter_company_name || "ไม่ระบุ",
+  //         data.type || "Soft",
+  //         data.description || "ไม่ระบุ",
+  //         data.seat ?? 0,
+  //         data.recieve_hours ?? 0,
+  //         data.event_format || "Online",
+  //         new Date(),
+  //         data.special_start_register_date instanceof Date
+  //           ? this.formatDateToLocalString(data.special_start_register_date)
+  //           : data.special_start_register_date || new Date(),
+  //         data.start_register_date instanceof Date
+  //           ? this.formatDateToLocalString(data.start_register_date)
+  //           : data.start_register_date || new Date(),
+  //         data.end_register_date instanceof Date
+  //           ? this.formatDateToLocalString(data.end_register_date)
+  //           : data.end_register_date || new Date(),
+  //         data.start_activity_date instanceof Date
+  //           ? this.formatDateToLocalString(data.start_activity_date)
+  //           : data.start_activity_date || new Date(),
+  //         data.end_activity_date instanceof Date
+  //           ? this.formatDateToLocalString(data.end_activity_date)
+  //           : data.end_activity_date || new Date(),
+  //         data.image_url || "ไม่ระบุ",
+  //         data.activity_status || "Private",
+  //         data.activity_state || "Not Start",
+  //         data.status || "Active",
+  //         new Date(),
+  //         data.url || "ไม่ระบุ",
+  //         data.room_id ?? null,
+  //         data.assessment_id ?? null,
+  //         data.start_assessment instanceof Date
+  //           ? this.formatDateToLocalString(data.start_assessment)
+  //           : data.start_assessment || new Date(),
+  //         data.end_assessment instanceof Date
+  //           ? this.formatDateToLocalString(data.end_assessment)
+  //           : data.end_assessment || new Date(),
+  //       ]
+  //     );
+
+  //     // ✅ Log ข้อมูลที่จะบันทึกลง Database
+  //     console.log("🔍 === CREATE ACTIVITY - VALUES TO SAVE ===");
+  //     console.log(
+  //       "📅 special_start_register_date (formatted):",
+  //       result[0]?.special_start_register_date
+  //     );
+  //     console.log(
+  //       "📅 start_register_date (formatted):",
+  //       result[0]?.start_register_date
+  //     );
+  //     console.log(
+  //       "📅 end_register_date (formatted):",
+  //       result[0]?.end_register_date
+  //     );
+  //     console.log(
+  //       "📅 start_activity_date (formatted):",
+  //       result[0]?.start_activity_date
+  //     );
+  //     console.log(
+  //       "📅 end_activity_date (formatted):",
+  //       result[0]?.end_activity_date
+  //     );
+  //     console.log("⏰ recieve_hours:", result[0]?.recieve_hours);
+  //     console.log("🏢 room_id:", result[0]?.room_id);
+  //     console.log("📊 assessment_id:", result[0]?.assessment_id);
+  //     console.log("🔍 === END LOG ===");
+
+  //     const newActivity: Activity = result[0];
+
+  //     // Insert ActivityFood
+  //     if (foodIds.length > 0) {
+  //       const values = foodIds.map(
+  //         (foodId) => `(${newActivity.activity_id}, ${foodId})`
+  //       );
+  //       const insertFoodSQL = `
+  //   INSERT INTO activity_food (activity_id, food_id)
+  //   VALUES ${values.join(", ")}
+  // `;
+  //       await queryRunner.query(insertFoodSQL);
+  //     }
+
+  //     await queryRunner.commitTransaction();
+  //     return newActivity;
+  //   } catch (error) {
+  //     await queryRunner.rollbackTransaction();
+  //     this.logDbError("createActivityDao", error);
+  //     throw new Error("❌ Failed to create activity with food");
+  //   } finally {
+  //     await queryRunner.release();
+  //   }
+  // }
+
   public async createActivityDao(
     data: Partial<Activity>,
     foodIds: number[] = []
@@ -43,113 +195,78 @@ export class ActivityDao extends ErrorHandledDao {
     await queryRunner.startTransaction();
 
     try {
-      // ✅ Log ข้อมูลก่อนบันทึกลง Database
+      // 🔍 Logging for debug
       console.log("🔍 === CREATE ACTIVITY - DATA BEFORE SAVE ===");
-      console.log(
-        "📅 special_start_register_date:",
-        data.special_start_register_date
-      );
-      console.log("📅 start_register_date:", data.start_register_date);
-      console.log("📅 end_register_date:", data.end_register_date);
       console.log("📅 start_activity_date:", data.start_activity_date);
       console.log("📅 end_activity_date:", data.end_activity_date);
-      console.log("📅 start_assessment:", data.start_assessment);
-      console.log("📅 end_assessment:", data.end_assessment);
       console.log("⏰ recieve_hours:", data.recieve_hours);
       console.log("🏢 room_id:", data.room_id);
       console.log("📊 assessment_id:", data.assessment_id);
-      console.log("🔍 === END LOG ===");
 
-      // Insert Activity
+      // 🛡️ Logging sanitized dates
+      console.log("🛡️ Final sanitized dates:", {
+        start_register_date: this.sanitizeDate(data.start_register_date),
+        end_register_date: this.sanitizeDate(data.end_register_date),
+        start_activity_date: this.sanitizeDate(data.start_activity_date),
+        end_activity_date: this.sanitizeDate(data.end_activity_date),
+        start_assessment: this.sanitizeDate(data.start_assessment),
+        end_assessment: this.sanitizeDate(data.end_assessment),
+      });
+
       const result = await queryRunner.query(
         `
-        INSERT INTO Activity (
+        INSERT INTO activity (
           activity_name, presenter_company_name, type, description,
           seat, recieve_hours, event_format, create_activity_date,
-          special_start_register_date, start_register_date, end_register_date,
-          start_activity_date, end_activity_date, image_url,
-          activity_status, activity_state, status, last_update_activity_date,
-          url, assessment_id, room_id
+          special_start_register_date,
+          start_register_date, end_register_date, start_activity_date, end_activity_date,
+          start_assessment, end_assessment,
+          image_url, activity_status, activity_state, status, url, room_id, assessment_id,
+          last_update_activity_date
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8,
-          $9, $10, $11, $12, $13, $14,
-          $15, $16, $17, $18, $19, $20, $21
+          $9,
+          $10, $11, $12, $13, $14, $15,
+          $16, $17, $18, $19, $20, $21, $22, $23
         ) RETURNING *
         `,
         [
-          data.activity_name,
-          data.presenter_company_name || null,
+          data.activity_name || "ไม่ระบุ",
+          data.presenter_company_name || "ไม่ระบุ",
           data.type || "Soft",
-          data.description || null,
+          data.description || "ไม่ระบุ",
           data.seat ?? 0,
-          data.recieve_hours ?? null,
+          data.recieve_hours ?? 0,
           data.event_format || "Online",
-          new Date(),
-          data.special_start_register_date instanceof Date
-            ? this.formatDateToLocalString(data.special_start_register_date)
-            : data.special_start_register_date || null,
-          data.start_register_date instanceof Date
-            ? this.formatDateToLocalString(data.start_register_date)
-            : data.start_register_date || null,
-          data.end_register_date instanceof Date
-            ? this.formatDateToLocalString(data.end_register_date)
-            : data.end_register_date || null,
-          data.start_activity_date instanceof Date
-            ? this.formatDateToLocalString(data.start_activity_date)
-            : data.start_activity_date || null,
-          data.end_activity_date instanceof Date
-            ? this.formatDateToLocalString(data.end_activity_date)
-            : data.end_activity_date || null,
-          data.image_url || null,
+          new Date(), // create_activity_date
+          this.sanitizeDate(data.special_start_register_date), // 🟩 เพิ่มตรงนี้
+          this.sanitizeDate(data.start_register_date),
+          this.sanitizeDate(data.end_register_date),
+          this.sanitizeDate(data.start_activity_date),
+          this.sanitizeDate(data.end_activity_date),
+          this.sanitizeDate(data.start_assessment), // 🟩 เพิ่ม start_assessment
+          this.sanitizeDate(data.end_assessment), // 🟩 เพิ่ม end_assessment
+          data.image_url || "ไม่ระบุ",
           data.activity_status || "Private",
           data.activity_state || "Not Start",
           data.status || "Active",
-          new Date(),
-          data.url || null,
-          data.assessment_id ?? null,
+          data.url || "ไม่ระบุ",
           data.room_id ?? null,
+          data.assessment_id ?? null,
+          new Date(),
         ]
       );
 
-      // ✅ Log ข้อมูลที่จะบันทึกลง Database
-      console.log("🔍 === CREATE ACTIVITY - VALUES TO SAVE ===");
-      console.log(
-        "📅 special_start_register_date (formatted):",
-        result[0]?.special_start_register_date
-      );
-      console.log(
-        "📅 start_register_date (formatted):",
-        result[0]?.start_register_date
-      );
-      console.log(
-        "📅 end_register_date (formatted):",
-        result[0]?.end_register_date
-      );
-      console.log(
-        "📅 start_activity_date (formatted):",
-        result[0]?.start_activity_date
-      );
-      console.log(
-        "📅 end_activity_date (formatted):",
-        result[0]?.end_activity_date
-      );
-      console.log("⏰ recieve_hours:", result[0]?.recieve_hours);
-      console.log("🏢 room_id:", result[0]?.room_id);
-      console.log("📊 assessment_id:", result[0]?.assessment_id);
-      console.log("🔍 === END LOG ===");
-
       const newActivity: Activity = result[0];
 
-      // Insert ActivityFood
+      // ✅ เพิ่ม ActivityFood หากมี
       if (foodIds.length > 0) {
-        const values = foodIds.map(
-          (foodId) => `(${newActivity.activity_id}, ${foodId})`
+        const values = foodIds
+          .map((foodId) => `(${newActivity.activity_id}, ${foodId})`)
+          .join(", ");
+        await queryRunner.query(
+          `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`
         );
-        const insertFoodSQL = `
-    INSERT INTO activity_food (activity_id, food_id)
-    VALUES ${values.join(", ")}
-  `;
-        await queryRunner.query(insertFoodSQL);
       }
 
       await queryRunner.commitTransaction();
@@ -287,12 +404,16 @@ export class ActivityDao extends ErrorHandledDao {
 
       // ✅ เพิ่มข้อมูลอาหารใหม่ (ถ้ามี)
       if (foodIds.length > 0) {
+        console.log("🍽️ Adding foods to activity:", { activity_id, foodIds });
         const values = foodIds
           .map((foodId) => `(${activity_id}, ${foodId})`)
           .join(", ");
-        await queryRunner.query(
-          `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`
-        );
+        const insertSQL = `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`;
+        console.log("🍽️ Insert SQL:", insertSQL);
+        await queryRunner.query(insertSQL);
+        console.log("✅ Foods added successfully");
+      } else {
+        console.log("🍽️ No foods to add for activity:", activity_id);
       }
 
       await queryRunner.commitTransaction();
@@ -334,8 +455,22 @@ export class ActivityDao extends ErrorHandledDao {
 
     const result = await this.dataSource!.getRepository(Activity).findOne({
       where: { activity_id: id },
-      relations: ["activityFood"], // 👈 ดึง relation มาด้วย
+      relations: ["activityFood", "activityFood.food"], // 👈 ดึง relation มาด้วย
     });
+
+    // ✅ Log ข้อมูลอาหารที่ดึงออกมา
+    if (result && result.activityFood) {
+      console.log("🍽️ Activity foods found:", result.activityFood.length);
+      result.activityFood.forEach((af, index) => {
+        console.log(`🍽️ Food ${index + 1}:`, {
+          activity_food_id: af.activity_food_id,
+          food_id: af.food_id,
+          food_name: af.food?.food_name,
+        });
+      });
+    } else {
+      console.log("🍽️ No foods found for activity:", id);
+    }
 
     // ✅ Log ข้อมูลที่ดึงออกมาจาก Database
     if (result) {

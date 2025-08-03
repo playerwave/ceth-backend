@@ -46,9 +46,22 @@ export class ActivityController extends ErrorHandledController {
       const id = this.parseId(req.params.id);
       const data = this.parseActivityPayload(req.body);
 
-      console.log("Data in controlller: ", data);
+      // ✅ เพิ่ม foodIds เข้าไปใน data
+      const foodIds: number[] =
+        req.body.selectedFoods || req.body.foodIds || [];
+      const dataWithFoods = {
+        ...data,
+        foodIds,
+      };
 
-      const result = await this.activityService.updateActivity(id, data);
+      console.log("Data in controller: ", data);
+      console.log("🍽️ Food IDs from request:", foodIds);
+      console.log("🍽️ Data with foods:", dataWithFoods);
+
+      const result = await this.activityService.updateActivity(
+        id,
+        dataWithFoods
+      );
 
       if (!result) {
         res.status(404).json({ message: "Activity not found" });
@@ -139,29 +152,30 @@ export class ActivityController extends ErrorHandledController {
 
   private parseActivityPayload(body: any): any {
     return {
-      activity_name: body.activity_name,
-      presenter_company_name: body.presenter_company_name || "",
+      activity_name: body.activity_name || "ไม่ระบุ",
+      presenter_company_name: body.presenter_company_name || "ไม่ระบุ",
       type: body.type || "Soft", // ENUM('Soft', 'Hard')
-      description: body.description || "",
+      description: body.description || "ไม่ระบุ",
       seat: this.parseOptionalInt(body.seat) ?? 0, // ✅ ใช้ 0 แทน null
-      recieve_hours: this.parseOptionalInt(body.recieve_hours),
+      recieve_hours: this.parseOptionalInt(body.recieve_hours) ?? 0, // ✅ ใช้ 0 แทน null
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
-      special_start_register_date: this.parseDate(
-        body.special_start_register_date
-      ),
-      start_register_date: this.parseDate(body.start_register_date),
-      end_register_date: this.parseDate(body.end_register_date),
-      start_activity_date: this.parseDate(body.start_activity_date),
-      end_activity_date: this.parseDate(body.end_activity_date),
+      special_start_register_date:
+        this.parseDate(body.special_start_register_date) || new Date(),
+      start_register_date:
+        this.parseDate(body.start_register_date) || new Date(),
+      end_register_date: this.parseDate(body.end_register_date) || new Date(),
+      start_activity_date:
+        this.parseDate(body.start_activity_date) || new Date(),
+      end_activity_date: this.parseDate(body.end_activity_date) || new Date(),
       start_assessment: this.parseDate(body.start_assessment), // ✅ เพิ่ม start_assessment
       end_assessment: this.parseDate(body.end_assessment), // ✅ เพิ่ม end_assessment
-      image_url: body.image_url || "",
+      image_url: body.image_url || "ไม่ระบุ",
       activity_status: body.activity_status || "Private", // ENUM
       activity_state: body.activity_state || "Not Start", // ENUM
       status: body.status || "Active", // ENUM default
       last_update_activity_date: new Date(),
-      url: body.url || null,
+      url: body.url || "ไม่ระบุ",
       assessment_id: this.parseOptionalInt(body.assessment_id),
       room_id: this.parseOptionalInt(body.room_id),
     };
