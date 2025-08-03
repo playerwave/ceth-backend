@@ -67,7 +67,9 @@ router.get("/get-activity/:id", wrapAsync(activityController.getActivity));
 //   await activityController.updateByStatus(req, res)
 // })
 
-router.post("/update-activity-status/:activity_id", wrapAsync (activityController.updateByStatus));
-
+router.patch(
+  "/update-activity-status/:activity_id",
+  wrapAsync(activityController.updateByStatus)
+);
 
 export default router;
