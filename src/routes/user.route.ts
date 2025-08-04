@@ -10,7 +10,7 @@ import { RolesController } from "../controllers/roles.controller";
 import { RolesService } from "../services/roles.service";
 
 import { wrapAsync } from "../utils/wrapAsync";
-import { Admin } from "../middleware/CheckRole";
+import { verifyToken } from "../middleware/verifyToken";
 import { Users } from "../entity/users.entity";
 
 const router = Router();
@@ -127,35 +127,35 @@ router.get(
 // 🎭 GET: Roles
 router.get(
   "/get-roles",
-  Admin,
+  verifyToken,
   wrapAsync(rolesController.getAll.bind(rolesController))
 );
 
 // ➕ POST: Create user
 router.post(
   "/create-user",
-  Admin,
+  verifyToken,
   wrapAsync(usersController.create.bind(usersController))
 );
 
 // ✏️ PUT: Update user info
 router.put(
   "/update-user/:users_id",
-  Admin,
+  verifyToken,
   wrapAsync(usersController.update.bind(usersController))
 );
 
 // 🔑 PUT: Change password
 router.put(
   "/update-password/:users_id",
-  Admin,
+  verifyToken,
   wrapAsync(usersController.updatePassword.bind(usersController))
 );
 
 // ❌ DELETE: Remove user
 router.delete(
   "/delete-user/:users_id",
-  Admin,
+  verifyToken,
   wrapAsync(usersController.delete.bind(usersController))
 );
 

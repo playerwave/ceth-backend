@@ -1,60 +1,74 @@
 // src/routes/department.route.ts
-
 import { Router } from "express";
-import { departmentController } from "../controllers/department.controller";
-import { facultyController } from "../controllers/faculty.controller";
-import { Admin } from "../middleware/CheckRole";
+import { DepartmentService } from "../services/department.service";
+import { DepartmentController } from "../controllers/department.controller";
+import { DepartmentDao } from "../daos/department.dao";
+import { FacultyService } from "../services/faculty.service";
+import { FacultyDao } from "../daos/faculty.dao";
 import { wrapAsync } from "../utils/wrapAsync";
+import { validateDTO } from "../middleware/validateDTO.validator";
+import { verifyToken } from "../middleware/verifyToken";
+import { Admin } from "../middleware/CheckRole";
 
 const router = Router();
 
-// GET: สาขาทั้งหมด + จำนวน + คณะที่เกี่ยวข้อง
+// ✅ สร้าง instance ของ service และ controller
+const departmentDao = new DepartmentDao();
+const departmentService = new DepartmentService(departmentDao);
+const departmentController = new DepartmentController(departmentService);
+const facultyDao = new FacultyDao();
+const facultyService = new FacultyService(facultyDao);
+
+// 🧠 interface สำหรับ JWT user
+interface JwtUser {
+  users_id: number;
+  roles_id: number;
+}
+
+// ✅ GET /get-departments → รวมข้อมูลสาขา + faculty + user
 router.get(
-  "/data",
-  Admin,
+  "/get-departments",
+  verifyToken,
   wrapAsync(async (req, res) => {
-    const user = req.user;
+    const user = req.user as JwtUser;
+    const departmentData = await departmentService.getDepartment(1, 100);
+    const countDepartment = await departmentService.countDepartment();
+    const facultyData = await facultyService.getFaculty(1, 100);
 
-    const [departments, count, faculties] = await Promise.all([
-      departmentController.getAll(req, res),
-      departmentController.count(req, res),
-      facultyController.getAll(req, res),
-    ]);
-
-    if (req.isAuthenticated()) {
-      res.status(200).json({
-        page: "สาขา",
-        user,
-        departmentData: departments,
-        countDepartment: count,
-        facultyData: faculties,
-        notification: "The data connection was successful.",
-      });
-    } else {
-      res.status(401).json({
-        page: "สาขา",
-        user: null,
-        notification: "Error fetching Department data",
-      });
-    }
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({
+      page: "สาขา",
+      user,
+      departmentData,
+      countDepartment,
+      facultyData,
+      notification: "เชื่อมต่อข้อมูลสาขาสำเร็จ",
+    });
   })
 );
 
-// POST: เพิ่มสาขา
-router.post("/add", Admin, wrapAsync(departmentController.create));
+// ✅ GET /count → จำนวนสาขาทั้งหมด
+router.get("/count", verifyToken, wrapAsync(departmentController.count));
 
-// PUT: แก้ไขชื่อสาขา
-router.put(
-  "/edit/:department_id",
-  Admin,
-  wrapAsync(departmentController.update)
+// ✅ POST /create-department → เพิ่มสาขา
+router.post(
+  "/create-department",
+  verifyToken,
+  wrapAsync(departmentController.create.bind(departmentController))
 );
 
-// DELETE: ลบสาขา
+// ✅ PUT /update-department/:department_id → แก้ไขสาขา
+router.put(
+  "/update-department/:department_id",
+  verifyToken,
+  wrapAsync(departmentController.update.bind(departmentController))
+);
+
+// ✅ DELETE /delete-department/:department_id → ลบสาขา
 router.delete(
-  "/delete/:department_id",
-  Admin,
-  wrapAsync(departmentController.delete)
+  "/delete-department/:department_id",
+  verifyToken,
+  wrapAsync(departmentController.delete.bind(departmentController))
 );
 
 export default router;

@@ -30,23 +30,8 @@ interface JwtUser {
 router.post(
   "/login",
   wrapAsync(async (req, res) => {
-    const { username, password } = req.body;
-    const user = await authController.validateUser(username, password);
-    if (!user) {
-      return res.status(401).json({ message: "Invalid username/password" });
-    }
-
-    const token = generateTokenAndSetCookie(res, user.users_id); // ใช้ฟังก์ชันที่สร้างไว้
-
-    res.status(200).json({
-      message: "เข้าสู่ระบบสำเร็จ",
-      user: {
-        users_id: user.users_id,
-        username: user.username,
-        roles_id: user.roles_id,
-        role_name: user.roles.roles_name,
-      },
-    });
+    // ใช้ login method ใหม่ที่จัดการ response เอง
+    await authController.login(req, res);
   })
 );
 
@@ -96,16 +81,7 @@ router.get(
   "/me",
   verifyToken,
   wrapAsync(async (req, res) => {
-    const user = req.user as JwtUser;
-    const result = await authController.findById(user.users_id);
-    if (!result) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const { password, ...safeUser } = result;
-
-    res.setHeader("Cache-Control", "no-store"); // ✅ ปิด cache
-    res.status(200).json(safeUser); // ✅ จะได้ response.body เสมอ
+    await authController.getMe(req, res);
   })
 );
 

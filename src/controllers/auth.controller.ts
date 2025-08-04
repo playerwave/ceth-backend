@@ -4,6 +4,7 @@ import xss from "xss";
 import { AuthService } from "../services/auth.service";
 import { ErrorHandledController } from "./error.handled.controller";
 import { Users } from "../entity/users.entity";
+import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
 
 export class AuthController extends ErrorHandledController {
   constructor(private readonly authService: AuthService = new AuthService()) {
@@ -41,11 +42,111 @@ export class AuthController extends ErrorHandledController {
     }
   }
 
+  public async login(req: Request, res: Response): Promise<void> {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        res.status(400).json({
+          message: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน",
+        });
+        return;
+      }
+
+      const user = await this.authService.validateUser(username, password);
+
+      if (!user) {
+        res.status(401).json({
+          message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+        });
+        return;
+      }
+
+      // ถ้าเป็น Student ให้ดึงข้อมูล Student เพิ่มเติม
+      if (user.roles.roles_name === "Student") {
+        const studentData = await this.authService.getStudentData(
+          user.users_id
+        );
+
+        if (studentData) {
+          const responseBody = {
+            message: "เข้าสู่ระบบสำเร็จ",
+            user: {
+              users_id: user.users_id,
+              username: user.username,
+              roles_id: user.roles_id,
+              roles_name: user.roles.roles_name,
+              student: studentData,
+            },
+          };
+
+          // สร้าง token ก่อน
+          const token = generateTokenAndSetCookie(res, user.users_id);
+          res.status(200).json(responseBody);
+          return;
+        }
+      }
+
+      // สำหรับ role อื่นๆ
+      const responseBody = {
+        message: "เข้าสู่ระบบสำเร็จ",
+        user: {
+          users_id: user.users_id,
+          username: user.username,
+          roles_id: user.roles_id,
+          roles_name: user.roles.roles_name,
+        },
+      };
+
+      // สร้าง token ก่อน
+      const token = generateTokenAndSetCookie(res, user.users_id);
+      res.status(200).json(responseBody);
+    } catch (error) {
+      this.handleError("AuthController.login", error, res);
+    }
+  }
+
   public async findById(userId: number): Promise<Users | null> {
     try {
       return await this.authService.findById(userId);
     } catch (error) {
       throw error;
+    }
+  }
+
+  public async getMe(req: Request, res: Response): Promise<void> {
+    try {
+      const user = req.user as { users_id: number; roles_id: number };
+      const result = await this.authService.findById(user.users_id);
+
+      if (!result) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+
+      const { password, ...safeUser } = result;
+
+      // ถ้าเป็น Student ให้ดึงข้อมูล Student เพิ่มเติม
+      if (result.roles.roles_name === "Student") {
+        const studentData = await this.authService.getStudentData(
+          user.users_id
+        );
+
+        if (studentData) {
+          res.setHeader("Cache-Control", "no-store");
+          res.status(200).json({
+            ...safeUser,
+            student: studentData,
+          });
+          return;
+        }
+      }
+
+      // สำหรับ role อื่นๆ
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).json(safeUser);
+    } catch (error) {
+      this.handleError("AuthController.getMe", error, res);
     }
   }
 
@@ -67,4 +168,6 @@ export const authController = {
   register: controller.register.bind(controller),
   validateUser: controller.validateUser.bind(controller),
   findById: controller.findById.bind(controller),
+  login: controller.login.bind(controller),
+  getMe: controller.getMe.bind(controller),
 };

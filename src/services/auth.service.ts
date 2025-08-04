@@ -224,6 +224,18 @@ export class AuthService extends ErrorHandledService {
     return await this.authDao.getUsersById(userId); // ✅ ไม่เปลี่ยนชื่อเหมือนเดิมเป๊ะ!
   }
 
+  /**
+   * ดึงข้อมูล Student ตาม users_id
+   */
+  public async getStudentData(userId: number): Promise<any | null> {
+    try {
+      return await this.studentsDao.getStudentByUserId(userId);
+    } catch (error) {
+      this.logError("❌ Error in getStudentData", error);
+      return null;
+    }
+  }
+
   /*** helper functions ***/
 
   // private async existsUsername(username: string): Promise<boolean> {

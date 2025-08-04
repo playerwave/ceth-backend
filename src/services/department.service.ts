@@ -49,96 +49,111 @@ export class DepartmentService extends ErrorHandledService {
     }
   }
 
-  public async addDepartment(
-    department_name: string,
-    faculty_id: number
+  public async createDepartment(
+    data: Partial<Department>
   ): Promise<Department | null> {
     try {
       const existing = await this.departmentDao.getDepartmentByName(
-        department_name
+        data.department_name!
       );
       if (existing.length > 0) {
-        this.logInfo("🚫 Duplicate department name", { department_name });
+        this.logInfo("🚫 Duplicate department name", {
+          department_name: data.department_name,
+        });
         return null;
       }
 
-      await this.departmentDao.addDepartment(department_name, faculty_id);
+      const created = await this.departmentDao.createDepartment(data);
       await redis.del("department:all");
 
-      const created = await this.departmentDao.getDepartmentByName(
-        department_name
-      );
-      const result = created[0] || null;
-
       this.logInfo("✅ Department created", {
-        department_id: result?.department_id,
-        department_name,
+        department_id: created?.department_id,
+        department_name: data.department_name,
       });
 
-      return result;
+      return created;
     } catch (error) {
-      this.logError("❌ Error in addDepartment", error);
+      this.logError("❌ Error in createDepartment", error);
       throw error;
     }
   }
 
-  public async updatedDepartmentByName(
+  public async updateDepartment(
     department_id: number,
-    department_name: string,
-    faculty_id: number
+    data: Partial<Department>
   ): Promise<Department | null> {
     try {
       const existing = await this.departmentDao.getDepartmentByName(
-        department_name
+        data.department_name!
       );
       const isDuplicate = existing.some(
         (d) =>
           d.department_id !== department_id &&
-          d.department_name === department_name
+          d.department_name === data.department_name
       );
 
       if (isDuplicate) {
         this.logInfo("🚫 Department name already exists on another record", {
-          department_name,
+          department_name: data.department_name,
           department_id,
         });
         return null;
       }
 
-      await this.departmentDao.updatedDepartmentByName(
+      const updated = await this.departmentDao.updateDepartment(
         department_id,
-        department_name,
-        faculty_id
+        data
       );
 
       await redis.del("department:all");
 
-      const updated = await this.departmentDao.getDepartmentByName(
-        department_name
-      );
-      const result =
-        updated.find((d) => d.department_id === department_id) || null;
-
       this.logInfo("✏️ Department updated", { department_id });
 
-      return result;
+      return updated;
     } catch (error) {
-      this.logError("❌ Error in updatedDepartmentByName", error);
+      this.logError("❌ Error in updateDepartment", error);
       throw error;
     }
   }
 
-  public async deletedDepartment(department_id: number): Promise<boolean> {
+  public async getDepartmentById(
+    department_id: number
+  ): Promise<Department | null> {
     try {
-      const result = await this.departmentDao.deletedDepartment(department_id);
+      const result = await this.departmentDao.findById(department_id);
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in getDepartmentById", error);
+      throw error;
+    }
+  }
+
+  public async softDeleteDepartment(
+    department_id: number
+  ): Promise<Department | null> {
+    try {
+      // เนื่องจาก Department entity ไม่มี status field
+      // ให้ใช้ hard delete แทน หรือไม่ทำ soft delete
+      const result = await this.hardDeleteDepartment(department_id);
+      return result ? ({ department_id } as Department) : null;
+    } catch (error) {
+      this.logError("❌ Error in softDeleteDepartment", error);
+      throw error;
+    }
+  }
+
+  public async hardDeleteDepartment(department_id: number): Promise<boolean> {
+    try {
+      const department = await this.departmentDao.findById(department_id);
+      if (!department) return false;
+
+      await this.departmentDao.delete(department_id);
       await redis.del("department:all");
 
-      const deleted = result.length > 0;
-      this.logInfo("🗑️ Department deleted", { department_id, deleted });
-
-      return deleted;
+      this.logInfo("🗑️ Department hard deleted", { department_id });
+      return true;
     } catch (error) {
-      this.logError("❌ Error in deletedDepartment", error);
+      this.logError("❌ Error in hardDeleteDepartment", error);
       throw error;
     }
   }

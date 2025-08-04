@@ -98,6 +98,43 @@ export class StudentsDao extends ErrorHandledDao {
     }
   }
 
+  public async getStudentByUserId(users_id: number): Promise<Students | null> {
+    this.checkConnection();
+    try {
+      const sql = `
+        SELECT 
+          s.students_id,
+          s.users_id,
+          s.first_name,
+          s.last_name,
+          s.email,
+          s.soft_hours,
+          s.hard_hours,
+          s.risk_status,
+          s.education_status,
+          s.faculty_id,
+          s.department_id,
+          s.grade_id,
+          s.eventcoop_id,
+          f.faculty_name,
+          d.department_name,
+          g.level as grade_level,
+          ec.date as event_coop_date
+        FROM students s
+        LEFT JOIN faculty f ON s.faculty_id = f.faculty_id
+        LEFT JOIN department d ON s.department_id = d.department_id
+        LEFT JOIN grade g ON s.grade_id = g.grade_id
+        LEFT JOIN event_coop ec ON s.eventcoop_id = ec.eventcoop_id
+        WHERE s.users_id = $1
+      `;
+      const result = await this.dataSource!.query(sql, [users_id]);
+      return result[0] || null;
+    } catch (error) {
+      this.logDbError("getStudentByUserId", error);
+      throw error;
+    }
+  }
+
   public async addStudents(
     users_id: number,
     first_name: string,

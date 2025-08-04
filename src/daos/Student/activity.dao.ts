@@ -265,25 +265,64 @@ export class ActivityDao extends ErrorHandledDao {
   //   return result[0];
   // }
 
+  public async createActivityDetail(
+    activityId: number,
+    joinId: number,
+    foodChoices: string[]
+  ): Promise<{ activity_detail_id: number }> {
+    this.checkConnection();
+
+    // สร้าง activity_detail record
+    const result = await this.dataSource!.query(
+      `INSERT INTO activity_detail (activity_id, join_id, register_date, status)
+       VALUES ($1, $2, $3, $4)
+       RETURNING activity_detail_id`,
+      [
+        activityId,
+        joinId,
+        new Date(), // register_date
+        "Registered", // status
+      ]
+    );
+    return result[0];
+  }
+
   public async createJoin(
     studentId: number,
     activityDetailId: number,
-    foodChoices: string[] // หรือ teacherId ถ้าต้องการ
+    foodChoices: string[]
   ): Promise<Join> {
     this.checkConnection();
-
-    // สร้าง join record
     const result = await this.dataSource!.query(
       `INSERT INTO "join" (students_id, activity_detail_id, join_date, status)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [
-        studentId,
-        activityDetailId,
-        new Date(), // join_date
-        "Pending", // หรือ 'Completed', 'Cancelled'
-      ]
+      [studentId, activityDetailId, new Date(), "Pending"]
     );
     return result[0];
+  }
+
+  public async createActivityDetailOnly(
+    activityId: number
+  ): Promise<{ activity_detail_id: number }> {
+    this.checkConnection();
+    const result = await this.dataSource!.query(
+      `INSERT INTO activity_detail (activity_id, register_date, status)
+       VALUES ($1, $2, $3)
+       RETURNING activity_detail_id`,
+      [activityId, new Date(), "Registered"]
+    );
+    return result[0];
+  }
+
+  public async updateActivityDetailWithFood(
+    activityDetailId: number,
+    foodChoices: string[]
+  ): Promise<void> {
+    this.checkConnection();
+    await this.dataSource!.query(
+      `UPDATE activity_detail SET food_choices = $1 WHERE activity_detail_id = $2`,
+      [foodChoices.join(","), activityDetailId]
+    );
   }
 }

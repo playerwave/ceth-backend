@@ -69,51 +69,61 @@ export class DepartmentDao extends ErrorHandledDao {
     }
   }
 
-  public async addDepartment(
-    department_name: string,
-    faculty_id: number
-  ): Promise<Department[]> {
+  public async createDepartment(
+    data: Partial<Department>
+  ): Promise<Department> {
     this.checkConnection();
     try {
-      const name = department_name.trim();
-      const sql = `INSERT INTO department (department_name, faculty_id) VALUES ($1, $2)`;
-      const result = await this.dataSource!.query(sql, [name, faculty_id]);
-      return result;
+      const sql = `INSERT INTO department (department_name, faculty_id) VALUES ($1, $2) RETURNING *`;
+      const result = await this.dataSource!.query(sql, [
+        data.department_name?.trim(),
+        data.faculty_id,
+      ]);
+      return result[0];
     } catch (error) {
-      this.logDbError("addDepartment", error);
+      this.logDbError("createDepartment", error);
       throw error;
     }
   }
 
-  public async updatedDepartmentByName(
+  public async updateDepartment(
     department_id: number,
-    department_name: string,
-    faculty_id: number
-  ): Promise<Department[]> {
+    data: Partial<Department>
+  ): Promise<Department> {
     this.checkConnection();
     try {
-      const name = department_name.trim();
-      const sql = `UPDATE department SET department_name = $1, faculty_id = $2 WHERE department_id = $3`;
+      const sql = `UPDATE department SET department_name = $1, faculty_id = $2 WHERE department_id = $3 RETURNING *`;
       const result = await this.dataSource!.query(sql, [
-        name,
-        faculty_id,
+        data.department_name?.trim(),
+        data.faculty_id,
         department_id,
       ]);
-      return result;
+      return result[0];
     } catch (error) {
-      this.logDbError("updatedDepartmentByName", error);
+      this.logDbError("updateDepartment", error);
       throw error;
     }
   }
 
-  public async deletedDepartment(department_id: number): Promise<Department[]> {
+  public async findById(id: number): Promise<Department | null> {
+    this.checkConnection();
+    try {
+      const sql = `SELECT * FROM department WHERE department_id = $1`;
+      const result = await this.dataSource!.query(sql, [id]);
+      return result[0] || null;
+    } catch (error) {
+      this.logDbError("findById", error);
+      throw error;
+    }
+  }
+
+  public async delete(id: number): Promise<void> {
     this.checkConnection();
     try {
       const sql = `DELETE FROM department WHERE department_id = $1`;
-      const result = await this.dataSource!.query(sql, [department_id]);
-      return result;
+      await this.dataSource!.query(sql, [id]);
     } catch (error) {
-      this.logDbError("deletedDepartment", error);
+      this.logDbError("delete", error);
       throw error;
     }
   }

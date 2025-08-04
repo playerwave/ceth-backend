@@ -125,34 +125,48 @@ export class ActivityService extends ErrorHandledService {
     foodChoices: string[]
   ): Promise<Join> {
     try {
-      // 1. หา activity_detail_id ที่ยังไม่มี join สำหรับ student นี้
-      const activityDetailResult =
-        await this.activityDao.getAvailableActivityDetailId(
-          activityId,
-          studentId
-        );
-      const activityDetailId = activityDetailResult?.activity_detail_id;
-      if (!activityDetailId) throw new Error("Activity detail not found");
-
-      // 2. ตรวจสอบว่าสมัครซ้ำหรือยัง
-      const existing = await this.joinDao.findJoinByStudentAndActivity(
+      const existingJoin = await this.joinDao.findJoinByStudentAndActivityId(
         studentId,
-        activityDetailId
+        activityId
       );
-      if (existing) throw new Error("Already enrolled in this activity");
+      if (existingJoin) throw new Error("Already enrolled in this activity");
 
-      // 3. สร้าง join ใหม่
-      const join = await this.joinDao.createJoin(
+      // const activityDetail = await this.activityDao.createActivityDetailOnly(
+      //   activityId
+      // );
+
+      // const join = await this.joinDao.createJoin(
+      //   studentId,
+      //   activityDetail.activity_detail_id,
+      //   foodChoices
+      // );
+
+      // 2. สร้าง join ใหม่ (โดยไม่ต้องมี activity_detail_id ก่อน)
+      const join = await this.joinDao.createJoinWithoutActivityDetail(
         studentId,
-        activityDetailId,
-        foodChoices // หรือ teacherId ถ้าต้องการ
+        foodChoices
       );
 
-      // 4. ลบ cache
+      // 3. สร้าง activity_detail ใหม่ (ใช้ join_id ที่เพิ่งสร้าง)
+      const activityDetail = await this.activityDao.createActivityDetail(
+        activityId,
+        join.join_id,
+        foodChoices
+      );
+
+      // 4. อัพเดท join ให้มี activity_detail_id
+      await this.joinDao.updateJoinWithActivityDetail(
+        join.join_id,
+        activityDetail.activity_detail_id
+      );
+
+      // 5. ลบ cache
       await redis.del(`join:${studentId}`);
       this.logInfo("✅ Student enrolled in activity", {
         studentId,
         activityId,
+        joinId: join.join_id,
+        activityDetailId: activityDetail.activity_detail_id,
       });
       return join;
     } catch (error) {
@@ -207,7 +221,7 @@ export class ActivityService extends ErrorHandledService {
     activityId: number
   ): Promise<boolean> {
     try {
-      const existing = await this.joinDao.findJoinByStudentAndActivity(
+      const existing = await this.joinDao.findJoinByStudentAndActivityId(
         studentId,
         activityId
       );

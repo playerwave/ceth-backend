@@ -1,4 +1,4 @@
-// src/controllers/Admin/department.controller.ts
+// src/controllers/department.controller.ts
 import { Request, Response } from "express";
 import xss from "xss";
 import { DepartmentService } from "../services/department.service";
@@ -31,20 +31,19 @@ export class DepartmentController extends ErrorHandledController {
 
   public async create(req: Request, res: Response): Promise<void> {
     try {
-      const department_name = this.sanitize(req.body.department_name);
-      const faculty_id = this.parseId(req.body.faculty_id);
+      const data = this.parseDepartmentPayload(req.body);
 
-      const created = await this.departmentService.addDepartment(
-        department_name,
-        faculty_id
-      );
+      const result = await this.departmentService.createDepartment(data);
 
-      if (!created) {
+      if (!result) {
         res.status(409).json({ message: "มีชื่อสาขานี้อยู่ในระบบแล้ว !" });
         return;
       }
 
-      res.status(201).json({ message: "เพิ่มชื่อสาขาสำเร็จ !" });
+      res.status(201).json({
+        message: "เพิ่มชื่อสาขาสำเร็จ !",
+        data: result,
+      });
     } catch (error) {
       this.handleError("DepartmentController.create", error, res);
     }
@@ -52,22 +51,20 @@ export class DepartmentController extends ErrorHandledController {
 
   public async update(req: Request, res: Response): Promise<void> {
     try {
-      const department_id = this.parseId(req.params.department_id);
-      const department_name = this.sanitize(req.body.department_name);
-      const faculty_id = this.parseId(req.body.faculty_id);
+      const id = this.parseId(req.params.department_id);
+      const data = this.parseDepartmentPayload(req.body);
 
-      const updated = await this.departmentService.updatedDepartmentByName(
-        department_id,
-        department_name,
-        faculty_id
-      );
+      const result = await this.departmentService.updateDepartment(id, data);
 
-      if (!updated) {
-        res.status(409).json({ message: "มีชื่อสาขานี้อยู่ในระบบแล้ว !" });
+      if (!result) {
+        res.status(404).json({ message: "ไม่พบข้อมูลสาขาที่ต้องการแก้ไข !" });
         return;
       }
 
-      res.status(200).json({ message: "แก้ชื่อสาขาสำเร็จ !" });
+      res.status(200).json({
+        message: "แก้ชื่อสาขาสำเร็จ !",
+        data: result,
+      });
     } catch (error) {
       this.handleError("DepartmentController.update", error, res);
     }
@@ -75,24 +72,48 @@ export class DepartmentController extends ErrorHandledController {
 
   public async delete(req: Request, res: Response): Promise<void> {
     try {
-      const department_id = this.parseId(req.params.department_id);
+      const id = this.parseId(req.params.department_id);
+      const forceDelete = req.query.force === "true";
 
-      const deleted = await this.departmentService.deletedDepartment(
-        department_id
-      );
+      let result;
+      if (forceDelete) {
+        result = await this.departmentService.hardDeleteDepartment(id);
+      } else {
+        result = await this.departmentService.softDeleteDepartment(id);
+      }
 
-      if (!deleted) {
+      if (!result) {
         res.status(404).json({ message: "ไม่พบข้อมูลสาขาที่ต้องการลบ !" });
         return;
       }
 
-      res.status(200).json({ message: "ลบชื่อสาขาสำเร็จ !" });
+      res.status(200).json({
+        message: forceDelete
+          ? "ลบสาขาสำเร็จ (ถาวร)"
+          : "ลบสาขาสำเร็จ (ชั่วคราว)",
+      });
     } catch (error) {
       this.handleError("DepartmentController.delete", error, res);
     }
   }
 
-  private parseId(value: any): number {
+  public async getDepartment(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.department_id);
+      const department = await this.departmentService.getDepartmentById(id);
+
+      if (!department) {
+        res.status(404).json({ message: "ไม่พบข้อมูลสาขา" });
+        return;
+      }
+
+      res.status(200).json(department);
+    } catch (error) {
+      this.handleError("DepartmentController.getDepartment", error, res);
+    }
+  }
+
+  private parseId(value: string): number {
     const id = parseInt(value, 10);
     if (isNaN(id)) throw new Error("Invalid ID format");
     return id;
@@ -100,6 +121,13 @@ export class DepartmentController extends ErrorHandledController {
 
   private parseOptionalInt(value: any, fallback: number): number {
     return !isNaN(Number(value)) ? parseInt(value, 10) : fallback;
+  }
+
+  private parseDepartmentPayload(body: any): any {
+    return {
+      department_name: body.department_name || "ไม่ระบุ",
+      faculty_id: this.parseOptionalInt(body.faculty_id, 0),
+    };
   }
 
   private sanitize(input: any): string {
@@ -116,4 +144,5 @@ export const departmentController = {
   create: controller.create.bind(controller),
   update: controller.update.bind(controller),
   delete: controller.delete.bind(controller),
+  getDepartment: controller.getDepartment.bind(controller),
 };

@@ -76,19 +76,22 @@ import { connectDatabase } from "../db/database";
 import { ErrorHandledDao } from "./error.handled.dao";
 
 export class AuthDao extends ErrorHandledDao {
-  private dataSource!: DataSource;
-  private usersRepository!: Repository<Users>;
+  private dataSource: DataSource | null = null;
+  private usersRepository: Repository<Users> | null = null;
 
   constructor() {
     super();
-    // สลับมาใช้ async/await ให้แน่นอนว่ามี repository ก่อนใช้งาน
-    this.initialize().catch((err) => this.logDbError("initialize", err));
+    this.initialize();
   }
 
   private async initialize(): Promise<void> {
-    this.dataSource = await connectDatabase();
-    this.usersRepository = this.dataSource.getRepository(Users);
-    console.log("✅ AuthDao initialized");
+    try {
+      this.dataSource = await connectDatabase();
+      this.usersRepository = this.dataSource.getRepository(Users);
+      console.log("✅ AuthDao initialized");
+    } catch (error) {
+      this.logDbError("initialize", error);
+    }
   }
 
   private checkConnection(): void {
@@ -109,7 +112,7 @@ export class AuthDao extends ErrorHandledDao {
     roles_id: number
   ): Promise<void> {
     this.checkConnection();
-    await this.usersRepository.insert({
+    await this.usersRepository!.insert({
       username: username.trim(),
       password,
       roles_id,
@@ -128,8 +131,7 @@ export class AuthDao extends ErrorHandledDao {
 
   public async getUsersByUsername(username: string): Promise<Users | null> {
     this.checkConnection();
-    return this.usersRepository
-      .createQueryBuilder("users")
+    return this.usersRepository!.createQueryBuilder("users")
       .innerJoinAndSelect("users.roles", "roles") // ✅ JOIN roles → ดึง role_name ได้
       .where("users.username = :username", { username: username.trim() })
       .select([
@@ -157,8 +159,7 @@ export class AuthDao extends ErrorHandledDao {
 
   public async getUsersById(users_id: number): Promise<Users | null> {
     this.checkConnection();
-    return this.usersRepository
-      .createQueryBuilder("users")
+    return this.usersRepository!.createQueryBuilder("users")
       .innerJoinAndSelect("users.roles", "roles") // ✅ JOIN ให้ได้ roles.role_name
       .where("users.users_id = :users_id", { users_id })
       .getOne(); // ✅ return คนเดียวเท่านั้น
@@ -172,7 +173,7 @@ export class AuthDao extends ErrorHandledDao {
     username: string
   ): Promise<{ users_id: number }[]> {
     this.checkConnection();
-    return this.usersRepository.query(
+    return this.usersRepository!.query(
       `SELECT users_id FROM users WHERE username = $1`,
       [username.trim()]
     );

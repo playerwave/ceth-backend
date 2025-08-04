@@ -26,10 +26,9 @@ export class JoinDao extends ErrorHandledDao {
     }
   }
 
-  // ✅ ค้นหา Join ตาม studentId และ activityId
   public async findJoinByStudentAndActivity(
     studentId: number,
-    activityId: number
+    activityDetailId: number
   ): Promise<Join | null> {
     this.checkConnection();
 
@@ -37,7 +36,7 @@ export class JoinDao extends ErrorHandledDao {
       const result = await this.dataSource!.getRepository(Join).findOne({
         where: {
           students_id: studentId,
-          activity_detail_id: activityId,
+          activity_detail_id: activityDetailId,
         },
       });
       return result;
@@ -47,39 +46,96 @@ export class JoinDao extends ErrorHandledDao {
     }
   }
 
-  // ✅ สร้างการเข้าร่วมใหม่
-  public async createJoin(
+  public async findJoinByStudentAndActivityId(
     studentId: number,
-    activityId: number,
-    foodChoices: string[]
-  ): Promise<Join> {
+    activityId: number
+  ): Promise<Join | null> {
     this.checkConnection();
 
     try {
-      const joinRepo = this.dataSource!.getRepository(Join);
-
-      const newJoin = joinRepo.create({
-        students_id: studentId,
-        teacher_id: 1, // 🔧 คุณอาจต้องรับ teacher_id ด้วยใน args
-        activity_detail_id: activityId,
-        join_date: new Date(),
-        status: "Pending",
-      });
-
-      const saved = await joinRepo.save(newJoin);
-      // ✅ ถ้าคุณต้องการบันทึก foodChoices ด้วย ต้องมี relation table สำหรับอาหาร
-
-      return saved;
+      const result = await this.dataSource!.query(
+        `SELECT j.*
+         FROM "join" j
+         INNER JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+         WHERE j.students_id = $1 AND ad.activity_id = $2`,
+        [studentId, activityId]
+      );
+      return result[0] || null;
     } catch (error) {
-      this.logDbError("createJoin", error);
+      this.logDbError("findJoinByStudentAndActivityId", error);
       throw error;
     }
   }
 
-  // ✅ ลบการเข้าร่วม
-  public async deleteJoin(join_id: number): Promise<void> {
+  public async createJoin(
+    studentId: number,
+    activityDetailId: number,
+    foodChoices: string[]
+  ): Promise<Join> {
+    this.checkConnection();
+    const result = await this.dataSource!.query(
+      `INSERT INTO "join" (students_id, activity_detail_id, join_date, status)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [studentId, activityDetailId, new Date(), "Pending"]
+    );
+    return result[0];
+  }
+
+  public async createJoinWithoutActivityDetail(
+    studentId: number,
+    foodChoices: string[]
+  ): Promise<Join> {
+    this.checkConnection();
+    try {
+      const result = await this.dataSource!.query(
+        `INSERT INTO "join" (students_id, teacher_id, join_date, status)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [
+          studentId,
+          1, // teacher_id
+          new Date(), // join_date
+          "Pending", // status
+        ]
+      );
+      return result[0];
+    } catch (error) {
+      this.logDbError("createJoinWithoutActivityDetail", error);
+      throw error;
+    }
+  }
+
+  public async updateJoinWithActivityDetail(
+    joinId: number,
+    activityDetailId: number
+  ): Promise<void> {
     this.checkConnection();
 
+    try {
+      await this.dataSource!.query(
+        `UPDATE "join" SET activity_detail_id = $1 WHERE join_id = $2`,
+        [activityDetailId, joinId]
+      );
+    } catch (error) {
+      this.logDbError("updateJoinWithActivityDetail", error);
+      throw error;
+    }
+  }
+
+  public async updateActivityDetailWithFood(
+    activityDetailId: number,
+    foodChoices: string[]
+  ): Promise<void> {
+    this.checkConnection();
+    await this.dataSource!.query(
+      `UPDATE activity_detail SET food_choices = $1 WHERE activity_detail_id = $2`,
+      [foodChoices.join(","), activityDetailId]
+    );
+  }
+
+  public async deleteJoin(join_id: number): Promise<void> {
+    this.checkConnection();
     try {
       const repo = this.dataSource!.getRepository(Join);
       await repo.delete({ join_id });

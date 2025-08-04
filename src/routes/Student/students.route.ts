@@ -20,6 +20,7 @@ import { wrapAsync } from "../../utils/wrapAsync";
 import { validateDTO } from "../../middleware/validateDTO.validator";
 import { CreateStudentDto } from "../../dtos/Teacher/student.dto";
 import { UpdateStudentDto } from "../../dtos/Teacher/student.dto";
+import { verifyToken } from "../../middleware/verifyToken";
 
 const router = Router();
 
@@ -37,6 +38,7 @@ const eventCoopService = new EventCoopService();
 // ✅ GET all student data
 router.get(
   "/get-students",
+  verifyToken,
   wrapAsync(async (req: Request, res: Response) => {
     const user = req.user;
 
@@ -51,39 +53,32 @@ router.get(
         eventCoopService.getEventCoop(),
       ]);
 
-    if (req.isAuthenticated()) {
-      res.status(200).json({
-        page: "นิสิต",
-        user,
-        studentsData,
-        countStudents,
-        facultyData,
-        departmentData,
-        gradeData,
-        eventCoopData,
-        notification: "The data connection was successful.",
-      });
-    } else {
-      res.status(401).json({
-        page: "นิสิต",
-        user: null,
-        notification: "Error fetching Students data",
-      });
-    }
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({
+      page: "นิสิต",
+      user,
+      studentsData,
+      countStudents,
+      facultyData,
+      departmentData,
+      gradeData,
+      eventCoopData,
+      notification: "เชื่อมต่อข้อมูลนิสิตสำเร็จ",
+    });
   })
 );
 
 // ✅ GET Success students (แยก endpoint admin)
 router.get(
   "/success",
-  Admin,
+  verifyToken,
   wrapAsync(studentsController.getStudentsSuccess.bind(studentsController))
 );
 
 // ✅ POST: Create student
 router.post(
   "/create-student",
-  Admin,
+  verifyToken,
   validateDTO(CreateStudentDto),
   wrapAsync(studentsController.create.bind(studentsController))
 );
@@ -91,7 +86,7 @@ router.post(
 // ✅ PUT: Update student
 router.put(
   "/update-student/:students_id",
-  Admin,
+  verifyToken,
   validateDTO(UpdateStudentDto),
   wrapAsync(studentsController.update.bind(studentsController))
 );
@@ -99,7 +94,7 @@ router.put(
 // ✅ DELETE: Delete student
 router.delete(
   "/delete-student/:students_id",
-  Admin,
+  verifyToken,
   wrapAsync(studentsController.delete.bind(studentsController))
 );
 
