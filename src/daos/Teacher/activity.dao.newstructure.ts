@@ -521,4 +521,38 @@ export class ActivityDao extends ErrorHandledDao {
 
     await this.dataSource!.getRepository(Activity).delete({ activity_id: id });
   }
+
+  public async findActivitiesToCloseRegister(now: Date): Promise<Activity[]> {
+  this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE activity_state = 'Open Register'
+        AND status = 'Active'
+        AND end_register_date <= $1
+    `;
+    const result = await this.dataSource!.query(sql, [now]);
+    return result;
+  } catch (error) {
+    this.logDbError("findActivitiesToCloseRegister", error);
+    throw new Error("❌ Failed to find activities to close register");
+  }
+}
+
+public async updateActivityState(activity_id: number, state: string): Promise<void> {
+  this.checkConnection();
+  try {
+    const sql = `
+      UPDATE activity
+      SET activity_state = $1,
+          last_update_activity_date = NOW()
+      WHERE activity_id = $2
+    `;
+    await this.dataSource!.query(sql, [state, activity_id]);
+  } catch (error) {
+    this.logDbError("updateActivityState", error);
+    throw new Error("❌ Failed to update activity state");
+  }
+}
+
 }

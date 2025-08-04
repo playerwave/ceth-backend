@@ -300,4 +300,36 @@ export class ActivityService extends ErrorHandledService {
       throw error;
     }
   }
+
+  public async autoCloseRegisterActivities(): Promise<void> {
+  try {
+    const now = new Date();
+
+    // ดึงกิจกรรมที่ต้องปิดลงทะเบียน
+    const activitiesToClose = await this.activityDao.findActivitiesToCloseRegister(now);
+
+    if (activitiesToClose.length === 0) {
+      this.logInfo("📭 No activities to close.");
+      return;
+    }
+
+    for (const activity of activitiesToClose) {
+      await this.activityDao.updateActivityState(activity.activity_id, "Close Register");
+      this.logInfo("✅ Closed register for activity", {
+        activity_id: activity.activity_id,
+        name: activity.activity_name,
+      });
+
+      // ลบ cache รายตัวด้วย (ถ้าใช้)
+      await redis.del(`activity:${activity.activity_id}`);
+    }
+
+    // เคลียร์ cache ทั้งหมดหลังอัปเดต
+    await redis.del("activity:all");
+  } catch (error) {
+    this.logError("❌ Error in autoCloseRegisterActivities", error);
+    throw error;
+  }
+}
+
 }

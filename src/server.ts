@@ -9,7 +9,7 @@ import { httpLogger, requestLogger, errorLogger } from "./utils/logger";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import passport from "passport";
-
+import "./jobs/cron.job";
 import { UsersService } from "./services/user.service";
 
 //import authRoute
