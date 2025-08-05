@@ -1,4 +1,4 @@
-import { formatTimeToLocal } from "./formatTimeToLocal";
+import { formatTimeToLocal, formatTimeToISO } from "./formatTimeToLocal";
 
 export const convertDateFieldsToLocal = <T extends object>(data: T): T => {
   const converted: any = {};
@@ -27,7 +27,8 @@ export const convertDateFieldsToLocal = <T extends object>(data: T): T => {
     if (typeof value === "string" || value instanceof Date) {
       const dateVal = new Date(value);
       if (!isNaN(dateVal.getTime())) {
-        converted[key] = formatTimeToLocal(value);
+        // ✅ ส่งเวลาจาก database เลยโดยไม่แปลง
+        converted[key] = value;
         continue;
       }
     }

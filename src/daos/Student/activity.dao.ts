@@ -63,22 +63,79 @@ export class ActivityDao extends ErrorHandledDao {
   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
     await this.checkConnection();
 
-    const query = `
-    SELECT a.*
-    FROM activity a
-    WHERE a.activity_status = 'Public'
-      AND a.status = 'Active'
-      AND NOT EXISTS (
-        SELECT 1
-        FROM activity_detail ad
-        JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
-        WHERE ad.activity_id = a.activity_id
-          AND j.students_id = $1
-      )
-    ORDER BY a.create_activity_date DESC
-  `;
+    // ✅ ดึงข้อมูล risk_status ของนิสิต
+    const studentQuery = `
+      SELECT s.risk_status
+      FROM students s
+      WHERE s.users_id = $1
+    `;
+    const studentResult = await this.dataSource!.query(studentQuery, [
+      studentId,
+    ]);
+    const riskStatus = studentResult[0]?.risk_status || "Normal";
 
-    const result = await this.dataSource!.query(query, [studentId]);
+    // ✅ สร้าง query ตาม risk_status
+    let query: string;
+    let params: any[];
+
+    if (riskStatus === "Risk") {
+      // ✅ สำหรับ Risk: เห็นกิจกรรมที่ถึง special_start_register_date แล้ว และยังไม่เกิน end_register_date
+      query = `
+        SELECT a.*
+        FROM activity a
+        WHERE a.activity_status = 'Public'
+          AND a.status = 'Active'
+          AND a.activity_state IN ('Special Open Register', 'Open Register')
+          AND a.special_start_register_date <= NOW()
+          AND a.end_register_date > NOW()
+          AND (
+            SELECT COUNT(*)
+            FROM activity_detail ad
+            JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+            WHERE ad.activity_id = a.activity_id
+          ) < a.seat
+          AND NOT EXISTS (
+            SELECT 1
+            FROM activity_detail ad
+            JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+            WHERE ad.activity_id = a.activity_id
+              AND j.students_id = $1
+          )
+        ORDER BY a.create_activity_date DESC
+      `;
+    } else {
+      // ✅ สำหรับ Normal: เห็นกิจกรรมที่ถึง start_register_date แล้ว และยังไม่เกิน end_register_date
+      query = `
+        SELECT a.*
+        FROM activity a
+        WHERE a.activity_status = 'Public'
+          AND a.status = 'Active'
+          AND a.activity_state = 'Open Register'
+          AND a.start_register_date <= NOW()
+          AND a.end_register_date > NOW()
+          AND (
+            SELECT COUNT(*)
+            FROM activity_detail ad
+            JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+            WHERE ad.activity_id = a.activity_id
+          ) < a.seat
+          AND NOT EXISTS (
+            SELECT 1
+            FROM activity_detail ad
+            JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+            WHERE ad.activity_id = a.activity_id
+              AND j.students_id = $1
+          )
+        ORDER BY a.create_activity_date DESC
+      `;
+    }
+
+    params = [studentId];
+    const result = await this.dataSource!.query(query, params);
+
+    console.log(
+      `📊 Found ${result.length} available activities for student ${studentId} (risk_status: ${riskStatus})`
+    );
     return result;
   }
 

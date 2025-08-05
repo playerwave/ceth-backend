@@ -16,7 +16,10 @@ export class ActivityService extends ErrorHandledService {
       const activities = await this.activityDao.getAvailableActivities(
         studentId
       );
-      this.logInfo("📄 Retrieved student-available activities", { studentId });
+      this.logInfo("📄 Retrieved student-available activities", {
+        studentId,
+        count: activities.length,
+      });
       return activities;
     } catch (error) {
       this.logError("❌ Error in getStudentActivitiesService", error);

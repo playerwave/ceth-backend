@@ -181,6 +181,10 @@ export class ActivityController extends ErrorHandledController {
       const result = await this.activityService.getStudentActivitiesService(
         userId
       );
+
+      console.log(
+        `📊 Returning ${result.length} activities for student ${userId}`
+      );
       res.status(200).json(result);
     } catch (error) {
       this.handleError(

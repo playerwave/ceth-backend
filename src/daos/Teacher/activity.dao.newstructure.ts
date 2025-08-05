@@ -2,7 +2,7 @@ import { DataSource } from "typeorm";
 import { Activity } from "../../entity/activity.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
-import { formatTimeToLocal } from "../../utils/formatTimeToLocal";
+import { formatTimeToLocal, add7Hours } from "../../utils/formatTimeToLocal";
 
 export class ActivityDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;
@@ -42,19 +42,30 @@ export class ActivityDao extends ErrorHandledDao {
     return formatTimeToLocal(date, "Asia/Bangkok");
   }
 
-  private sanitizeDate(input: unknown): string {
+  private sanitizeDate(input: unknown): string | null {
+    // ✅ ถ้าเป็น null หรือ empty string ให้ return null
+    if (input === null || input === undefined || input === "") {
+      return null;
+    }
+
     if (input instanceof Date) {
-      return this.formatDateToLocalString(input);
+      // ✅ บวก 7 ชั่วโมงก่อนบันทึก
+      return add7Hours(this.formatDateToLocalString(input));
     }
 
     if (typeof input === "string" && input.trim() !== "") {
       const parsed = new Date(input);
-      return isNaN(parsed.getTime())
-        ? this.formatDateToLocalString(new Date())
-        : this.formatDateToLocalString(parsed);
+      if (isNaN(parsed.getTime())) {
+        // ✅ ถ้า parse ไม่ได้ ให้ return null
+        return null;
+      } else {
+        // ✅ บวก 7 ชั่วโมงก่อนบันทึก
+        return add7Hours(this.formatDateToLocalString(parsed));
+      }
     }
 
-    return this.formatDateToLocalString(new Date());
+    // ✅ ถ้าไม่มีข้อมูล ให้ return null
+    return null;
   }
 
   // public async createActivityDao(
@@ -249,13 +260,13 @@ export class ActivityDao extends ErrorHandledDao {
           data.recieve_hours ?? 0,
           data.event_format || "Online",
           new Date(), // create_activity_date
-          this.sanitizeDate(data.special_start_register_date), // 🟩 เพิ่มตรงนี้
-          this.sanitizeDate(data.start_register_date),
-          this.sanitizeDate(data.end_register_date),
-          this.sanitizeDate(data.start_activity_date),
-          this.sanitizeDate(data.end_activity_date),
-          this.sanitizeDate(data.start_assessment), // 🟩 เพิ่ม start_assessment
-          this.sanitizeDate(data.end_assessment), // 🟩 เพิ่ม end_assessment
+          this.sanitizeDate(data.special_start_register_date) || null, // 🟩 เพิ่มตรงนี้
+          this.sanitizeDate(data.start_register_date) || null,
+          this.sanitizeDate(data.end_register_date) || null,
+          this.sanitizeDate(data.start_activity_date) || null,
+          this.sanitizeDate(data.end_activity_date) || null,
+          this.sanitizeDate(data.start_assessment) || null, // 🟩 เพิ่ม start_assessment
+          this.sanitizeDate(data.end_assessment) || null, // 🟩 เพิ่ม end_assessment
           data.image_url || "ไม่ระบุ",
           data.activity_status || "Private",
           data.activity_state || "Not Start",
@@ -399,9 +410,26 @@ export class ActivityDao extends ErrorHandledDao {
           return null;
         }
 
-        // ✅ จัดการ date fields ให้ใช้ formatDateToLocalString
+        // ✅ จัดการ date fields ให้บวก 7 ชั่วโมงก่อนบันทึก
         if (value instanceof Date) {
-          return this.formatDateToLocalString(value);
+          return add7Hours(this.formatDateToLocalString(value));
+        }
+
+        // ✅ จัดการ date fields ที่เป็น string ให้บวก 7 ชั่วโมงก่อนบันทึก
+        if (
+          typeof value === "string" &&
+          value.trim() !== "" &&
+          (field.includes("_date") || field.includes("_assessment"))
+        ) {
+          return add7Hours(value);
+        }
+
+        // ✅ จัดการ null หรือ empty string สำหรับ date fields
+        if (
+          (value === null || value === "" || value === undefined) &&
+          (field.includes("_date") || field.includes("_assessment"))
+        ) {
+          return null;
         }
 
         return value ?? null;

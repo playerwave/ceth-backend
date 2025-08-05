@@ -204,8 +204,14 @@ export class ActivityController extends ErrorHandledController {
         );
         return date;
       } else {
-        // เป็น local format ให้สร้างเป็น local time โดยไม่แปลงเป็น UTC
-        const [datePart, timePart] = dateString.split("T");
+        // เป็น local format (YYYY-MM-DD HH:mm:ss)
+        const parts = dateString.split(" ");
+        if (parts.length !== 2) {
+          console.error("❌ Invalid date format:", dateString);
+          return null;
+        }
+
+        const [datePart, timePart] = parts;
         const [year, month, day] = datePart.split("-");
         const [hours, minutes, seconds] = timePart.split(":");
 
