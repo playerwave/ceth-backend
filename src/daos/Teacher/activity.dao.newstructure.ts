@@ -271,12 +271,20 @@ export class ActivityDao extends ErrorHandledDao {
 
       // ✅ เพิ่ม ActivityFood หากมี
       if (foodIds.length > 0) {
-        const values = foodIds
-          .map((foodId) => `(${newActivity.activity_id}, ${foodId})`)
-          .join(", ");
-        await queryRunner.query(
-          `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`
-        );
+        // ✅ กรอง foodIds ที่ถูกต้อง (ไม่ใช่ -1 หรือ 0)
+        const validFoodIds = foodIds.filter((foodId) => foodId > 0);
+
+        if (validFoodIds.length > 0) {
+          const values = validFoodIds
+            .map((foodId) => `(${newActivity.activity_id}, ${foodId})`)
+            .join(", ");
+          await queryRunner.query(
+            `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`
+          );
+          console.log("✅ Foods added successfully to new activity");
+        } else {
+          console.log("🍽️ No valid food IDs to add for new activity");
+        }
       }
 
       await queryRunner.commitTransaction();
@@ -428,14 +436,24 @@ export class ActivityDao extends ErrorHandledDao {
 
       // ✅ เพิ่มข้อมูลอาหารใหม่ (ถ้ามี)
       if (foodIds.length > 0) {
-        console.log("🍽️ Adding foods to activity:", { activity_id, foodIds });
-        const values = foodIds
-          .map((foodId) => `(${activity_id}, ${foodId})`)
-          .join(", ");
-        const insertSQL = `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`;
-        console.log("🍽️ Insert SQL:", insertSQL);
-        await queryRunner.query(insertSQL);
-        console.log("✅ Foods added successfully");
+        // ✅ กรอง foodIds ที่ถูกต้อง (ไม่ใช่ -1 หรือ 0)
+        const validFoodIds = foodIds.filter((foodId) => foodId > 0);
+
+        if (validFoodIds.length > 0) {
+          console.log("🍽️ Adding foods to activity:", {
+            activity_id,
+            validFoodIds,
+          });
+          const values = validFoodIds
+            .map((foodId) => `(${activity_id}, ${foodId})`)
+            .join(", ");
+          const insertSQL = `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`;
+          console.log("🍽️ Insert SQL:", insertSQL);
+          await queryRunner.query(insertSQL);
+          console.log("✅ Foods added successfully");
+        } else {
+          console.log("🍽️ No valid food IDs to add for activity:", activity_id);
+        }
       } else {
         console.log("🍽️ No foods to add for activity:", activity_id);
       }

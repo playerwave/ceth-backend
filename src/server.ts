@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { connectDatabase } from "./db/database";
+import { connectDatabase, closeDatabase } from "./db/database";
 import bodyParser from "body-parser";
 import "reflect-metadata";
 import { httpLogger, requestLogger, errorLogger } from "./utils/logger";
@@ -140,16 +140,67 @@ app.use("/api/visitor", activityVisitorRoute);
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 
+// ✅ ฟังก์ชัน graceful shutdown
+const gracefulShutdown = async (signal: string) => {
+  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+
+  try {
+    // ✅ ปิด database connection
+    await closeDatabase();
+    console.log("✅ Database connection closed");
+
+    // ✅ ปิด server
+    if (server) {
+      server.close(() => {
+        console.log("✅ Server closed");
+        process.exit(0);
+      });
+
+      // ✅ Force close หลังจาก 10 วินาที
+      setTimeout(() => {
+        console.error(
+          "❌ Could not close connections in time, forcefully shutting down"
+        );
+        process.exit(1);
+      }, 10000);
+    } else {
+      process.exit(0);
+    }
+  } catch (error) {
+    console.error("❌ Error during graceful shutdown:", error);
+    // ✅ ไม่ต้องรอ ให้ปิดทันที
+    process.exit(1);
+  }
+};
+
 // เชื่อมต่อ database และเริ่ม server
+let server: any = null;
+
 const startServer = async () => {
   try {
     console.log("🔄 Connecting to database...");
     await connectDatabase();
     console.log("✅ Database connected successfully");
-    
+
     const PORT = process.env.PORT || 5090;
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    });
+
+    // ✅ ตั้งค่า graceful shutdown
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+    // ✅ จัดการ uncaught exceptions
+    process.on("uncaughtException", (error) => {
+      console.error("❌ Uncaught Exception:", error);
+      gracefulShutdown("uncaughtException");
+    });
+
+    // ✅ จัดการ unhandled promise rejections
+    process.on("unhandledRejection", (reason, promise) => {
+      console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+      gracefulShutdown("unhandledRejection");
     });
   } catch (error) {
     console.error("❌ Failed to connect to the database:", error);

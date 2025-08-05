@@ -1,80 +1,9 @@
-// import { createConnection } from "typeorm";
-// import dotenv from "dotenv";
-
-// //import entity
-// import { Roles } from "../entity/roles.entity";
-// import { Users } from "../entity/users.entity";
-// import { Department } from "../entity/department.entity";
-// import { Grade } from "../entity/grade.entity";
-// import { EventCoop } from "../entity/eventcoop.entity";
-// import { Faculty } from "../entity/faculty.entity";
-// import { Students } from "../entity/students.entity";
-// import { Teacher } from "../entity/teacher.entity";
-// import { Building } from "../entity/building.entity";
-// import { Room } from "../entity/room.entity";
-// import { Food } from "../entity/food.entity";
-// import { ActivityFood } from "../entity/activity.food.entity";
-// import { QuestionType } from "../entity/questiontype.entity";
-// import { Question } from "../entity/question.entity";
-// import { Choice } from "../entity/choice.entity";
-// import { SetNumber } from "../entity/setNumbers.entity";
-// import { Assessment } from "../entity/assessment.entity";
-// import { Answer } from "../entity/answer.entity";
-// import { Activity } from "../entity/activity.entity";
-// import { Join } from "../entity/join.entity";
-// import { ActivityDetail } from "../entity/activitydetail.entity";
-// import { Certificate } from "../entity/certificate.entity";
-
-// dotenv.config();
-
-// export const connectDatabase = async () => {
-//   try {
-//     const connection = await createConnection({
-//       type: "postgres",
-//       host: process.env.DB_HOST,
-//       port: parseInt(process.env.DB_PORT || "5432"),
-//       username: process.env.DB_USERNAME,
-//       password: process.env.DB_PASSWORD,
-//       database: process.env.DB_DATABASE,
-//       entities: [
-//         Roles,
-//         Users,
-//         Department,
-//         Grade,
-//         EventCoop,
-//         Faculty,
-//         Students,
-//         Teacher,
-//         Building,
-//         Room,
-//         Food,
-//         ActivityFood,
-//         QuestionType,
-//         Question,
-//         Choice,
-//         SetNumber,
-//         Assessment,
-//         Answer,
-//         Activity,
-//         Join,
-//         ActivityDetail,
-//         Certificate
-//       ],
-//       synchronize: false,
-//       logging: true,
-//       ssl: {
-//         rejectUnauthorized: false,
-//       },
-//     });
-//     console.log("Database connected successfully");
-//     return connection;
-//   } catch (error) {
-//     console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล: ", error);
-//     throw new Error("การเชื่อมต่อฐานข้อมูลล้มเหลว");
-//   }
-// };
-
-import { Connection, createConnection, getConnection } from "typeorm";
+import {
+  Connection,
+  createConnection,
+  getConnection,
+  getConnectionManager,
+} from "typeorm";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -102,22 +31,63 @@ import { Join } from "../entity/join.entity";
 import { ActivityDetail } from "../entity/activitydetail.entity";
 import { Certificate } from "../entity/certificate.entity";
 
-let connection: Connection | null = null;
+// ✅ Singleton Database Manager
+class DatabaseManager {
+  private static instance: DatabaseManager;
+  private connection: Connection | null = null;
+  private isClosing = false;
+  private isInitializing = false;
 
-export const connectDatabase = async (): Promise<Connection> => {
-  try {
-    if (connection && connection.isConnected) {
-      console.log("🔁 Reusing existing database connection");
-      return connection;
+  private constructor() {}
+
+  public static getInstance(): DatabaseManager {
+    if (!DatabaseManager.instance) {
+      DatabaseManager.instance = new DatabaseManager();
+    }
+    return DatabaseManager.instance;
+  }
+
+  public async getConnection(): Promise<Connection> {
+    // ✅ ถ้ามี connection อยู่แล้วและเชื่อมต่ออยู่
+    if (this.connection && this.connection.isConnected) {
+      return this.connection;
     }
 
+    // ✅ ถ้ากำลัง initialize อยู่ ให้รอ
+    if (this.isInitializing) {
+      while (this.isInitializing) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      if (this.connection && this.connection.isConnected) {
+        return this.connection;
+      }
+    }
+
+    // ✅ เริ่ม initialize
+    this.isInitializing = true;
+
     try {
-      // ลองใช้ getConnection ถ้ามีอยู่แล้ว
-      connection = getConnection("default");
-      if (!connection.isConnected) await connection.connect();
-    } catch (e) {
-      // ถ้าไม่มี connection เดิม → สร้างใหม่
-      connection = await createConnection({
+      const connectionManager = getConnectionManager();
+
+      // ✅ ตรวจสอบว่ามี connection เดิมอยู่หรือไม่
+      if (connectionManager.has("default")) {
+        this.connection = connectionManager.get("default");
+        if (this.connection.isConnected) {
+          console.log("🔁 Reusing existing database connection");
+          this.isInitializing = false;
+          return this.connection;
+        } else {
+          // ✅ ถ้า connection หลุด ให้ reconnect
+          console.log("🔄 Reconnecting to database...");
+          await this.connection.connect();
+          this.isInitializing = false;
+          return this.connection;
+        }
+      }
+
+      // ✅ สร้าง connection ใหม่
+      console.log("🆕 Creating new database connection...");
+      this.connection = await createConnection({
         name: "default",
         type: "postgres",
         host: process.env.DB_HOST,
@@ -150,15 +120,77 @@ export const connectDatabase = async (): Promise<Connection> => {
           Certificate,
         ],
         synchronize: false,
-        logging: true,
+        logging: false, // ✅ ปิด logging เพื่อลด overhead
         ssl: { rejectUnauthorized: false },
+        // ✅ ลด connection pooling settings
+        extra: {
+          max: 3, // ✅ ลดจำนวน connection สูงสุด
+          min: 1, // ✅ จำนวน connection ขั้นต่ำ
+          idle: 60000, // ✅ เพิ่มเวลาที่ connection จะ idle ก่อนปิด (60 วินาที)
+          acquire: 60000, // ✅ เวลาสูงสุดในการรอ connection (60 วินาที)
+          evict: 60000, // ✅ เวลาที่จะตรวจสอบ connection ที่ idle (60 วินาที)
+        },
+        // ✅ เพิ่ม connection timeout
+        connectTimeoutMS: 30000,
       });
-      console.log("✅ Database connected successfully");
-    }
 
-    return connection;
-  } catch (error) {
-    console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล: ", error);
-    throw new Error("การเชื่อมต่อฐานข้อมูลล้มเหลว");
+      console.log("✅ Database connected successfully");
+      this.isInitializing = false;
+      return this.connection;
+    } catch (error) {
+      this.isInitializing = false;
+      console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล: ", error);
+
+      // ✅ ลองปิด connection เก่าถ้ามี (เฉพาะเมื่อยังไม่ปิด)
+      if (this.connection && this.connection.isConnected && !this.isClosing) {
+        try {
+          this.isClosing = true;
+          await this.connection.close();
+          console.log("🔒 Closed existing connection");
+        } catch (closeError) {
+          console.error("❌ Error closing connection:", closeError);
+        } finally {
+          this.isClosing = false;
+        }
+      }
+
+      throw new Error("การเชื่อมต่อฐานข้อมูลล้มเหลว");
+    }
   }
+
+  // ✅ ฟังก์ชันปิด connection
+  public async closeConnection(): Promise<void> {
+    try {
+      if (this.connection && this.connection.isConnected && !this.isClosing) {
+        this.isClosing = true;
+        await this.connection.close();
+        this.connection = null;
+        console.log("🔒 Database connection closed");
+      }
+    } catch (error) {
+      console.error("❌ Error closing database connection:", error);
+    } finally {
+      this.isClosing = false;
+    }
+  }
+
+  // ✅ ฟังก์ชันตรวจสอบ connection status
+  public isConnected(): boolean {
+    return this.connection !== null && this.connection.isConnected;
+  }
+}
+
+// ✅ Export singleton instance
+const dbManager = DatabaseManager.getInstance();
+
+export const connectDatabase = async (): Promise<Connection> => {
+  return dbManager.getConnection();
+};
+
+export const closeDatabase = async (): Promise<void> => {
+  return dbManager.closeConnection();
+};
+
+export const isDatabaseConnected = (): boolean => {
+  return dbManager.isConnected();
 };

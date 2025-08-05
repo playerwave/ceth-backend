@@ -165,17 +165,16 @@ export class RoomController extends ErrorHandledController {
   // }
 
   public async getAll(req: Request, res: Response): Promise<void> {
-  try {
-    const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 10;
+    try {
+      const page = parseInt(req.query.page as string, 10) || 1;
+      const limit = parseInt(req.query.limit as string, 10) || 10;
 
-    const rooms = await this.roomService.getRoom(page, limit);
-    res.status(200).json(rooms); // ✅ ส่ง array ล้วน
-  } catch (error) {
-    this.handleError("RoomController.getAll", error, res);
+      const rooms = await this.roomService.getRoom(page, limit);
+      res.status(200).json(rooms); // ✅ ส่ง array ล้วน
+    } catch (error) {
+      this.handleError("RoomController.getAll", error, res);
+    }
   }
-}
-
 
   public async create(req: Request, res: Response): Promise<void> {
     try {
@@ -246,6 +245,87 @@ export class RoomController extends ErrorHandledController {
       }
     } catch (error) {
       this.handleError("RoomController.delete", error, res);
+    }
+  }
+
+  // ✅ GET /available-rooms → ห้องที่ว่างในช่วงเวลาที่กำหนด
+  public async getAvailableRooms(req: Request, res: Response): Promise<void> {
+    try {
+      const { start_activity_date, end_activity_date, exclude_activity_id } =
+        req.query;
+
+      if (!start_activity_date || !end_activity_date) {
+        res.status(400).json({
+          message: "กรุณาระบุวันที่เริ่มและสิ้นสุดกิจกรรม",
+        });
+        return;
+      }
+
+      const rooms = await this.roomService.getAvailableRooms(
+        start_activity_date as string,
+        end_activity_date as string,
+        exclude_activity_id
+          ? parseInt(exclude_activity_id as string)
+          : undefined
+      );
+
+      res.status(200).json({
+        message: "ดึงข้อมูลห้องที่ว่างสำเร็จ",
+        rooms,
+        count: rooms.length,
+      });
+    } catch (error) {
+      this.handleError("RoomController.getAvailableRooms", error, res);
+    }
+  }
+
+  // ✅ GET /room-conflicts/:room_id → ตรวจสอบห้องที่ถูกใช้งาน
+  public async getRoomConflicts(req: Request, res: Response): Promise<void> {
+    try {
+      const room_id = this.parseId(req.params.room_id);
+      const { start_activity_date, end_activity_date, exclude_activity_id } =
+        req.query;
+
+      if (!start_activity_date || !end_activity_date) {
+        res.status(400).json({
+          message: "กรุณาระบุวันที่เริ่มและสิ้นสุดกิจกรรม",
+        });
+        return;
+      }
+
+      const conflicts = await this.roomService.getRoomConflicts(
+        room_id,
+        start_activity_date as string,
+        end_activity_date as string,
+        exclude_activity_id ? parseInt(exclude_activity_id as string) : undefined
+      );
+
+      res.status(200).json({
+        message: "ตรวจสอบห้องที่ถูกใช้งานสำเร็จ",
+        room_id,
+        conflicts,
+        has_conflicts: conflicts.length > 0,
+      });
+    } catch (error) {
+      this.handleError("RoomController.getRoomConflicts", error, res);
+    }
+  }
+
+  // ✅ GET /all-available-rooms → ห้องที่ว่างทั้งหมด
+  public async getAllAvailableRooms(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const rooms = await this.roomService.getAllAvailableRooms();
+
+      res.status(200).json({
+        message: "ดึงข้อมูลห้องที่ว่างทั้งหมดสำเร็จ",
+        rooms,
+        count: rooms.length,
+      });
+    } catch (error) {
+      this.handleError("RoomController.getAllAvailableRooms", error, res);
     }
   }
 
