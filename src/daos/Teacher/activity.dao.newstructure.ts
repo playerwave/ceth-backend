@@ -14,16 +14,26 @@ export class ActivityDao extends ErrorHandledDao {
 
   private async initialize(): Promise<void> {
     try {
+      console.log("🔄 Initializing TeacherActivityDao...");
       this.dataSource = await connectDatabase();
-      console.log("✅ ActivityDao initialized");
+      console.log("✅ TeacherActivityDao initialized successfully");
     } catch (error) {
+      console.error("❌ Failed to initialize TeacherActivityDao:", error);
       this.logDbError("initialize", error);
+      throw error;
     }
   }
 
-  private checkConnection(): void {
-    if (!this.dataSource) {
-      throw new Error("❌ Database connection is not established");
+  private async checkConnection(): Promise<void> {
+    if (!this.dataSource?.isConnected) {
+      console.log(
+        "🔄 Database connection not established, attempting to initialize..."
+      );
+      try {
+        await this.initialize();
+      } catch (error) {
+        throw new Error(`❌ Database connection is not established: ${error}`);
+      }
     }
   }
 
@@ -188,7 +198,7 @@ export class ActivityDao extends ErrorHandledDao {
     data: Partial<Activity>,
     foodIds: number[] = []
   ): Promise<Activity> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const queryRunner = this.dataSource!.createQueryRunner();
     await queryRunner.connect();
@@ -281,7 +291,7 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   public async getActivityByID(activity_id: number): Promise<Activity[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const sql = `SELECT * FROM activity WHERE activity_id = $1`;
       const result = await this.dataSource?.query(sql, [activity_id]);
@@ -293,7 +303,7 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   public async getAllActivitiesDao(): Promise<Activity[]> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const activities = await this.dataSource!.getRepository(Activity).find({
       where: { status: "Active" }, // ดึงเฉพาะที่ยังไม่ soft delete
@@ -308,7 +318,7 @@ export class ActivityDao extends ErrorHandledDao {
     data: Partial<Activity>,
     foodIds: number[] = []
   ): Promise<Activity> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const queryRunner = this.dataSource!.createQueryRunner();
     await queryRunner.connect();
@@ -450,7 +460,7 @@ export class ActivityDao extends ErrorHandledDao {
     activity_id: number,
     activity_status: string
   ): Promise<Activity[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const sql = `UPDATE activity SET activity_status = $1 WHERE activity_id = $2;`;
       const result = await this.dataSource?.query(sql, [
@@ -465,7 +475,7 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   public async findById(id: number): Promise<Activity | null> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const result = await this.dataSource!.getRepository(Activity).findOne({
       where: { activity_id: id },
@@ -510,49 +520,51 @@ export class ActivityDao extends ErrorHandledDao {
 
   // อัปเดตข้อมูลกิจกรรม (ใช้สำหรับ soft delete)
   public async save(activity: Activity): Promise<Activity> {
-    this.checkConnection();
+    await this.checkConnection();
 
     return this.dataSource!.getRepository(Activity).save(activity);
   }
 
   // ลบกิจกรรม (ใช้สำหรับ hard delete)
   public async delete(id: number): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
 
     await this.dataSource!.getRepository(Activity).delete({ activity_id: id });
   }
 
   public async findActivitiesToCloseRegister(now: Date): Promise<Activity[]> {
-  this.checkConnection();
-  try {
-    const sql = `
+    await this.checkConnection();
+    try {
+      const sql = `
       SELECT * FROM activity
       WHERE activity_state = 'Open Register'
         AND status = 'Active'
         AND end_register_date <= $1
     `;
-    const result = await this.dataSource!.query(sql, [now]);
-    return result;
-  } catch (error) {
-    this.logDbError("findActivitiesToCloseRegister", error);
-    throw new Error("❌ Failed to find activities to close register");
+      const result = await this.dataSource!.query(sql, [now]);
+      return result;
+    } catch (error) {
+      this.logDbError("findActivitiesToCloseRegister", error);
+      throw new Error("❌ Failed to find activities to close register");
+    }
   }
-}
 
-public async updateActivityState(activity_id: number, state: string): Promise<void> {
-  this.checkConnection();
-  try {
-    const sql = `
+  public async updateActivityState(
+    activity_id: number,
+    state: string
+  ): Promise<void> {
+    await this.checkConnection();
+    try {
+      const sql = `
       UPDATE activity
       SET activity_state = $1,
           last_update_activity_date = NOW()
       WHERE activity_id = $2
     `;
-    await this.dataSource!.query(sql, [state, activity_id]);
-  } catch (error) {
-    this.logDbError("updateActivityState", error);
-    throw new Error("❌ Failed to update activity state");
+      await this.dataSource!.query(sql, [state, activity_id]);
+    } catch (error) {
+      this.logDbError("updateActivityState", error);
+      throw new Error("❌ Failed to update activity state");
+    }
   }
-}
-
 }

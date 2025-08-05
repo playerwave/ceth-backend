@@ -140,14 +140,21 @@ app.use("/api/visitor", activityVisitorRoute);
 
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 
-// เชื่อมต่อ database
-connectDatabase()
-  .then(() => {
-    const PORT = process.env.PORT || 5090; // ใช้พอร์ต 5090
+// เชื่อมต่อ database และเริ่ม server
+const startServer = async () => {
+  try {
+    console.log("🔄 Connecting to database...");
+    await connectDatabase();
+    console.log("✅ Database connected successfully");
+    
+    const PORT = process.env.PORT || 5090;
     app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
     });
-  })
-  .catch((error) => {
-    console.error("Failed to connect to the database", error);
-  });
+  } catch (error) {
+    console.error("❌ Failed to connect to the database:", error);
+    process.exit(1); // ออกจากโปรแกรมถ้าเชื่อมต่อ database ไม่ได้
+  }
+};
+
+startServer();

@@ -295,21 +295,31 @@ export class RoomDao extends ErrorHandledDao {
 
   private async initialize(): Promise<void> {
     try {
+      console.log("🔄 Initializing RoomDao...");
       this.dataSource = await connectDatabase();
-      console.log("✅ RoomDao initialized");
+      console.log("✅ RoomDao initialized successfully");
     } catch (error) {
+      console.error("❌ Failed to initialize RoomDao:", error);
       this.logDbError("initialize", error);
+      throw error;
     }
   }
 
-  private checkConnection(): void {
-    if (!this.dataSource?.isInitialized) {
-      throw new Error("❌ Database connection is not established");
+  private async checkConnection(): Promise<void> {
+    if (!this.dataSource?.isConnected) {
+      console.log(
+        "🔄 Database connection not established, attempting to initialize..."
+      );
+      try {
+        await this.initialize();
+      } catch (error) {
+        throw new Error(`❌ Database connection is not established: ${error}`);
+      }
     }
   }
 
   async countRoom(): Promise<number> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query("SELECT COUNT(*) FROM room");
       return Number(result[0].count);
@@ -346,7 +356,7 @@ export class RoomDao extends ErrorHandledDao {
   // }
 
   async getRoom(page: number, limit: number): Promise<Room[]> {
-    this.checkConnection();
+    await this.checkConnection();
     const offset = (page - 1) * limit;
 
     try {
@@ -376,7 +386,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async getRoomByID(room_id: number): Promise<Room[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT * FROM room WHERE room_id = $1",
@@ -389,7 +399,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async getRoomByName(room_name: string): Promise<Room[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT * FROM room WHERE room_name = $1",
@@ -402,7 +412,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async getRoomIDByFacultyID(faculty_id: number): Promise<Room[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT room_id FROM room WHERE faculty_id = $1",
@@ -415,7 +425,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async getRoomIDByBuildingID(building_id: number): Promise<Room[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT room_id FROM room WHERE building_id = $1",
@@ -435,7 +445,7 @@ export class RoomDao extends ErrorHandledDao {
     seat_number: number,
     status: string
   ): Promise<Room> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const trimmedName = room_name.trim();
     const trimmedFloor = floor.trim();
@@ -476,7 +486,7 @@ export class RoomDao extends ErrorHandledDao {
     seat_number: number,
     status: string
   ): Promise<Room | null> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query(
         `UPDATE room SET 
@@ -513,7 +523,7 @@ export class RoomDao extends ErrorHandledDao {
     seat_number: number,
     status: string
   ): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       await this.dataSource!.query(
         `UPDATE room SET 
@@ -539,7 +549,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async save(room: Room): Promise<Room> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const repo: Repository<Room> = this.dataSource!.getRepository(Room);
       const saved = await repo.save(room);
@@ -551,7 +561,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async softDeleteRoom(room_id: number): Promise<Room | null> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query(
         `UPDATE room SET status = 'Inactive' WHERE room_id = $1 RETURNING *`,
@@ -565,7 +575,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async hardDeleteRoom(room_id: number): Promise<Room | null> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query(
         `DELETE FROM room WHERE room_id = $1 RETURNING *`,
@@ -579,7 +589,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async deletedRoomByFacultyID(faculty_id: number): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       await this.dataSource!.query("DELETE FROM room WHERE faculty_id = $1", [
         faculty_id,
@@ -591,7 +601,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async deletedRoomByBuildingID(building_id: number): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       await this.dataSource!.query("DELETE FROM room WHERE building_id = $1", [
         building_id,
@@ -603,7 +613,7 @@ export class RoomDao extends ErrorHandledDao {
   }
 
   async hasRelations(room_id: number): Promise<boolean> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query(
         "SELECT 1 FROM activity WHERE room_id = $1 LIMIT 1",

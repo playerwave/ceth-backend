@@ -14,16 +14,26 @@ export class ActivityDao extends ErrorHandledDao {
 
   private async initialize(): Promise<void> {
     try {
+      console.log("🔄 Initializing StudentActivityDao...");
       this.dataSource = await connectDatabase();
-      console.log("✅ StudentActivityDao initialized");
+      console.log("✅ StudentActivityDao initialized successfully");
     } catch (error) {
+      console.error("❌ Failed to initialize StudentActivityDao:", error);
       this.logDbError("initialize", error);
+      throw error;
     }
   }
 
-  private checkConnection(): void {
-    if (!this.dataSource) {
-      throw new Error("❌ Database connection is not established");
+  private async checkConnection(): Promise<void> {
+    if (!this.dataSource?.isConnected) {
+      console.log(
+        "🔄 Database connection not established, attempting to initialize..."
+      );
+      try {
+        await this.initialize();
+      } catch (error) {
+        throw new Error(`❌ Database connection is not established: ${error}`);
+      }
     }
   }
 
@@ -51,7 +61,7 @@ export class ActivityDao extends ErrorHandledDao {
   //   }
 
   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const query = `
     SELECT a.*
@@ -89,7 +99,7 @@ export class ActivityDao extends ErrorHandledDao {
   // }
 
   public async getEnrolledActivities(studentId: number): Promise<Activity[]> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const query = `
       SELECT a.*
@@ -107,7 +117,7 @@ export class ActivityDao extends ErrorHandledDao {
 
   // 🔹 ค้นหากิจกรรมจากชื่อ (เฉพาะ public, active)
   public async searchActivitiesByName(ac_name: string): Promise<Activity[]> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const query = `
       SELECT *
@@ -126,7 +136,7 @@ export class ActivityDao extends ErrorHandledDao {
     activityId: number,
     studentId?: number | null
   ): Promise<Activity | null> {
-    this.checkConnection();
+    await this.checkConnection();
 
     let query: string;
     let params: any[];
@@ -158,7 +168,7 @@ export class ActivityDao extends ErrorHandledDao {
     studentId: number,
     activityDetailId: number // ต้องเป็น activity_detail_id
   ): Promise<Join | null> {
-    this.checkConnection();
+    await this.checkConnection();
 
     try {
       const result = await this.dataSource!.getRepository(Join).findOne({
@@ -188,7 +198,7 @@ export class ActivityDao extends ErrorHandledDao {
   public async getActivityDetailIdByActivityId(
     activityId: number
   ): Promise<{ activity_detail_id: number } | null> {
-    this.checkConnection();
+    await this.checkConnection();
 
     // ลอง log activityId ที่รับเข้ามา (ช่วย debug)
     console.log(
@@ -216,7 +226,7 @@ export class ActivityDao extends ErrorHandledDao {
     activityId: number,
     studentId: number
   ): Promise<{ activity_detail_id: number } | null> {
-    this.checkConnection();
+    await this.checkConnection();
     const result = await this.dataSource!.query(
       `SELECT ad.activity_detail_id
        FROM activity_detail ad
@@ -270,7 +280,7 @@ export class ActivityDao extends ErrorHandledDao {
     joinId: number,
     foodChoices: string[]
   ): Promise<{ activity_detail_id: number }> {
-    this.checkConnection();
+    await this.checkConnection();
 
     // สร้าง activity_detail record
     const result = await this.dataSource!.query(
@@ -292,7 +302,7 @@ export class ActivityDao extends ErrorHandledDao {
     activityDetailId: number,
     foodChoices: string[]
   ): Promise<Join> {
-    this.checkConnection();
+    await this.checkConnection();
     const result = await this.dataSource!.query(
       `INSERT INTO "join" (students_id, activity_detail_id, join_date, status)
        VALUES ($1, $2, $3, $4)
@@ -305,7 +315,7 @@ export class ActivityDao extends ErrorHandledDao {
   public async createActivityDetailOnly(
     activityId: number
   ): Promise<{ activity_detail_id: number }> {
-    this.checkConnection();
+    await this.checkConnection();
     const result = await this.dataSource!.query(
       `INSERT INTO activity_detail (activity_id, register_date, status)
        VALUES ($1, $2, $3)
@@ -319,7 +329,7 @@ export class ActivityDao extends ErrorHandledDao {
     activityDetailId: number,
     foodChoices: string[]
   ): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     await this.dataSource!.query(
       `UPDATE activity_detail SET food_choices = $1 WHERE activity_detail_id = $2`,
       [foodChoices.join(","), activityDetailId]

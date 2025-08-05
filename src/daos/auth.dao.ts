@@ -86,17 +86,30 @@ export class AuthDao extends ErrorHandledDao {
 
   private async initialize(): Promise<void> {
     try {
+      console.log("🔄 Initializing AuthDao...");
       this.dataSource = await connectDatabase();
       this.usersRepository = this.dataSource.getRepository(Users);
-      console.log("✅ AuthDao initialized");
+      console.log("✅ AuthDao initialized successfully");
     } catch (error) {
+      console.error("❌ Failed to initialize AuthDao:", error);
       this.logDbError("initialize", error);
+      throw error; // Re-throw เพื่อให้ caller รู้ว่ามีปัญหา
     }
   }
 
-  private checkConnection(): void {
+  private async checkConnection(): Promise<void> {
     if (!this.dataSource?.isInitialized || !this.usersRepository) {
-      throw new Error("❌ Users repository is not initialized");
+      console.log("🔄 Repository not initialized, attempting to initialize...");
+      try {
+        await this.initialize();
+      } catch (error) {
+        throw new Error(`❌ Users repository is not initialized: ${error}`);
+      }
+    }
+
+    // ตรวจสอบว่า connection ยังใช้งานได้อยู่
+    if (!this.dataSource?.isConnected) {
+      throw new Error("❌ Database connection is not active");
     }
   }
 
@@ -111,7 +124,7 @@ export class AuthDao extends ErrorHandledDao {
     password: string,
     roles_id: number
   ): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     await this.usersRepository!.insert({
       username: username.trim(),
       password,
@@ -130,7 +143,7 @@ export class AuthDao extends ErrorHandledDao {
   // }
 
   public async getUsersByUsername(username: string): Promise<Users | null> {
-    this.checkConnection();
+    await this.checkConnection();
     return this.usersRepository!.createQueryBuilder("users")
       .innerJoinAndSelect("users.roles", "roles") // ✅ JOIN roles → ดึง role_name ได้
       .where("users.username = :username", { username: username.trim() })
@@ -158,7 +171,7 @@ export class AuthDao extends ErrorHandledDao {
   // }
 
   public async getUsersById(users_id: number): Promise<Users | null> {
-    this.checkConnection();
+    await this.checkConnection();
     return this.usersRepository!.createQueryBuilder("users")
       .innerJoinAndSelect("users.roles", "roles") // ✅ JOIN ให้ได้ roles.role_name
       .where("users.users_id = :users_id", { users_id })
@@ -172,7 +185,7 @@ export class AuthDao extends ErrorHandledDao {
   public async getIdByUsername(
     username: string
   ): Promise<{ users_id: number }[]> {
-    this.checkConnection();
+    await this.checkConnection();
     return this.usersRepository!.query(
       `SELECT users_id FROM users WHERE username = $1`,
       [username.trim()]

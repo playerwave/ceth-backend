@@ -188,21 +188,31 @@ export class AssessmentDao extends ErrorHandledDao {
 
   private async initialize(): Promise<void> {
     try {
+      console.log("🔄 Initializing AssessmentDao...");
       this.dataSource = await connectDatabase();
-      console.log("✅ AssessmentDao initialized");
+      console.log("✅ AssessmentDao initialized successfully");
     } catch (error) {
+      console.error("❌ Failed to initialize AssessmentDao:", error);
       this.logDbError("initialize", error);
+      throw error;
     }
   }
 
-  private checkConnection(): void {
-    if (!this.dataSource?.isInitialized) {
-      throw new Error("❌ Database connection is not established");
+  private async checkConnection(): Promise<void> {
+    if (!this.dataSource?.isConnected) {
+      console.log(
+        "🔄 Database connection not established, attempting to initialize..."
+      );
+      try {
+        await this.initialize();
+      } catch (error) {
+        throw new Error(`❌ Database connection is not established: ${error}`);
+      }
     }
   }
 
   async countAssessments(): Promise<number> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query(
         "SELECT COUNT(*) FROM assessment"
@@ -215,7 +225,7 @@ export class AssessmentDao extends ErrorHandledDao {
   }
 
   async getAssessments(page: number, limit: number): Promise<Assessment[]> {
-    this.checkConnection();
+    await this.checkConnection();
     const offset = (page - 1) * limit;
 
     try {
@@ -233,7 +243,7 @@ export class AssessmentDao extends ErrorHandledDao {
   }
 
   async getAssessmentByID(assessment_id: number): Promise<Assessment[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT * FROM assessment WHERE assessment_id = $1",
@@ -246,7 +256,7 @@ export class AssessmentDao extends ErrorHandledDao {
   }
 
   async getAssessmentByTitle(assessment_name: string): Promise<Assessment[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT * FROM assessment WHERE assessment_name = $1",
@@ -267,7 +277,7 @@ export class AssessmentDao extends ErrorHandledDao {
     create_date: Date,
     last_update: Date
   ): Promise<Assessment> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const trimmedName = assessment_name.trim();
     const trimmedDescription = description.trim();
@@ -323,7 +333,7 @@ export class AssessmentDao extends ErrorHandledDao {
     set_number_id: number,
     last_update: Date
   ): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
 
     try {
       await this.dataSource!.query(
@@ -359,7 +369,7 @@ export class AssessmentDao extends ErrorHandledDao {
     set_number_id: number,
     last_update: Date
   ): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
 
     try {
       await this.dataSource!.query(
@@ -386,7 +396,7 @@ export class AssessmentDao extends ErrorHandledDao {
   }
 
   async deleteAssessment(assessment_id: number): Promise<Assessment | null> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query(
         "DELETE FROM assessment WHERE assessment_id = $1 RETURNING *",

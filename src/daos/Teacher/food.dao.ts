@@ -13,21 +13,31 @@ export class FoodDao extends ErrorHandledDao {
 
   private async initialize(): Promise<void> {
     try {
+      console.log("🔄 Initializing FoodDao...");
       this.dataSource = await connectDatabase();
-      console.log("✅ FoodDao initialized");
+      console.log("✅ FoodDao initialized successfully");
     } catch (error) {
+      console.error("❌ Failed to initialize FoodDao:", error);
       this.logDbError("initialize", error);
+      throw error;
     }
   }
 
-  private checkConnection(): void {
-    if (!this.dataSource?.isInitialized) {
-      throw new Error("❌ Database connection is not established");
+  private async checkConnection(): Promise<void> {
+    if (!this.dataSource?.isConnected) {
+      console.log(
+        "🔄 Database connection not established, attempting to initialize..."
+      );
+      try {
+        await this.initialize();
+      } catch (error) {
+        throw new Error(`❌ Database connection is not established: ${error}`);
+      }
     }
   }
 
   async countFood(): Promise<number> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query("SELECT COUNT(*) FROM food");
       return Number(result[0].count);
@@ -53,7 +63,7 @@ export class FoodDao extends ErrorHandledDao {
   // }
 
   async getFood(page: number, limit: number): Promise<Food[]> {
-    this.checkConnection();
+    await this.checkConnection();
     const offset = (page - 1) * limit;
 
     const result = await this.dataSource!.query(
@@ -74,7 +84,7 @@ export class FoodDao extends ErrorHandledDao {
   }
 
   async getFoodByID(food_id: number): Promise<Food[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT * FROM food WHERE food_id = $1",
@@ -87,7 +97,7 @@ export class FoodDao extends ErrorHandledDao {
   }
 
   async getFoodByName(food_name: string): Promise<Food[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT * FROM food WHERE food_name = $1",
@@ -100,7 +110,7 @@ export class FoodDao extends ErrorHandledDao {
   }
 
   async getFoodIDByFacultyID(faculty_id: number): Promise<Food[]> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       return await this.dataSource!.query(
         "SELECT * FROM food WHERE faculty_id = $1",
@@ -117,7 +127,7 @@ export class FoodDao extends ErrorHandledDao {
     status: string,
     faculty_id: number
   ): Promise<Food> {
-    this.checkConnection();
+    await this.checkConnection();
 
     const trimmedName = food_name.trim();
     const trimmedStatus = status.trim();
@@ -149,7 +159,7 @@ export class FoodDao extends ErrorHandledDao {
     status: string,
     faculty_id: number
   ): Promise<Food | null> {
-    this.checkConnection();
+    await this.checkConnection();
     const trimmedName = food_name.trim();
     const trimmedStatus = status.trim();
 
@@ -177,7 +187,7 @@ export class FoodDao extends ErrorHandledDao {
     status: string,
     faculty_id: number
   ): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       await this.dataSource!.query(
         `
@@ -194,7 +204,7 @@ export class FoodDao extends ErrorHandledDao {
   }
 
   async deletedFood(food_id: number): Promise<Food | null> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       const result = await this.dataSource!.query(
         "DELETE FROM food WHERE food_id = $1 RETURNING *",
@@ -208,7 +218,7 @@ export class FoodDao extends ErrorHandledDao {
   }
 
   async deletedFoodByFacultyID(faculty_id: number): Promise<void> {
-    this.checkConnection();
+    await this.checkConnection();
     try {
       await this.dataSource!.query("DELETE FROM food WHERE faculty_id = $1", [
         faculty_id,
