@@ -214,9 +214,9 @@ export class UpdateActivityDto {
   @ValidateIf(
     (o) => o.activity_status === "Public" && o.event_format === "Onsite"
   )
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty({ message: "ต้องเลือกอาหารอย่างน้อย 1 รายการ" })
-  foodIds!: number[];
+  foodIds?: number[];
 
   // ––– seat เฉพาะ Online & Public –––
   @ValidateIf(

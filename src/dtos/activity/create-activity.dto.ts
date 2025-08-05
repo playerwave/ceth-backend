@@ -237,7 +237,7 @@ export class CreateActivityDto {
   @ValidateIf(
     (o) => o.event_format === "Onsite" && o.activity_status === "Public"
   )
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty({ message: "ต้องเลือกอาหารอย่างน้อย 1 รายการ" })
-  foodIds!: number[];
+  foodIds?: number[];
 }
