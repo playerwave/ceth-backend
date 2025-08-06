@@ -141,7 +141,6 @@ import {
   JoinColumn,
   Index,
 } from "typeorm";
-import { Join } from "./join.entity";
 import { Activity } from "./activity.entity";
 import { ActivityFood } from "./activity.food.entity";
 
@@ -184,7 +183,7 @@ export class ActivityDetail {
   )
   register_date?: Date;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", nullable: true })
   @Transform(({ value }) =>
     value
       ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
@@ -192,9 +191,9 @@ export class ActivityDetail {
         })
       : null
   )
-  time_in?: Date;
+  time_in?: Date | null;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", nullable: true })
   @Transform(({ value }) =>
     value
       ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
@@ -202,7 +201,7 @@ export class ActivityDetail {
         })
       : null
   )
-  time_out?: Date;
+  time_out?: Date | null;
 
   @Column({
     type: "enum",
@@ -210,7 +209,4 @@ export class ActivityDetail {
     default: "Registered",
   })
   status?: "Registered" | "Cancelled";
-
-  @ManyToOne(() => Join, (join) => join.activityDetail)
-  join!: Join;
 }

@@ -4,7 +4,7 @@ import {
   Column,
   ManyToOne,
   OneToMany,
-  JoinColumn
+  JoinColumn,
 } from "typeorm";
 import { Users } from "./users.entity";
 import { EventCoop } from "./eventcoop.entity";
@@ -12,7 +12,7 @@ import { Grade } from "./grade.entity";
 import { Department } from "./department.entity";
 import { Faculty } from "./faculty.entity";
 import { Join } from "./join.entity";
-import { Certificate } from './certificate.entity';
+import { Certificate } from "./certificate.entity";
 
 @Entity()
 export class Students {
@@ -20,60 +20,60 @@ export class Students {
   students_id!: number;
 
   @ManyToOne(() => Users, (users) => users.students)
-  @JoinColumn({ name: 'users_id' })
-  users!: Users
+  @JoinColumn({ name: "users_id" })
+  users!: Users;
 
   @Column()
   users_id!: number;
 
-  @Column({ type: "varchar", length: 255 })
+  @Column({ type: "varchar", length: 255, nullable: true })
   first_name?: string;
 
-  @Column({ type: "varchar", length: 255 })
+  @Column({ type: "varchar", length: 255, nullable: true })
   last_name?: string;
 
-  @Column({ type: "varchar", length: 255, unique: true })
+  @Column({ type: "varchar", length: 255, unique: true, nullable: true })
   email?: string;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", nullable: true })
   soft_hours?: number;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", nullable: true })
   hard_hours?: number;
 
-  @Column({ type: 'enum', enum: ['Normal', 'Risk'] })
-  risk_status?: 'Normal' | 'Risk';
+  @Column({ type: "enum", enum: ["Normal", "Risk"], nullable: true })
+  risk_status?: "Normal" | "Risk";
 
-  @Column({ type: 'enum', enum: ['Studying', 'Graduate'] })
-  education_status?: 'Studying' | 'Graduate';
+  @Column({ type: "enum", enum: ["Studying", "Graduate"], nullable: true })
+  education_status?: "Studying" | "Graduate";
 
   @ManyToOne(() => Faculty, (faculty) => faculty.students)
-  @JoinColumn({ name: 'faculty_id' })
+  @JoinColumn({ name: "faculty_id" })
   faculty!: Faculty;
 
-  @Column()
-  faculty_id!: number;
+  @Column({ nullable: true })
+  faculty_id?: number;
 
   @ManyToOne(() => Department, (department) => department.students)
-  @JoinColumn({ name: 'department_id' })
+  @JoinColumn({ name: "department_id" })
   department!: Department;
 
-  @Column()
-  department_id!: number;
+  @Column({ nullable: true })
+  department_id?: number;
 
   @ManyToOne(() => Grade, (grade) => grade.students)
-  @JoinColumn({ name: 'grade_id' })
+  @JoinColumn({ name: "grade_id" })
   grade!: Grade;
 
-  @Column()
-  grade_id!: number;
+  @Column({ nullable: true })
+  grade_id?: number;
 
   @ManyToOne(() => EventCoop, (eventCoop) => eventCoop.students)
-  @JoinColumn({ name: 'eventcoop_id' })
+  @JoinColumn({ name: "eventcoop_id" })
   eventCoop!: EventCoop;
 
-  @Column()
-  eventcoop_id!: number;
+  @Column({ nullable: true })
+  eventcoop_id?: number;
 
   @OneToMany(() => Join, (join) => join.students)
   join?: Join[];

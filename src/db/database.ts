@@ -119,7 +119,7 @@ class DatabaseManager {
           ActivityDetail,
           Certificate,
         ],
-        synchronize: false,
+        synchronize: true,
         logging: false, // ✅ ปิด logging เพื่อลด overhead
         ssl: { rejectUnauthorized: false },
         // ✅ ลด connection pooling settings
