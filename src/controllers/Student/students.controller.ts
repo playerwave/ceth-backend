@@ -170,10 +170,10 @@ export class StudentsController extends ErrorHandledController {
     last_name: string;
     education_status: string;
     email: string;
-    faculty_id: number;
-    department_id: number;
-    grade_id: number;
-    eventcoop_id: number;
+    faculty_id?: number;
+    department_id?: number;
+    grade_id?: number;
+    eventcoop_id?: number;
   } {
     return {
       users_id: body.users_id,

@@ -75,6 +75,8 @@ router.put(
   wrapAsync(roomController.update.bind(roomController))
 );
 
+router.get("/get-room/:room_id", verifyToken, wrapAsync(roomController.getOne.bind(roomController)));
+
 // ✅ DELETE /delete-room/:room_id → ลบห้อง
 router.delete(
   "/delete-room/:room_id",

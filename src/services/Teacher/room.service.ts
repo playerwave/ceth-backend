@@ -48,6 +48,23 @@ export class RoomService extends ErrorHandledService {
     }
   }
 
+  public async getRoomById(room_id: number): Promise<Room | null> {
+    try {
+      const found = await this.roomDao.getRoomByID(room_id);
+      if (!found.length) {
+        this.logInfo("❌ room not found", { room_id });
+        return null;
+      }
+
+      const room = found[0];
+      this.logInfo("🍽️ Room retrieved", { room_id });
+      return room;
+    } catch (error) {
+      this.logError("❌ Error in getRoomById", error);
+      throw error;
+    }
+  }
+
   public async addRoom(
     faculty_id: number,
     building_id: number,

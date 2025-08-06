@@ -176,6 +176,16 @@ export class RoomController extends ErrorHandledController {
     }
   }
 
+  public async getOne(req: Request, res: Response): Promise<void> {
+    try{
+      const id = this.parseId(req.params.room_id);
+      const room = await this.roomService.getRoomById(id);
+      res.status(200).json(room);
+    } catch (error) {
+      this.handleError("RoomController.getOne", error, res);
+    }
+  }
+
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseRoomPayload(req.body);
