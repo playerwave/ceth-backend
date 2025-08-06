@@ -82,47 +82,6 @@ export class JoinDao extends ErrorHandledDao {
     return result[0];
   }
 
-  public async createJoinWithoutActivityDetail(
-    studentId: number,
-    foodChoices: string[]
-  ): Promise<Join> {
-    this.checkConnection();
-    try {
-      const result = await this.dataSource!.query(
-        `INSERT INTO "join" (students_id, teacher_id, join_date, status)
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [
-          studentId,
-          1, // teacher_id
-          new Date(), // join_date
-          "Pending", // status
-        ]
-      );
-      return result[0];
-    } catch (error) {
-      this.logDbError("createJoinWithoutActivityDetail", error);
-      throw error;
-    }
-  }
-
-  public async updateJoinWithActivityDetail(
-    joinId: number,
-    activityDetailId: number
-  ): Promise<void> {
-    this.checkConnection();
-
-    try {
-      await this.dataSource!.query(
-        `UPDATE "join" SET activity_detail_id = $1 WHERE join_id = $2`,
-        [activityDetailId, joinId]
-      );
-    } catch (error) {
-      this.logDbError("updateJoinWithActivityDetail", error);
-      throw error;
-    }
-  }
-
   public async updateActivityDetailWithFood(
     activityDetailId: number,
     foodChoices: string[]

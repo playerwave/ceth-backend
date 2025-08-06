@@ -141,10 +141,10 @@ export class StudentsDao extends ErrorHandledDao {
     last_name: string,
     email: string,
     education_status: string,
-    faculty_id: number,
-    department_id: number,
-    grade_id: number,
-    eventcoop_id: number
+    faculty_id: number | null,
+    department_id: number | null,
+    grade_id: number | null,
+    eventcoop_id: number | null
   ): Promise<Students[]> {
     this.checkConnection();
     try {
@@ -175,22 +175,60 @@ export class StudentsDao extends ErrorHandledDao {
     );
   }
 
-  public async updatedStudents(...args: any[]): Promise<Students[]> {
+  public async updatedStudents(
+    first_name: string,
+    last_name: string,
+    email: string,
+    education_status: string,
+    faculty_id: number | null,
+    department_id: number | null,
+    grade_id: number | null,
+    eventcoop_id: number | null,
+    students_id: number
+  ): Promise<Students[]> {
     this.checkConnection();
     try {
       const sql = `UPDATE students SET first_name = $1, last_name = $2, email = $3, education_status = $4, faculty_id = $5, department_id = $6, grade_id = $7, eventcoop_id = $8 WHERE students_id = $9`;
-      return await this.dataSource!.query(sql, args);
+      return await this.dataSource!.query(sql, [
+        first_name,
+        last_name,
+        email,
+        education_status,
+        faculty_id,
+        department_id,
+        grade_id,
+        eventcoop_id,
+        students_id,
+      ]);
     } catch (error) {
       this.logDbError("updatedStudents", error);
       throw error;
     }
   }
 
-  public async updatedStudentNotEmail(...args: any[]): Promise<Students[]> {
+  public async updatedStudentNotEmail(
+    first_name: string,
+    last_name: string,
+    education_status: string,
+    faculty_id: number | null,
+    department_id: number | null,
+    grade_id: number | null,
+    eventcoop_id: number | null,
+    students_id: number
+  ): Promise<Students[]> {
     this.checkConnection();
     try {
       const sql = `UPDATE students SET first_name = $1, last_name = $2, education_status = $3, faculty_id = $4, department_id = $5, grade_id = $6, eventcoop_id = $7 WHERE students_id = $8`;
-      return await this.dataSource!.query(sql, args);
+      return await this.dataSource!.query(sql, [
+        first_name,
+        last_name,
+        education_status,
+        faculty_id,
+        department_id,
+        grade_id,
+        eventcoop_id,
+        students_id,
+      ]);
     } catch (error) {
       this.logDbError("updatedStudentNotEmail", error);
       throw error;

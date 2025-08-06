@@ -339,15 +339,73 @@ export class ActivityDao extends ErrorHandledDao {
   ): Promise<{ activity_detail_id: number }> {
     await this.checkConnection();
 
-    // สร้าง activity_detail record
+    // 1. สร้าง activity_food record สำหรับแต่ละ food choice
+    let activityFoodId = null;
+    if (foodChoices && foodChoices.length > 0) {
+      // สร้าง activity_food record สำหรับ food แรก
+      const firstFoodId = parseInt(foodChoices[0]);
+
+      // ตรวจสอบว่า food_id มีอยู่จริงหรือไม่
+      const foodExists = await this.dataSource!.query(
+        `SELECT food_id FROM food WHERE food_id = $1`,
+        [firstFoodId]
+      );
+
+      if (foodExists.length > 0) {
+        const activityFoodResult = await this.dataSource!.query(
+          `INSERT INTO activity_food (activity_id, food_id)
+           VALUES ($1, $2)
+           RETURNING activity_food_id`,
+          [activityId, firstFoodId]
+        );
+        activityFoodId = activityFoodResult[0].activity_food_id;
+      }
+    }
+
+    // ถ้าไม่มี food choices หรือ food_id ไม่มีอยู่ ให้สร้าง default activity_food record
+    if (!activityFoodId) {
+      // หา food_id แรกที่มีอยู่
+      const firstFood = await this.dataSource!.query(
+        `SELECT food_id FROM food LIMIT 1`
+      );
+
+      if (firstFood.length > 0) {
+        const activityFoodResult = await this.dataSource!.query(
+          `INSERT INTO activity_food (activity_id, food_id)
+           VALUES ($1, $2)
+           RETURNING activity_food_id`,
+          [activityId, firstFood[0].food_id]
+        );
+        activityFoodId = activityFoodResult[0].activity_food_id;
+      } else {
+        // ถ้าไม่มี food ในฐานข้อมูลเลย ให้สร้าง activity_detail โดยไม่มี activity_food_id
+        const result = await this.dataSource!.query(
+          `INSERT INTO activity_detail (activity_id, register_date, time_in, time_out, status)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING activity_detail_id`,
+          [
+            activityId,
+            new Date(), // register_date
+            null, // time_in - ให้เป็น null ได้
+            null, // time_out - ให้เป็น null ได้
+            "Registered", // status
+          ]
+        );
+        return result[0];
+      }
+    }
+
+    // 2. สร้าง activity_detail record
     const result = await this.dataSource!.query(
-      `INSERT INTO activity_detail (activity_id, join_id, register_date, status)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO activity_detail (activity_id, activity_food_id, register_date, time_in, time_out, status)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING activity_detail_id`,
       [
         activityId,
-        joinId,
+        activityFoodId, // ใช้ activity_food_id ที่เพิ่งสร้าง
         new Date(), // register_date
+        null, // time_in - ให้เป็น null ได้
+        null, // time_out - ให้เป็น null ได้
         "Registered", // status
       ]
     );
@@ -374,10 +432,10 @@ export class ActivityDao extends ErrorHandledDao {
   ): Promise<{ activity_detail_id: number }> {
     await this.checkConnection();
     const result = await this.dataSource!.query(
-      `INSERT INTO activity_detail (activity_id, register_date, status)
-       VALUES ($1, $2, $3)
+      `INSERT INTO activity_detail (activity_id, register_date, time_in, time_out, status)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING activity_detail_id`,
-      [activityId, new Date(), "Registered"]
+      [activityId, new Date(), null, null, "Registered"]
     );
     return result[0];
   }

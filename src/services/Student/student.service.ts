@@ -82,10 +82,10 @@ export class StudentsService extends ErrorHandledService {
     last_name: string;
     email: string;
     education_status: string;
-    faculty_id: number;
-    department_id: number;
-    grade_id: number;
-    eventcoop_id: number;
+    faculty_id?: number;
+    department_id?: number;
+    grade_id?: number;
+    eventcoop_id?: number;
   }): Promise<Students | null> {
     try {
       const existing = await this.studentsDao.getStudentsByEmail(data.email);
@@ -100,10 +100,10 @@ export class StudentsService extends ErrorHandledService {
         data.last_name,
         data.email,
         data.education_status,
-        data.faculty_id,
-        data.department_id,
-        data.grade_id,
-        data.eventcoop_id
+        data.faculty_id || null,
+        data.department_id || null,
+        data.grade_id || null,
+        data.eventcoop_id || null
       );
 
       await redis.del("students:all");
@@ -124,10 +124,10 @@ export class StudentsService extends ErrorHandledService {
       last_name: string;
       email: string;
       education_status: string;
-      faculty_id: number;
-      department_id: number;
-      grade_id: number;
-      eventcoop_id: number;
+      faculty_id?: number;
+      department_id?: number;
+      grade_id?: number;
+      eventcoop_id?: number;
     }
   ): Promise<Students | null> {
     try {
@@ -143,10 +143,10 @@ export class StudentsService extends ErrorHandledService {
           data.first_name,
           data.last_name,
           data.education_status,
-          data.faculty_id,
-          data.department_id,
-          data.grade_id,
-          data.eventcoop_id,
+          data.faculty_id || null,
+          data.department_id || null,
+          data.grade_id || null,
+          data.eventcoop_id || null,
           students_id
         );
       } else {
@@ -163,10 +163,10 @@ export class StudentsService extends ErrorHandledService {
           data.last_name,
           data.email,
           data.education_status,
-          data.faculty_id,
-          data.department_id,
-          data.grade_id,
-          data.eventcoop_id,
+          data.faculty_id || null,
+          data.department_id || null,
+          data.grade_id || null,
+          data.eventcoop_id || null,
           students_id
         );
       }

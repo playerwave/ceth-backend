@@ -128,42 +128,28 @@ export class ActivityService extends ErrorHandledService {
     foodChoices: string[]
   ): Promise<Join> {
     try {
+      // 1. ตรวจสอบว่าสมัครซ้ำหรือยัง
       const existingJoin = await this.joinDao.findJoinByStudentAndActivityId(
         studentId,
         activityId
       );
       if (existingJoin) throw new Error("Already enrolled in this activity");
 
-      // const activityDetail = await this.activityDao.createActivityDetailOnly(
-      //   activityId
-      // );
-
-      // const join = await this.joinDao.createJoin(
-      //   studentId,
-      //   activityDetail.activity_detail_id,
-      //   foodChoices
-      // );
-
-      // 2. สร้าง join ใหม่ (โดยไม่ต้องมี activity_detail_id ก่อน)
-      const join = await this.joinDao.createJoinWithoutActivityDetail(
-        studentId,
-        foodChoices
-      );
-
-      // 3. สร้าง activity_detail ใหม่ (ใช้ join_id ที่เพิ่งสร้าง)
+      // 2. สร้าง activity_detail ใหม่
       const activityDetail = await this.activityDao.createActivityDetail(
         activityId,
-        join.join_id,
+        0, // ไม่ใช้ join_id
         foodChoices
       );
 
-      // 4. อัพเดท join ให้มี activity_detail_id
-      await this.joinDao.updateJoinWithActivityDetail(
-        join.join_id,
-        activityDetail.activity_detail_id
+      // 3. สร้าง join ใหม่ (ใช้ activity_detail_id ที่เพิ่งสร้าง)
+      const join = await this.joinDao.createJoin(
+        studentId,
+        activityDetail.activity_detail_id,
+        foodChoices
       );
 
-      // 5. ลบ cache
+      // 4. ลบ cache
       await redis.del(`join:${studentId}`);
       this.logInfo("✅ Student enrolled in activity", {
         studentId,
