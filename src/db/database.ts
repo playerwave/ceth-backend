@@ -20,7 +20,6 @@ import { Building } from "../entity/building.entity";
 import { Room } from "../entity/room.entity";
 import { Food } from "../entity/food.entity";
 import { ActivityFood } from "../entity/activity.food.entity";
-import { QuestionType } from "../entity/questiontype.entity";
 import { Question } from "../entity/question.entity";
 import { Choice } from "../entity/choice.entity";
 import { SetNumber } from "../entity/setNumbers.entity";
@@ -108,7 +107,6 @@ class DatabaseManager {
           Room,
           Food,
           ActivityFood,
-          QuestionType,
           Question,
           Choice,
           SetNumber,

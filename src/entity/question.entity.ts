@@ -1,5 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { QuestionType } from './questiontype.entity';
 import { SetNumber } from './setNumbers.entity';
 import { Choice } from './choice.entity';
 import { Answer } from './answer.entity';
@@ -11,13 +10,6 @@ export class Question {
     @Column({ type: 'text' })
     question_text!: string;
 
-    @ManyToOne(() => QuestionType, (questionType) => questionType.question)
-    @JoinColumn({ name: 'question_type_id' })
-    questionType!: QuestionType;
-
-    @Column()
-    question_type_id?: number;
-
     @Column({ type: 'int' })
     question_number?: number;
 
@@ -27,6 +19,14 @@ export class Question {
 
     @Column()
     set_number_id?: number;
+
+    @Column({
+        type: 'enum',
+        enum: ['Fix Single answer', 'Single answer', 'Multiple answer', 'Text answer'],
+        unique: true,
+        default: 'Text answer'
+    })
+    question_type?: 'Fix Single answer' | 'Single answer' | 'Multiple answer' | 'Text answer';
 
     @OneToMany(() => Choice, (choice) => choice.question)
     choice?: Choice[];
