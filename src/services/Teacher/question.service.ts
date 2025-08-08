@@ -46,4 +46,20 @@ export class QuestionService extends ErrorHandledService {
             throw error;
         }
     }
+
+    public async addQuestion(question_text: string,
+        set_number_id: number,
+        question_type: string): Promise<Question | null> {
+        const cacheKey = "question:all";
+        try {
+            const countQuestion = await this.questionDao.countQuestionBySetNumberID(set_number_id)
+            const itemNumber = countQuestion + 1
+            const result = await this.questionDao.addQuestion(question_text, itemNumber, set_number_id, question_type)
+            await redis.del(cacheKey);
+            return result;
+        } catch (error) {
+            this.logError("❌ Error in addBuilding", error);
+            throw error;
+        }
+    }
 }

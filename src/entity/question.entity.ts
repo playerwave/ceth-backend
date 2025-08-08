@@ -23,7 +23,6 @@ export class Question {
     @Column({
         type: 'enum',
         enum: ['Fix Single answer', 'Single answer', 'Multiple answer', 'Text answer'],
-        unique: true,
         default: 'Text answer'
     })
     question_type?: 'Fix Single answer' | 'Single answer' | 'Multiple answer' | 'Text answer';

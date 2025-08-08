@@ -39,6 +39,19 @@ export class QuestionDao extends ErrorHandledDao {
         }
     }
 
+    public async countQuestionBySetNumberID(set_number_id: number): Promise<number> {
+        this.checkConnection();
+        try {
+            const result = await this.questionDao!.query(
+                `SELECT COUNT(*) FROM question WHERE set_number_id = $1`
+            );
+            return parseInt(result[0].count);
+        } catch (error) {
+            this.logDbError("countQuestion", error);
+            throw error;
+        }
+    }
+
     public async getQuestion(page: number, limit: number): Promise<Question[]> {
         this.checkConnection();
         const offset = (page - 1) * limit;
@@ -49,6 +62,27 @@ export class QuestionDao extends ErrorHandledDao {
             );
         } catch (error) {
             this.logDbError("getQuestion", error);
+            throw error;
+        }
+    }
+
+    public async addQuestion(
+        question_text: string,
+        question_number: number,
+        set_number_id: number,
+        question_type: string
+    ): Promise<Question> {
+        this.checkConnection();
+        try {
+            const Question = question_text.trim();
+            const Type = question_type.trim();
+            const result = await this.questionDao!.query(
+                `INSERT INTO question (question_text, question_number, set_number_id, question_type) VALUES ($1, $2, $3, $4) RETURNING *`,
+                [Question, question_number, set_number_id, Type]
+            );
+            return result[0];
+        } catch (error) {
+            this.logDbError("addQuestion", error);
             throw error;
         }
     }

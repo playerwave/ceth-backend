@@ -24,6 +24,8 @@ import teacherRoute from "./routes/Teacher/teacher.route";
 import teacherFoodRoute from "./routes/Teacher/food.route";
 import teacherAssessmentRoute from "./routes/Teacher/assessment.route";
 import teacherSetNumberRoute from "./routes/Teacher/setNumber.route";
+import teacherQuestionRoute from './routes/Teacher/question.route'
+
 // import adminActivityRoute from "./routes/Admin/activity.route";
 // import adminAssessmentRoute from "./routes/Admin/assessment.route";
 
@@ -49,6 +51,7 @@ import facultyRoute from "./routes/faculty.route";
 // import studentActivityRoute from "./routes/Student/activity.route";
 
 import activityVisitorRoute from "./routes/visitor/activity.route";
+
 
 dotenv.config();
 
@@ -124,6 +127,7 @@ app.use("/api/teacher", teacherRoute);
 app.use("/api/teacher/food", teacherFoodRoute);
 app.use("/api/teacher/assessment", teacherAssessmentRoute);
 app.use("/api/teacher/setNumber", teacherSetNumberRoute);
+app.use("/api/teacher/question", teacherQuestionRoute);
 
 //api ของ role student (usecase 1,2,3,4,5)
 app.use("/api/student/activity", studentActivityRoute);
