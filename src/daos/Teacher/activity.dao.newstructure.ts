@@ -613,4 +613,27 @@ export class ActivityDao extends ErrorHandledDao {
       throw new Error("❌ Failed to update activity state");
     }
   }
+
+  // ✅ เพิ่ม search method
+  public async searchActivities(searchTerm: string): Promise<Activity[]> {
+    try {
+      await this.initialize();
+      const query = `
+        SELECT * FROM activity 
+        WHERE (
+          LOWER(activity_name) LIKE LOWER($1) OR
+          LOWER(description) LIKE LOWER($1) OR
+          LOWER(presenter_company_name) LIKE LOWER($1)
+        )
+        AND status = 'Active'
+        ORDER BY create_activity_date DESC
+      `;
+      const searchPattern = `%${searchTerm}%`;
+      const result = await this.dataSource!.query(query, [searchPattern]);
+      return result;
+    } catch (error) {
+      console.error("❌ Error searching activities:", error);
+      throw error;
+    }
+  }
 }

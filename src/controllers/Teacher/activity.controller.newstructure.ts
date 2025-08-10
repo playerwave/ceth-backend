@@ -144,6 +144,22 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  // ✅ เพิ่ม search method
+  public async search(req: Request, res: Response): Promise<void> {
+    try {
+      const { name } = req.query;
+      if (!name || typeof name !== "string") {
+        res.status(400).json({ message: "Search term 'name' is required" });
+        return;
+      }
+
+      const activities = await this.activityService.searchActivities(name);
+      res.status(200).json(activities);
+    } catch (error) {
+      this.handleError("ActivityController.search", error, res);
+    }
+  }
+
   private parseId(value: string): number {
     const id = parseInt(value, 10);
     if (isNaN(id)) throw new Error("Invalid ID format");
@@ -257,6 +273,6 @@ export const activityController = {
   getAll: controller.getAll.bind(controller),
   getActivity: controller.getActivity.bind(controller),
   // getById: controller.getById.bind(controller),
-  // search: controller.search.bind(controller),
+  search: controller.search.bind(controller), // ✅ เพิ่ม search method
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
 };

@@ -50,6 +50,9 @@ router.get("/get-activities", wrapAsync(activityController.getAll));
 
 router.get("/get-activity/:id", wrapAsync(activityController.getActivity));
 
+// ✅ เพิ่ม search route
+router.get("/search", wrapAsync(activityController.search));
+
 // // เรียกดูรายกิจกรรม
 // router.get("/get-activity/:id", wrapAsync(activityController.getById));
 
