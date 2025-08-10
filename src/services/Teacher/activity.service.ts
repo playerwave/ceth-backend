@@ -301,40 +301,121 @@ export class ActivityService extends ErrorHandledService {
     }
   }
 
-  public async autoCloseRegisterActivities(): Promise<void> {
-    try {
-      const now = new Date();
-
-      // ดึงกิจกรรมที่ต้องปิดลงทะเบียน
-      const activitiesToClose =
-        await this.activityDao.findActivitiesToCloseRegister(now);
-
-      if (activitiesToClose.length === 0) {
-        this.logInfo("📭 No activities to close.");
-        return;
-      }
-
-      for (const activity of activitiesToClose) {
-        await this.activityDao.updateActivityState(
-          activity.activity_id,
-          "Close Register"
-        );
-        this.logInfo("✅ Closed register for activity", {
-          activity_id: activity.activity_id,
-          name: activity.activity_name,
-        });
-
-        // ลบ cache รายตัวด้วย (ถ้าใช้)
-        await redis.del(`activity:${activity.activity_id}`);
-      }
-
-      // เคลียร์ cache ทั้งหมดหลังอัปเดต
-      await redis.del("activity:all");
-    } catch (error) {
-      this.logError("❌ Error in autoCloseRegisterActivities", error);
-      throw error;
-    }
+  // 1. Not Start → Special Open Register / Open Register
+public async updateNotStartActivities(): Promise<void> {
+  this.logInfo('[updateNotStartActivities] Checking activities to transition from "Not Start" to "Special Open Register" or "Open Register".');
+  const activitiesToUpdate = await this.activityDao.findActivitiesNotStart(); // Finds activities that are in a 'Not Start' state and should transition
+  if (activitiesToUpdate.length === 0) {
+    this.logInfo('No activities to update from "Not Start" state.');
+    return;
   }
+  for (const activity of activitiesToUpdate) {
+    // This logic needs to be based on your business rules for special vs. regular open register
+    // For now, let's assume they all move to 'Open Register' for simplicity
+    await this.activityDao.updateActivityState(activity.activity_id, 'Open Register');
+    this.logInfo(`[updateNotStartActivities] Updated activity ${activity.activity_id} to 'Open Register'.`);
+  }
+}
+
+// 2. Special Open Register → Open Register
+public async updateSpecialOpenRegisterActivities(): Promise<void> {
+  this.logInfo('[updateSpecialOpenRegisterActivities] Checking activities to transition from "Special Open Register" to "Open Register".');
+  const activitiesToUpdate = await this.activityDao.findActivitiesSpecialOpenRegister();
+  if (activitiesToUpdate.length === 0) {
+    this.logInfo('No activities to update from "Special Open Register" state.');
+    return;
+  }
+  for (const activity of activitiesToUpdate) {
+    await this.activityDao.updateActivityState(activity.activity_id, 'Open Register');
+    this.logInfo(`[updateSpecialOpenRegisterActivities] Updated activity ${activity.activity_id} to 'Open Register'.`);
+  }
+}
+
+// 3. Open Register → Close Register
+public async updateOpenRegisterActivities(): Promise<void> {
+  this.logInfo('[updateOpenRegisterActivities] Checking activities to transition from "Open Register" to "Close Register".');
+  const activitiesToUpdate = await this.activityDao.findActivitiesOpenRegister();
+  if (activitiesToUpdate.length === 0) {
+    this.logInfo('No activities to update from "Open Register" state.');
+    return;
+  }
+  for (const activity of activitiesToUpdate) {
+    await this.activityDao.updateActivityState(activity.activity_id, 'Close Register');
+    this.logInfo(`[updateOpenRegisterActivities] Updated activity ${activity.activity_id} to 'Close Register'.`);
+  }
+}
+
+// 4. Close Register → Start Activity
+public async updateCloseRegisterActivities(): Promise<void> {
+  this.logInfo('[updateCloseRegisterActivities] Checking activities to transition from "Close Register" to "Start Activity".');
+  const activitiesToUpdate = await this.activityDao.findActivitiesCloseRegister();
+  if (activitiesToUpdate.length === 0) {
+    this.logInfo('No activities to update from "Close Register" state.');
+    return;
+  }
+  for (const activity of activitiesToUpdate) {
+    await this.activityDao.updateActivityState(activity.activity_id, 'Start Activity');
+    this.logInfo(`[updateCloseRegisterActivities] Updated activity ${activity.activity_id} to 'Start Activity'.`);
+  }
+}
+
+// 5. Start Activity → End Activity
+public async updateStartActivityActivities(): Promise<void> {
+  this.logInfo('[updateStartActivityActivities] Checking activities to transition from "Start Activity" to "End Activity".');
+  const activitiesToUpdate = await this.activityDao.findActivitiesStartActivity();
+  if (activitiesToUpdate.length === 0) {
+    this.logInfo('No activities to update from "Start Activity" state.');
+    return;
+  }
+  for (const activity of activitiesToUpdate) {
+    await this.activityDao.updateActivityState(activity.activity_id, 'End Activity');
+    this.logInfo(`[updateStartActivityActivities] Updated activity ${activity.activity_id} to 'End Activity'.`);
+  }
+}
+
+// 6. End Activity → Start Assessment (3 วันหลัง End Activity)
+public async updateEndActivityActivities(): Promise<void> {
+  this.logInfo('[updateEndActivityActivities] Checking activities to transition from "End Activity" to "Start Assessment".');
+  const activitiesToUpdate = await this.activityDao.findActivitiesEndActivity();
+  if (activitiesToUpdate.length === 0) {
+    this.logInfo('No activities to update from "End Activity" state.');
+    return;
+  }
+  for (const activity of activitiesToUpdate) {
+    await this.activityDao.updateActivityState(activity.activity_id, 'Start Assessment');
+    this.logInfo(`[updateEndActivityActivities] Updated activity ${activity.activity_id} to 'Start Assessment'.`);
+  }
+}
+
+// 7. Start Assessment → End Assessment (3 วันหลัง Start Assessment)
+public async updateStartAssessmentActivities(): Promise<void> {
+  this.logInfo('[updateStartAssessmentActivities] Checking activities to transition from "Start Assessment" to "End Assessment".');
+  const activitiesToUpdate = await this.activityDao.findActivitiesStartAssessment();
+  if (activitiesToUpdate.length === 0) {
+    this.logInfo('No activities to update from "Start Assessment" state.');
+    return;
+  }
+  for (const activity of activitiesToUpdate) {
+    await this.activityDao.updateActivityState(activity.activity_id, 'End Assessment');
+    this.logInfo(`[updateStartAssessmentActivities] Updated activity ${activity.activity_id} to 'End Assessment'.`);
+  }
+}
+
+// 8. End Assessment → (ไม่เปลี่ยน state ต่อ)
+// This function is now correctly empty as the state is 'End Assessment'
+// and there is no subsequent state change defined.
+
+// ฟังก์ชันรวม
+public async autoUpdateActivityStates() {
+  await this.updateNotStartActivities();
+  await this.updateSpecialOpenRegisterActivities();
+  await this.updateOpenRegisterActivities();
+  await this.updateCloseRegisterActivities();
+  await this.updateStartActivityActivities();
+  await this.updateEndActivityActivities();
+  await this.updateStartAssessmentActivities();
+  // We can skip the final End Assessment, as per the comment above.
+}
 
   // ✅ เพิ่ม search method
   public async searchActivities(searchTerm: string): Promise<Activity[]> {

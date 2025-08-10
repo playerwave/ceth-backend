@@ -594,25 +594,160 @@ export class ActivityDao extends ErrorHandledDao {
       throw new Error("❌ Failed to find activities to close register");
     }
   }
+  // Not Start
+public async findActivitiesNotStart(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE NOW() < start_register_date
+        AND activity_state != 'Not Start'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    // Assuming logDbError is also a direct method of the class
+    this.logDbError('findActivitiesNotStart', error); 
+    throw new Error('❌ Failed to find activities Not Start');
+  }
+}
 
-  public async updateActivityState(
-    activity_id: number,
-    state: string
-  ): Promise<void> {
-    await this.checkConnection();
-    try {
-      const sql = `
+// Special Open Register
+public async findActivitiesSpecialOpenRegister(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE NOW() BETWEEN special_start_register_date AND start_register_date
+        AND activity_state != 'Special Open Register'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    this.logDbError('findActivitiesSpecialOpenRegister', error);
+    throw new Error('❌ Failed to find activities Special Open Register');
+  }
+}
+
+// Open Register
+public async findActivitiesOpenRegister(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE NOW() BETWEEN start_register_date AND end_register_date
+        AND activity_state != 'Open Register'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    this.logDbError('findActivitiesOpenRegister', error);
+    throw new Error('❌ Failed to find activities Open Register');
+  }
+}
+
+// Close Register
+public async findActivitiesCloseRegister(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE NOW() > end_register_date
+        AND NOW() < start_activity_date
+        AND activity_state != 'Close Register'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    this.logDbError('findActivitiesCloseRegister', error);
+    throw new Error('❌ Failed to find activities Close Register');
+  }
+}
+
+// Start Activity
+public async findActivitiesStartActivity(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE NOW() BETWEEN start_activity_date AND end_activity_date
+        AND activity_state != 'Start Activity'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    this.logDbError('findActivitiesStartActivity', error);
+    throw new Error('❌ Failed to find activities Start Activity');
+  }
+}
+
+// End Activity
+public async findActivitiesEndActivity(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE NOW() > end_activity_date
+        AND activity_state != 'End Activity'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    this.logDbError('findActivitiesEndActivity', error);
+    throw new Error('❌ Failed to find activities End Activity');
+  }
+}
+
+// Start Assessment
+public async findActivitiesStartAssessment(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE activity_state = 'End Activity'
+        AND NOW() >= end_activity_date
+        AND NOW() < end_activity_date + INTERVAL '3 days'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    this.logDbError('findActivitiesStartAssessment', error);
+    throw new Error('❌ Failed to find activities Start Assessment');
+  }
+}
+
+// End Assessment
+public async findActivitiesEndAssessment(): Promise<Activity[]> {
+  await this.checkConnection();
+  try {
+    const sql = `
+      SELECT * FROM activity
+      WHERE activity_state = 'Start Assessment'
+        AND last_update_activity_date < NOW() - INTERVAL '3 days'
+        AND status = 'Active'
+    `;
+    return await this.dataSource!.query(sql);
+  } catch (error) {
+    this.logDbError('findActivitiesEndAssessment', error);
+    throw new Error('❌ Failed to find activities End Assessment');
+  }
+}
+
+// อัปเดต state
+public async updateActivityState(activityId: number, newState: string) {
+  await this.checkConnection();
+  try {
+    const sql = `
       UPDATE activity
-      SET activity_state = $1,
-          last_update_activity_date = NOW()
+      SET activity_state = $1, last_update_activity_date = NOW()
       WHERE activity_id = $2
     `;
-      await this.dataSource!.query(sql, [state, activity_id]);
-    } catch (error) {
-      this.logDbError("updateActivityState", error);
-      throw new Error("❌ Failed to update activity state");
-    }
+    return await this.dataSource!.query(sql, [newState, activityId]);
+  } catch (error) {
+    this.logDbError('updateActivityState', error);
+    throw new Error(`❌ Failed to update activity state for ID ${activityId}`);
   }
+}
 
   // ✅ เพิ่ม search method
   public async searchActivities(searchTerm: string): Promise<Activity[]> {
