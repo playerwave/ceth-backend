@@ -166,18 +166,40 @@ export class RoomController extends ErrorHandledController {
 
   public async getAll(req: Request, res: Response): Promise<void> {
     try {
+      // ✅ ใช้ default values ที่เหมาะสม และเพิ่ม logging
       const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const limit = parseInt(req.query.limit as string, 10) || 100; // เพิ่ม limit เป็น 100
+
+      console.log(`🔍 Fetching rooms with page: ${page}, limit: ${limit}`);
 
       const rooms = await this.roomService.getRoom(page, limit);
-      res.status(200).json(rooms); // ✅ ส่ง array ล้วน
+
+      console.log(`📊 Found ${rooms.length} rooms`);
+
+      res.status(200).json(rooms);
     } catch (error) {
       this.handleError("RoomController.getAll", error, res);
     }
   }
 
+  // ✅ เพิ่มฟังก์ชันใหม่สำหรับดึงห้องทั้งหมด
+  public async getAllRooms(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔍 Fetching all rooms without pagination");
+
+      const rooms = await this.roomService.getAllRooms();
+
+      console.log(`📊 Found ${rooms.length} total rooms`);
+
+      res.status(200).json(rooms);
+    } catch (error) {
+      console.error("❌ Error in getAllRooms:", error);
+      this.handleError("RoomController.getAllRooms", error, res);
+    }
+  }
+
   public async getOne(req: Request, res: Response): Promise<void> {
-    try{
+    try {
       const id = this.parseId(req.params.room_id);
       const room = await this.roomService.getRoomById(id);
       res.status(200).json(room);
@@ -189,7 +211,7 @@ export class RoomController extends ErrorHandledController {
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseRoomPayload(req.body);
-      const created = await this.roomService.addRoom(
+      const result = await this.roomService.addRoom(
         data.faculty_id,
         data.building_id,
         data.room_name,
@@ -198,13 +220,23 @@ export class RoomController extends ErrorHandledController {
         data.status
       );
 
-      if (created) {
+      if (result.room) {
         res.status(201).json({
           message: "เพิ่มห้องสำเร็จ!",
-          room: created,
+          room: result.room,
         });
       } else {
-        res.status(409).json({ message: "มีห้องนี้อยู่ในระบบแล้ว!" });
+        let errorMessage = "มีห้องนี้อยู่ในระบบแล้ว!";
+        if (result.duplicateType === "name") {
+          errorMessage = "มีชื่อห้องนี้อยู่ในระบบแล้ว!";
+        } else if (result.duplicateType === "location") {
+          errorMessage =
+            "มีห้องในตำแหน่งนี้อยู่ในระบบแล้ว! (คณะ/อาคาร/ชั้น/ที่นั่งซ้ำ)";
+        }
+
+        res.status(409).json({
+          message: errorMessage,
+        });
       }
     } catch (error) {
       this.handleError("RoomController.create", error, res);
@@ -307,7 +339,9 @@ export class RoomController extends ErrorHandledController {
         room_id,
         start_activity_date as string,
         end_activity_date as string,
-        exclude_activity_id ? parseInt(exclude_activity_id as string) : undefined
+        exclude_activity_id
+          ? parseInt(exclude_activity_id as string)
+          : undefined
       );
 
       res.status(200).json({

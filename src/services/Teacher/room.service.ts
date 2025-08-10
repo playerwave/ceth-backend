@@ -14,6 +14,56 @@ export class RoomService extends ErrorHandledService {
     this.roomDao = RoomDao.getInstance();
   }
 
+  // ✅ เพิ่มฟังก์ชันลบ cache ทั้งหมด
+  private async invalidateAllRoomCache(): Promise<void> {
+    try {
+      this.logInfo("🔄 Starting cache invalidation...");
+
+      // ✅ ตรวจสอบ Redis connection
+      try {
+        await redis.ping();
+      } catch (error) {
+        this.logInfo("⚠️ Redis not connected, skipping cache invalidation");
+        return;
+      }
+
+      // ลบ cache ทั้งหมดที่เกี่ยวข้องกับ room
+      const keys = await redis.keys("room:*");
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        this.logInfo("🗑️ All room cache invalidated", { count: keys.length });
+      } else {
+        this.logInfo("ℹ️ No room cache found to invalidate");
+      }
+
+      // ลบ cache ของ buildings และ faculties ด้วย
+      const buildingKeys = await redis.keys("building:*");
+      const facultyKeys = await redis.keys("faculty:*");
+
+      if (buildingKeys.length > 0) {
+        await redis.del(...buildingKeys);
+        this.logInfo("🗑️ Building cache invalidated", {
+          count: buildingKeys.length,
+        });
+      } else {
+        this.logInfo("ℹ️ No building cache found to invalidate");
+      }
+
+      if (facultyKeys.length > 0) {
+        await redis.del(...facultyKeys);
+        this.logInfo("🗑️ Faculty cache invalidated", {
+          count: facultyKeys.length,
+        });
+      } else {
+        this.logInfo("ℹ️ No faculty cache found to invalidate");
+      }
+
+      this.logInfo("✅ Cache invalidation completed");
+    } catch (error) {
+      this.logError("❌ Failed to invalidate cache", error);
+    }
+  }
+
   public async countRoom(): Promise<number> {
     try {
       const count = await this.roomDao.countRoom();
@@ -26,24 +76,71 @@ export class RoomService extends ErrorHandledService {
   }
 
   public async getRoom(page: number, limit: number): Promise<Room[]> {
-    const cacheKey = `room:all:${page}:${limit}`;
-
     try {
+      // ✅ เปิด cache ใหม่เพื่อความเร็ว
+      const cacheKey = `room:all:${page}:${limit}`;
       const cached = await redis.get(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
-
-        // ✅ ใช้เฉพาะ array ไม่ดึง roomData object
-        if (Array.isArray(parsed)) return parsed;
-        if (Array.isArray(parsed.roomData)) return parsed.roomData; // รองรับ cache เก่า
-        return []; // fallback
+        if (Array.isArray(parsed)) {
+          this.logInfo("📦 Returning cached room data", {
+            page,
+            limit,
+            count: parsed.length,
+          });
+          return parsed;
+        }
+        if (Array.isArray(parsed.roomData)) {
+          this.logInfo("📦 Returning cached room data", {
+            page,
+            limit,
+            count: parsed.roomData.length,
+          });
+          return parsed.roomData;
+        }
+        return [];
       }
 
-      const data = await this.roomDao.getRoom(page, limit); // ✅ DAO return เป็น Room[]
-      await redis.set(cacheKey, JSON.stringify(data), "EX", 60); // cache array ล้วน
+      const data = await this.roomDao.getRoom(page, limit);
+
+      // ✅ เก็บ cache ใหม่
+      await redis.set(cacheKey, JSON.stringify(data), "EX", 60);
+      this.logInfo("💾 Cached room data", { page, limit, count: data.length });
+
       return data;
     } catch (error) {
       this.logError("❌ Error in getRoom", error);
+      throw error;
+    }
+  }
+
+  // ✅ เพิ่มฟังก์ชันใหม่สำหรับดึงห้องทั้งหมด
+  public async getAllRooms(): Promise<Room[]> {
+    try {
+      // ✅ ใช้ cache key แยกต่างหาก
+      const cacheKey = "room:all:no-pagination";
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          this.logInfo("📦 Returning cached all rooms data", {
+            count: parsed.length,
+          });
+          return parsed;
+        }
+        return [];
+      }
+
+      // ✅ เรียก DAO โดยตรงเพื่อดึงห้องทั้งหมด
+      const data = await this.roomDao.getAllRooms();
+
+      // ✅ เก็บ cache ใหม่
+      await redis.set(cacheKey, JSON.stringify(data), "EX", 60);
+      this.logInfo("💾 Cached all rooms data", { count: data.length });
+
+      return data;
+    } catch (error) {
+      this.logError("❌ Error in getAllRooms", error);
       throw error;
     }
   }
@@ -72,14 +169,44 @@ export class RoomService extends ErrorHandledService {
     floor: string,
     seat_number: number,
     status: string
-  ): Promise<Room | null> {
-    const cacheKey = "room:all";
-
+  ): Promise<{ room: Room | null; duplicateType: string | null }> {
     try {
-      const exists = await this.roomDao.getRoomByName(room_name);
+      // ✅ ใช้ฟังก์ชันตรวจสอบใหม่ที่ครอบคลุมมากขึ้น
+      const exists = await this.roomDao.checkRoomExists(
+        faculty_id,
+        building_id,
+        room_name,
+        floor,
+        seat_number
+      );
+
       if (exists.length > 0) {
-        this.logInfo("🚫 Duplicate room name", { room_name });
-        return null;
+        // ✅ ตรวจสอบว่าเป็น room_name ซ้ำหรือ combination ซ้ำ
+        const duplicateName = exists.find(
+          (room) => room.room_name === room_name
+        );
+        const duplicateLocation = exists.find(
+          (room) =>
+            room.faculty_id === faculty_id &&
+            room.building_id === building_id &&
+            room.floor === floor &&
+            room.seat_number === seat_number
+        );
+
+        if (duplicateName) {
+          this.logInfo("🚫 Duplicate room name", { room_name });
+          return { room: null, duplicateType: "name" };
+        }
+
+        if (duplicateLocation) {
+          this.logInfo("🚫 Duplicate room location", {
+            faculty_id,
+            building_id,
+            floor,
+            seat_number,
+          });
+          return { room: null, duplicateType: "location" };
+        }
       }
 
       const created = await this.roomDao.addRoom(
@@ -91,9 +218,13 @@ export class RoomService extends ErrorHandledService {
         status
       );
 
-      await redis.del(cacheKey);
+      // ✅ ลบ cache ทั้งหมดหลังสร้างห้อง
+      this.logInfo("🔄 Invalidating cache after room creation...");
+      await this.invalidateAllRoomCache();
+      this.logInfo("✅ Cache invalidation completed after room creation");
+
       this.logInfo("🆕 Room created", { room_id: created.room_id });
-      return created;
+      return { room: created, duplicateType: null };
     } catch (error) {
       this.logError("❌ Error in addRoom", error);
       throw error;
@@ -109,8 +240,6 @@ export class RoomService extends ErrorHandledService {
     seat_number: number,
     status: string
   ): Promise<Room | null> {
-    const cacheKey = "room:all";
-
     try {
       const found = await this.roomDao.getRoomByID(room_id);
       if (!found.length) {
@@ -148,7 +277,9 @@ export class RoomService extends ErrorHandledService {
         );
       }
 
-      await redis.del(cacheKey);
+      // ✅ ลบ cache ทั้งหมดหลังอัพเดทห้อง
+      await this.invalidateAllRoomCache();
+
       const [result] = await this.roomDao.getRoomByID(room_id);
       this.logInfo("✏️ Room updated", { room_id });
       return result || null;
@@ -162,8 +293,6 @@ export class RoomService extends ErrorHandledService {
     room_id: number,
     floor: string
   ): Promise<Room | null> {
-    const cacheKey = "room:all";
-
     try {
       const rooms = await this.roomDao.getRoomByID(room_id);
       if (!rooms.length) {
@@ -175,7 +304,9 @@ export class RoomService extends ErrorHandledService {
       room.floor = floor;
 
       const updated = await this.roomDao.save(room);
-      await redis.del(cacheKey);
+
+      // ✅ ลบ cache ทั้งหมดหลังอัพเดท
+      await this.invalidateAllRoomCache();
 
       this.logInfo("🏢 Room floor updated", { room_id, new_floor: floor });
       return updated;
@@ -186,8 +317,6 @@ export class RoomService extends ErrorHandledService {
   }
 
   public async deletedRoom(room_id: number): Promise<"soft" | "hard" | null> {
-    const cacheKey = "room:all";
-
     try {
       const hasRelation = await this.roomDao.hasRelations(room_id);
       let deleted: Room | null = null;
@@ -200,7 +329,8 @@ export class RoomService extends ErrorHandledService {
         this.logInfo("🗑️ Hard deleted room", { room_id });
       }
 
-      await redis.del(cacheKey);
+      // ✅ ลบ cache ทั้งหมดหลังลบห้อง
+      await this.invalidateAllRoomCache();
 
       if (!deleted) {
         this.logInfo("❌ No room deleted", { room_id });

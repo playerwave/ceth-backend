@@ -56,6 +56,13 @@ router.get(
   wrapAsync(roomController.getAll.bind(roomController))
 );
 
+// ✅ เพิ่ม route ใหม่สำหรับดึงห้องทั้งหมด
+router.get(
+  "/get-all-rooms",
+  verifyToken,
+  wrapAsync(roomController.getAllRooms.bind(roomController))
+);
+
 // ✅ GET /count → จำนวนห้องทั้งหมด
 router.get("/count", verifyToken, wrapAsync(roomController.count));
 
@@ -75,7 +82,11 @@ router.put(
   wrapAsync(roomController.update.bind(roomController))
 );
 
-router.get("/get-room/:room_id", verifyToken, wrapAsync(roomController.getOne.bind(roomController)));
+router.get(
+  "/get-room/:room_id",
+  verifyToken,
+  wrapAsync(roomController.getOne.bind(roomController))
+);
 
 // ✅ DELETE /delete-room/:room_id → ลบห้อง
 router.delete(

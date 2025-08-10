@@ -87,6 +87,33 @@ export class RoomDao extends ErrorHandledDao {
     }
   }
 
+  // ✅ เพิ่มฟังก์ชันใหม่สำหรับดึงห้องทั้งหมดโดยไม่ใช้ pagination
+  async getAllRooms(): Promise<Room[]> {
+    await this.checkConnection();
+    try {
+      const result = await this.dataSource!.query(
+        `SELECT 
+        r.room_id,
+        r.room_name,
+        r.floor,
+        r.seat_number,
+        r.status,
+        r.faculty_id,
+        r.building_id,
+        COALESCE(f.faculty_name, '') AS faculty_name,
+        COALESCE(b.building_name, '') AS building_name
+      FROM room r
+      LEFT JOIN faculty f ON f.faculty_id = r.faculty_id
+      LEFT JOIN building b ON b.building_id = r.building_id
+      ORDER BY r.room_id ASC`
+      );
+      return result;
+    } catch (error) {
+      this.logDbError("getAllRooms", error);
+      throw error;
+    }
+  }
+
   async getRoomByID(room_id: number): Promise<Room[]> {
     await this.checkConnection();
     try {
@@ -109,6 +136,29 @@ export class RoomDao extends ErrorHandledDao {
       );
     } catch (error) {
       this.logDbError("getRoomByName", error);
+      throw error;
+    }
+  }
+
+  // ✅ เพิ่มฟังก์ชันตรวจสอบห้องซ้ำที่ครอบคลุมมากขึ้น
+  async checkRoomExists(
+    faculty_id: number,
+    building_id: number,
+    room_name: string,
+    floor: string,
+    seat_number: number
+  ): Promise<Room[]> {
+    await this.checkConnection();
+    try {
+      // ตรวจสอบทั้ง room_name และ combination ของข้อมูลอื่นๆ
+      return await this.dataSource!.query(
+        `SELECT * FROM room WHERE 
+          (room_name = $1) OR 
+          (faculty_id = $2 AND building_id = $3 AND floor = $4 AND seat_number = $5)`,
+        [room_name.trim(), faculty_id, building_id, floor.trim(), seat_number]
+      );
+    } catch (error) {
+      this.logDbError("checkRoomExists", error);
       throw error;
     }
   }
