@@ -26,30 +26,6 @@ interface JwtUser {
   roles_id: number;
 }
 
-// ✅ GET /get-rooms → รวมข้อมูลห้อง + faculty + building + user
-// router.get(
-//   "/get-rooms",
-//   verifyToken,
-//   wrapAsync(async (req, res) => {
-//     const user = req.user as JwtUser;
-//     const roomData = await roomService.getRoom();
-//     const countRoom = await roomService.countRoom();
-//     const facultyData = await facultyService.getFaculty(1, 100);
-//     const buildingData = await buildingService.getBuilding(10, 0);
-
-//     res.setHeader("Cache-Control", "no-store");
-//     res.status(200).json({
-//       page: "ห้อง",
-//       user,
-//       roomData,
-//       countRoom,
-//       facultyData,
-//       buildingData,
-//       notification: "เชื่อมต่อข้อมูลห้องสำเร็จ",
-//     });
-//   })
-// );
-
 router.get(
   "/get-rooms",
   verifyToken,
@@ -86,6 +62,12 @@ router.get(
   "/get-room/:room_id",
   verifyToken,
   wrapAsync(roomController.getOne.bind(roomController))
+);
+
+router.get(
+  "/search-rooms",
+  verifyToken,
+  wrapAsync(roomController.search.bind(roomController))
 );
 
 // ✅ DELETE /delete-room/:room_id → ลบห้อง
