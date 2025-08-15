@@ -159,6 +159,7 @@ import {
   Matches,
   IsArray,
   ArrayNotEmpty,
+  IsUrl,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ExistsInDatabase } from "../../middleware/isExistindatabase.validator";
@@ -294,8 +295,13 @@ export class UpdateActivityDto {
   @IsEnum(["Active", "Inactive"])
   status: "Active" | "Inactive" = "Active";
 
-  @ValidateIf((o) => o.activity_status === "Public")
-  @IsOptional()
-  @IsString()
-  url?: string = "ไม่ระบุ";
+  @ValidateIf(
+    (o) =>
+      o.activity_status === "Public" &&
+      o.url !== undefined &&
+      o.url !== null &&
+      String(o.url).trim() !== ""
+  )
+  @IsUrl({}, { message: "url ต้องเป็นลิงก์ที่ถูกต้อง" })
+  url?: string;
 }
