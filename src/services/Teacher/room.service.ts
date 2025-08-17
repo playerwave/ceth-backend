@@ -162,6 +162,22 @@ export class RoomService extends ErrorHandledService {
     }
   }
 
+  public async searchRoom(params: {
+    room_name?: string;
+    building_name?: string;
+    seat_number?: number;
+  }): Promise<Room[]> {
+    try {
+      const results = await this.roomDao.searchRoom(params);
+      this.logInfo("🔍 Room search completed", { filters: params, count: results.length });
+      return results;
+    } catch (error) {
+      this.logError("❌ Error in searchRoom", error);
+      throw error;
+    }
+  }
+  
+
   public async addRoom(
     faculty_id: number,
     building_id: number,
@@ -368,6 +384,7 @@ export class RoomService extends ErrorHandledService {
       throw error;
     }
   }
+  
 
   // ✅ ฟังก์ชันตรวจสอบห้องที่ถูกใช้งานในช่วงเวลาที่กำหนด
   public async getRoomConflicts(

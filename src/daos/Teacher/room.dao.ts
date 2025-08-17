@@ -140,6 +140,60 @@ export class RoomDao extends ErrorHandledDao {
     }
   }
 
+  async searchRoom(params: {
+    room_name?: string;
+    building_name?: string;
+    seat_number?: number;
+  }): Promise<Room[]> {
+    await this.checkConnection();
+
+    const conditions: string[] = [];
+    const values: any[] = [];
+
+    if (params.room_name) {
+      conditions.push("r.room_name ILIKE $" + (values.length + 1));
+      values.push(`%${params.room_name.trim()}%`);
+    }
+
+    if (params.building_name) {
+      conditions.push("b.building_name ILIKE $" + (values.length + 1));
+      values.push(`%${params.building_name.trim()}%`);
+    }
+
+    if (params.seat_number !== undefined) {
+      conditions.push("r.seat_number = $" + (values.length + 1));
+      values.push(params.seat_number);
+    }
+
+    const whereClause =
+      conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+
+    try {
+      const result = await this.dataSource!.query(
+        `SELECT 
+          r.room_id,
+          r.room_name,
+          r.floor,
+          r.seat_number,
+          r.status,
+          r.faculty_id,
+          r.building_id,
+          COALESCE(f.faculty_name, '') AS faculty_name,
+          COALESCE(b.building_name, '') AS building_name
+        FROM room r
+        LEFT JOIN faculty f ON f.faculty_id = r.faculty_id
+        LEFT JOIN building b ON b.building_id = r.building_id
+        ${whereClause}
+        ORDER BY r.room_id ASC`,
+        values
+      );
+      return result;
+    } catch (error) {
+      this.logDbError("searchRoom", error);
+      throw error;
+    }
+  }
+
   // ✅ เพิ่มฟังก์ชันตรวจสอบห้องซ้ำที่ครอบคลุมมากขึ้น
   async checkRoomExists(
     faculty_id: number,

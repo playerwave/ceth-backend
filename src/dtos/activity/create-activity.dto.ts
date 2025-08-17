@@ -219,10 +219,16 @@ export class CreateActivityDto {
   @IsEnum(["Active", "Inactive"])
   status: "Active" | "Inactive" = "Active";
 
-  @ValidateIf((o) => o.activity_status === "Public")
-  @IsOptional()
-  @IsUrl()
-  url?: string = "ไม่ระบุ";
+  @ValidateIf(
+    (o) =>
+      o.activity_status === "Public" &&
+      (o.event_format === "Onsite" || o.event_format === "Online") &&
+      o.url !== undefined &&
+      o.url !== null &&
+      String(o.url).trim() !== ""
+  )
+  @IsUrl({}, { message: "url ต้องเป็นลิงก์ที่ถูกต้อง" })
+  url?: string;
 
   @ValidateIf((o) => o.activity_status === "Public")
   @IsInt()
