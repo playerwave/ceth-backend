@@ -705,8 +705,8 @@ public async findActivitiesStartAssessment(): Promise<Activity[]> {
     const sql = `
       SELECT * FROM activity
       WHERE activity_state = 'End Activity'
-        AND NOW() >= end_activity_date
-        AND NOW() < end_activity_date + INTERVAL '3 days'
+        AND NOW() >= start_assessment_date
+        AND NOW() < end_assessment_date
         AND status = 'Active'
     `;
     return await this.dataSource!.query(sql);
@@ -723,7 +723,7 @@ public async findActivitiesEndAssessment(): Promise<Activity[]> {
     const sql = `
       SELECT * FROM activity
       WHERE activity_state = 'Start Assessment'
-        AND last_update_activity_date < NOW() - INTERVAL '3 days'
+        AND NOW() >= end_assessment_date
         AND status = 'Active'
     `;
     return await this.dataSource!.query(sql);

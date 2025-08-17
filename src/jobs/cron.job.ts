@@ -6,6 +6,8 @@ const activityService = new ActivityService();
 
 // 🕛 ตั้งให้รันทุกวันเวลา 00:00 เพื่ออัปเดตสถานะกิจกรรมทั้งหมด
 // cron.schedule("*/10 * * * * *", async () => { สำหรับทำสอบรันทุกๆ 10 วิ
+// cron.schedule("0 0 * * *", async () => { 1 ชม
+// cron.schedule("*/1 * * * *", async () => { 1 นาที
 cron.schedule("0 0 * * *", async () => {
   console.log("🔁 [Cron] Running auto-update activity states job...");
   try {
