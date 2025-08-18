@@ -4,12 +4,34 @@ import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { formatTimeToLocal, add7Hours } from "../../utils/formatTimeToLocal";
 
+export type TransitionResult = {
+  notStartToSpecial: number;
+  notStartToOpen: number;
+  specialToOpen: number;
+  openToClose: number;
+  closeToStart: number;
+  startToEnd: number;
+  endToStartAssess: number;
+  startAssessToEnd: number;
+  updatedIds: {
+    notStartToSpecial: number[];
+    notStartToOpen: number[];
+    specialToOpen: number[];
+    openToClose: number[];
+    closeToStart: number[];
+    startToEnd: number[];
+    endToStartAssess: number[];
+    startAssessToEnd: number[];
+  };
+};
+
 export class ActivityDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;
 
   constructor() {
     super();
-    this.initialize();
+    // ไม่เรียก initialize() ทันที เพื่อให้ test สามารถ mock ได้
+    // this.initialize();
   }
 
   private async initialize(): Promise<void> {
@@ -578,176 +600,229 @@ export class ActivityDao extends ErrorHandledDao {
     await this.dataSource!.getRepository(Activity).delete({ activity_id: id });
   }
 
-  public async findActivitiesToCloseRegister(now: Date): Promise<Activity[]> {
+  public async advanceStatesOnce(freezeNow?: Date): Promise<TransitionResult> {
     await this.checkConnection();
-    try {
-      const sql = `
-      SELECT * FROM activity
-      WHERE activity_state = 'Open Register'
-        AND status = 'Active'
-        AND end_register_date <= $1
+    
+    // ✅ Debug: ตรวจสอบข้อมูลใน database
+    const debugQuery = `SELECT activity_id, activity_name, activity_state, status FROM activity WHERE status = 'Active' LIMIT 5`;
+    const debugResult = await this.dataSource!.query(debugQuery);
+    console.log(`🔍 [advanceStatesOnce] Current activities in DB:`, debugResult);
+    
+    // ✅ Debug: ตรวจสอบวันที่ของกิจกรรม ID 14
+    const debugActivity14Query = `
+      SELECT 
+        activity_id,
+        activity_name,
+        activity_state,
+        special_start_register_date,
+        start_register_date,
+        end_register_date,
+        start_activity_date,
+        end_activity_date
+      FROM activity 
+      WHERE activity_id = 14
     `;
-      const result = await this.dataSource!.query(sql, [now]);
-      return result;
-    } catch (error) {
-      this.logDbError("findActivitiesToCloseRegister", error);
-      throw new Error("❌ Failed to find activities to close register");
+    const activity14Result = await this.dataSource!.query(debugActivity14Query);
+    console.log(`🔍 [advanceStatesOnce] Activity 14 details:`, activity14Result);
+    
+    const qr = this.dataSource!.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+  
+    // ✅ แก้ไข: ใช้เวลาไทย (UTC+7) แทน UTC
+    const nowRef = freezeNow ?? new Date();
+    const thaiTime = new Date(nowRef.getTime() + (7 * 60 * 60 * 1000)); // เพิ่ม 7 ชั่วโมง
+    console.log(`🕐 [advanceStatesOnce] UTC time:`, nowRef.toISOString());
+    console.log(`🕐 [advanceStatesOnce] Thai time:`, thaiTime.toISOString());
+  
+    const run = async (sql: string, params: unknown[]): Promise<number[]> => {
+      const rows: Array<{ activity_id: number }> = await qr.query(sql, params);
+      console.log(`🔍 [advanceStatesOnce] Query result:`, rows);
+      console.log(`🔍 [advanceStatesOnce] SQL:`, sql);
+      console.log(`🔍 [advanceStatesOnce] Params:`, params);
+      
+      // ✅ Debug: ตรวจสอบการเปรียบเทียบเวลา
+      if (sql.includes('Open Register') && sql.includes('Close Register')) {
+        const timeCheckQuery = `
+          SELECT 
+            activity_id,
+            activity_name,
+            activity_state,
+            end_register_date,
+            start_activity_date,
+            $1::timestamp as current_time,
+            $1::timestamp >= end_register_date as end_register_check,
+            $1::timestamp < start_activity_date as start_activity_check
+          FROM activity 
+          WHERE activity_state = 'Open Register' 
+        AND status = 'Active'
+            AND end_register_date IS NOT NULL
+        `;
+        const timeCheckResult = await qr.query(timeCheckQuery, params);
+        console.log(`🔍 [advanceStatesOnce] Time comparison check:`, timeCheckResult);
+      }
+      
+      // ✅ ตรวจสอบว่า rows เป็น array หรือไม่
+      const safeRows = Array.isArray(rows) ? rows : [];
+      const ids = safeRows.map((r) => r.activity_id);
+      console.log(`🔍 [advanceStatesOnce] Extracted IDs:`, ids);
+      return ids;
+    };
+  
+    try {
+      // 1) Not Start -> Special Open Register
+      const ids1 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'Special Open Register',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Not Start'
+           AND special_start_register_date IS NOT NULL
+           AND $1::timestamp >= special_start_register_date
+           AND (start_register_date IS NULL OR $1::timestamp < start_register_date)
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+  
+      // 2) Not Start -> Open Register
+      const ids2 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'Open Register',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Not Start'
+           AND start_register_date IS NOT NULL
+           AND $1::timestamp >= start_register_date
+           AND (end_register_date IS NULL OR $1::timestamp < end_register_date)
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+  
+      // 3) Special Open Register -> Open Register
+      const ids3 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'Open Register',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Special Open Register'
+           AND start_register_date IS NOT NULL
+           AND $1::timestamp >= start_register_date
+           AND (end_register_date IS NULL OR $1::timestamp < end_register_date)
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+  
+      // 4) Open Register -> Close Register  ← (คุณพิมพ์ว่า "End Register" แต่ enum จริงคือ "Close Register")
+      const ids4 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'Close Register',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Open Register'
+           AND end_register_date IS NOT NULL
+           AND $1::timestamp >= end_register_date
+                      AND (start_activity_date IS NULL OR $1::timestamp < start_activity_date)
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+
+      // 5) Close Register -> Start Activity
+      const ids5 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'Start Activity',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Close Register'
+           AND start_activity_date IS NOT NULL
+           AND $1::timestamp >= start_activity_date
+                      AND (end_activity_date IS NULL OR $1::timestamp < end_activity_date)
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+
+      // 6) Start Activity -> End Activity
+      const ids6 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'End Activity',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Start Activity'
+           AND end_activity_date IS NOT NULL
+           AND $1::timestamp >= end_activity_date
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+  
+      // 7) End Activity -> Start Assessment (เมื่อถึง start_assessment)
+      const ids7 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'Start Assessment',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'End Activity'
+           AND start_assessment IS NOT NULL
+           AND $1::timestamp >= start_assessment
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+
+      // 8) Start Assessment -> End Assessment (เมื่อถึง end_assessment)
+      const ids8 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'End Assessment',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Start Assessment'
+           AND end_assessment IS NOT NULL
+           AND $1::timestamp >= end_assessment
+        RETURNING activity_id
+        `,
+        [thaiTime]
+      );
+  
+      await qr.commitTransaction();
+      return {
+        notStartToSpecial: ids1.length,
+        notStartToOpen: ids2.length,
+        specialToOpen: ids3.length,
+        openToClose: ids4.length,
+        closeToStart: ids5.length,
+        startToEnd: ids6.length,
+        endToStartAssess: ids7.length,
+        startAssessToEnd: ids8.length,
+        updatedIds: {
+          notStartToSpecial: ids1,
+          notStartToOpen: ids2,
+          specialToOpen: ids3,
+          openToClose: ids4,
+          closeToStart: ids5,
+          startToEnd: ids6,
+          endToStartAssess: ids7,
+          startAssessToEnd: ids8,
+        },
+      };
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.release();
     }
   }
-  // Not Start
-public async findActivitiesNotStart(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE NOW() < start_register_date
-        AND activity_state != 'Not Start'
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    // Assuming logDbError is also a direct method of the class
-    this.logDbError('findActivitiesNotStart', error); 
-    throw new Error('❌ Failed to find activities Not Start');
-  }
-}
-
-// Special Open Register
-public async findActivitiesSpecialOpenRegister(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE NOW() BETWEEN special_start_register_date AND start_register_date
-        AND activity_state != 'Special Open Register'
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    this.logDbError('findActivitiesSpecialOpenRegister', error);
-    throw new Error('❌ Failed to find activities Special Open Register');
-  }
-}
-
-// Open Register
-public async findActivitiesOpenRegister(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE NOW() BETWEEN start_register_date AND end_register_date
-        AND activity_state != 'Open Register'
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    this.logDbError('findActivitiesOpenRegister', error);
-    throw new Error('❌ Failed to find activities Open Register');
-  }
-}
-
-// Close Register
-public async findActivitiesCloseRegister(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE NOW() > end_register_date
-        AND NOW() < start_activity_date
-        AND activity_state != 'Close Register'
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    this.logDbError('findActivitiesCloseRegister', error);
-    throw new Error('❌ Failed to find activities Close Register');
-  }
-}
-
-// Start Activity
-public async findActivitiesStartActivity(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE NOW() BETWEEN start_activity_date AND end_activity_date
-        AND activity_state != 'Start Activity'
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    this.logDbError('findActivitiesStartActivity', error);
-    throw new Error('❌ Failed to find activities Start Activity');
-  }
-}
-
-// End Activity
-public async findActivitiesEndActivity(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE NOW() > end_activity_date
-        AND activity_state != 'End Activity'
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    this.logDbError('findActivitiesEndActivity', error);
-    throw new Error('❌ Failed to find activities End Activity');
-  }
-}
-
-// Start Assessment
-public async findActivitiesStartAssessment(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE activity_state = 'End Activity'
-        AND NOW() >= start_assessment_date
-        AND NOW() < end_assessment_date
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    this.logDbError('findActivitiesStartAssessment', error);
-    throw new Error('❌ Failed to find activities Start Assessment');
-  }
-}
-
-// End Assessment
-public async findActivitiesEndAssessment(): Promise<Activity[]> {
-  await this.checkConnection();
-  try {
-    const sql = `
-      SELECT * FROM activity
-      WHERE activity_state = 'Start Assessment'
-        AND NOW() >= end_assessment_date
-        AND status = 'Active'
-    `;
-    return await this.dataSource!.query(sql);
-  } catch (error) {
-    this.logDbError('findActivitiesEndAssessment', error);
-    throw new Error('❌ Failed to find activities End Assessment');
-  }
-}
-
-// อัปเดต state
-public async updateActivityState(activityId: number, newState: string) {
-  await this.checkConnection();
-  try {
-    const sql = `
-      UPDATE activity
-      SET activity_state = $1, last_update_activity_date = NOW()
-      WHERE activity_id = $2
-    `;
-    return await this.dataSource!.query(sql, [newState, activityId]);
-  } catch (error) {
-    this.logDbError('updateActivityState', error);
-    throw new Error(`❌ Failed to update activity state for ID ${activityId}`);
-  }
-}
 
   // ✅ เพิ่ม search method
   public async searchActivities(searchTerm: string): Promise<Activity[]> {
@@ -771,4 +846,6 @@ public async updateActivityState(activityId: number, newState: string) {
       throw error;
     }
   }
+
+
 }
