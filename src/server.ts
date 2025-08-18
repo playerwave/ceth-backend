@@ -33,6 +33,7 @@ import teacherQuestionRoute from './routes/Teacher/question.route'
 import studentActivityRoute from "./routes/Student/activity.route";
 import studentRoute from "./routes/Student/students.route";
 import studentGradeRoute from "./routes/Student/grade.route";
+import ocrRoute from "./routes/Student/orc.route";
 
 //import visitor routes
 import visitorRoute from "./routes/user.route";
@@ -133,6 +134,7 @@ app.use("/api/teacher/question", teacherQuestionRoute);
 app.use("/api/student/activity", studentActivityRoute);
 app.use("/api/student", studentRoute);
 app.use("/api/student/grade", studentGradeRoute);
+app.use("/api/ocr", ocrRoute);
 
 // api ของ visitor
 app.use("/api/auth", authRoute);
