@@ -4,93 +4,93 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Activity Reminder</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        line-height: 1.6;
-        color: #333;
-        max-width: 100%;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      .header {
-        background-color: #DC2626;
-        color: white;
-        padding: 20px;
-        text-align: center;
-        border-radius: 8px 8px 0 0;
-      }
-      .content {
-        background-color: #fef2f2;
-        padding: 20px;
-        border-radius: 0 0 8px 8px;
-      }
-      .reminder-box {
-        background-color: white;
-        padding: 15px;
-        margin: 15px 0;
-        border-radius: 5px;
-        border-left: 4px solid #DC2626;
-      }
-      .urgent {
-        background-color: #fef3c7;
-        border-left-color: #F59E0B;
-      }
-      .button {
-        display: inline-block;
-        background-color: #DC2626;
-        color: white;
-        padding: 12px 24px;
-        text-decoration: none;
-        border-radius: 5px;
-        margin: 10px 0;
-      }
-      .footer {
-        text-align: center;
-        margin-top: 20px;
-        color: #666;
-        font-size: 0.9em;
-      }
-    </style>
   </head>
-  <body>
-    <div class="header">
-      <h1>⏰ เตือนกิจกรรมพรุ่งนี้!</h1>
-    </div>
+  <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
     
-    <div class="content">
-      <h2>สวัสดี <%= name || 'ผู้ใช้' %>!</h2>
+    <div style="
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 24px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      background-color: #ffffff;
+      font-family: Arial, sans-serif;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    ">
+      <h1 style="color: #DC2626; margin-top: 0; margin-bottom: 10px;">⏰ กิจกรรมที่ท่านลงทะเบียนจะจัดขึ้นพรุ่งนี้!</h1>
       
-      <p>นี่เป็นการเตือนว่าคุณมีกิจกรรมพรุ่งนี้ กรุณาตรวจสอบรายละเอียด:</p>
-      
-      <div class="reminder-box urgent">
-        <h3>🚨 กิจกรรมพรุ่งนี้</h3>
-        <p><strong>ชื่อกิจกรรม:</strong> <%= activityName || 'กิจกรรมพัฒนาทักษะ' %></p>
-        <p><strong>วันที่:</strong> <%= activityDate || 'พรุ่งนี้' %></p>
-        <p><strong>เวลา:</strong> <%= activityTime || '09:00 - 16:00' %></p>
-        <p><strong>สถานที่:</strong> <%= activityLocation || 'ห้องประชุมใหญ่' %></p>
-        <p><strong>สิ่งที่ต้องเตรียม:</strong> <%= requirements || 'เอกสารและเครื่องเขียน' %></p>
+      <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=<%= encodeURIComponent(activityName || 'กิจกรรม') %>&dates=<%= activityDateISO || '20241220T090000Z' %>/<%= activityEndDateISO || '20241220T160000Z' %>&details=<%= encodeURIComponent(message || 'เตือนกิจกรรมพรุ่งนี้') %>&location=<%= encodeURIComponent((building || 'อาคารคณะวิทยาการสารสนเทศ') + ' ชั้น ' + (floor || '3') + ' ห้อง ' + (room || '301')) %>&sf=true&output=xml" 
+         style="
+           display: inline-block;
+           background-color: #4285f4;
+           color: white;
+           padding: 8px 16px;
+           text-decoration: none;
+           border-radius: 4px;
+           font-weight: 500;
+           font-size: 14px;
+           margin-bottom: 20px;
+         "
+         target="_blank">
+        View on Google Calendar
+      </a>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>ผู้จัด:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= organizerName || 'คณะวิทยาการสารสนเทศ' %></p>
       </div>
 
-      <% if (message) { %>
-        <div class="reminder-box">
-          <h3>📝 ข้อความเพิ่มเติม</h3>
-          <p><%= message %></p>
-        </div>
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>ประเภท:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= activityType || 'Soft Skill' %> • ( + <%= hoursEarned || '3' %> ชั่วโมง )</p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>Description:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= message || 'นี่เป็นการเตือนว่าคุณมีกิจกรรมพรุ่งนี้ กรุณาตรวจสอบรายละเอียด' %></p>
+      </div>
+
+      <div style="margin-bottom: 20px;"> 
+        <p style="margin-bottom: 4px;"><strong>When:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= activityDate || 'พรุ่งนี้' %> · <%= activityTime || '09:00-16:00' %> (เวลา ประเทศไทย)</p>
+      </div>
+
+      <div style="margin-bottom: 20px;"> 
+        <p style="margin-bottom: 4px;"><strong>สถานที่:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= building || 'อาคารคณะวิทยาการสารสนเทศ' %> ชั้น <%= floor || '3' %> ห้อง <%= room || '301' %></p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>ผู้จัด:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= contactEmail || 'support@example.com' %></p>
+      </div>
+      
+      <% if (activityImage) { %>
+        <img src="<%= activityImage %>" alt="กิจกรรม" style="width:100%; margin: 15px 0; border-radius: 8px;" />
+      <% } else { %>
+        <img src="https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/F1F2/production/_118283916_b19c5a1f-162b-410b-8169-f58f0d153752.jpg" alt="กิจกรรม" style="width:100%; margin: 15px 0; border-radius: 8px;" />
       <% } %>
 
-      <div style="text-align: center; margin: 20px 0;">
-        <a href="<%= activityLink || '#' %>" class="button">
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="<%= activityLink || '#' %>" style="
+          display: inline-block;
+          background-color: #1E3A8A;
+          color: white;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 5px;
+          font-weight: bold;
+        ">
           📋 ดูรายละเอียดกิจกรรม
         </a>
       </div>
 
-      <p><strong>หมายเหตุ:</strong> กรุณามาให้ตรงเวลาและเตรียมเอกสารที่จำเป็น</p>
-    </div>
-
-    <div class="footer">
-      <p>หากมีคำถาม กรุณาติดต่อ: <%= contactEmail || 'support@example.com' %></p>
-      <p>© 2024 ระบบจัดการกิจกรรม. สงวนลิขสิทธิ์.</p>
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 0.9em;">
+        <p>หากมีคำถาม กรุณาติดต่อ: <%= contactEmail || 'support@example.com' %></p>
+        <p>© 2024 ระบบจัดการกิจกรรม. สงวนลิขสิทธิ์.</p>
+      </div>
     </div>
   </body>
 </html>
