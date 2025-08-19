@@ -136,6 +136,29 @@ export class TeacherDao extends ErrorHandledDao {
     }
   }
 
+  public async getTeacherByUserId(users_id: number): Promise<Teacher | null> {
+    this.checkConnection();
+    try {
+      const sql = `
+        SELECT 
+          t.teacher_id,
+          t.users_id,
+          t.first_name,
+          t.last_name,
+          t.faculty_id,
+          f.faculty_name
+        FROM teacher t
+        LEFT JOIN faculty f ON t.faculty_id = f.faculty_id
+        WHERE t.users_id = $1
+      `;
+      const result = await this.dataSource!.query(sql, [users_id]);
+      return result[0] || null;
+    } catch (error) {
+      this.logDbError("getTeacherByUserId", error);
+      throw error;
+    }
+  }
+
   public async updatedTeacher(
     teacher_id: number,
     first_name: string | null,

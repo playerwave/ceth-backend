@@ -5,7 +5,6 @@ import { Assessment } from "../../entity/assessment.entity";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 import { RoomService } from "./room.service";
-import { convertDateFieldsToLocal } from "../../utils/convertDateFieldsToLocal";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
@@ -199,21 +198,17 @@ export class ActivityService extends ErrorHandledService {
       foods: foods,
     });
 
-    const localInput = convertDateFieldsToLocal({
+    const updatedData: Partial<Activity> = {
       ...input,
       last_update_activity_date: new Date(),
       create_activity_date: input.create_activity_date ?? new Date(),
-    });
-
-    const updatedData: Partial<Activity> = {
-      ...localInput,
       recieve_hours: hrs ?? undefined,
       seat: input.seat ?? 0,
-      assessment_id: input.assessment_id || null, // ✅ ใช้ null แทน undefined
-      // Set assessment dates from input (prioritize input over assessment data)
+      assessment_id: input.assessment_id ?? null, // ✅ ใช้ null แทน undefined
+      // Set assessment dates from input (do not shift timezone)
       start_assessment: input.start_assessment ?? null,
       end_assessment: input.end_assessment ?? null,
-      room_id: input.event_format === "Onsite" ? input.room_id || null : null, // ✅ ใช้ null แทน undefined
+      room_id: input.event_format === "Onsite" ? input.room_id ?? null : null, // ✅ ใช้ null แทน undefined
       url: input.url ?? undefined,
     };
 

@@ -98,8 +98,10 @@ app.use((req, res, next) => {
 // ใช้ CORS
 app.use(
   cors({
-    origin: "http://localhost:5173", // ระบุโดเมนที่อนุญาต
+    origin: ["http://localhost:5173", "http://localhost:3000"], // ระบุโดเมนที่อนุญาต
     credentials: true, // อนุญาตให้ใช้ credentials เช่น cookies
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   })
 );
 
@@ -136,7 +138,7 @@ app.use("/api/student", studentRoute);
 app.use("/api/student/grade", studentGradeRoute);
 app.use("/api/ocr", ocrRoute);
 
-// api ของ visitor
+// api ของ auth (login, logout, me)
 app.use("/api/auth", authRoute);
 
 app.use("/api/role", roleRoute);

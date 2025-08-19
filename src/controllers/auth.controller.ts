@@ -87,6 +87,31 @@ export class AuthController extends ErrorHandledController {
         }
       }
 
+      // ถ้าเป็น Teacher ให้ดึงข้อมูล Teacher เพิ่มเติม
+      if (user.roles.roles_name === "Teacher") {
+        const teacherData = await this.authService.getTeacherData(
+          user.users_id
+        );
+
+        if (teacherData) {
+          const responseBody = {
+            message: "เข้าสู่ระบบสำเร็จ",
+            user: {
+              users_id: user.users_id,
+              username: user.username,
+              roles_id: user.roles_id,
+              roles_name: user.roles.roles_name,
+              teacher: teacherData,
+            },
+          };
+
+          // สร้าง token ก่อน
+          const token = generateTokenAndSetCookie(res, user.users_id);
+          res.status(200).json(responseBody);
+          return;
+        }
+      }
+
       // สำหรับ role อื่นๆ
       const responseBody = {
         message: "เข้าสู่ระบบสำเร็จ",
@@ -137,6 +162,22 @@ export class AuthController extends ErrorHandledController {
           res.status(200).json({
             ...safeUser,
             student: studentData,
+          });
+          return;
+        }
+      }
+
+      // ถ้าเป็น Teacher ให้ดึงข้อมูล Teacher เพิ่มเติม
+      if (result.roles.roles_name === "Teacher") {
+        const teacherData = await this.authService.getTeacherData(
+          user.users_id
+        );
+
+        if (teacherData) {
+          res.setHeader("Cache-Control", "no-store");
+          res.status(200).json({
+            ...safeUser,
+            teacher: teacherData,
           });
           return;
         }

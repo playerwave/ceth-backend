@@ -86,8 +86,8 @@ export class ActivityDao extends ErrorHandledDao {
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
           AND a.activity_state IN ('Special Open Register', 'Open Register')
-          AND a.special_start_register_date <= NOW()
-          AND a.end_register_date > NOW()
+          AND a.special_start_register_date <= NOW() + INTERVAL '7 hours'
+          AND a.end_register_date > NOW() + INTERVAL '7 hours'
           AND (
             SELECT COUNT(*)
             FROM activity_detail ad
@@ -111,8 +111,8 @@ export class ActivityDao extends ErrorHandledDao {
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
           AND a.activity_state = 'Open Register'
-          AND a.start_register_date <= NOW()
-          AND a.end_register_date > NOW()
+          AND a.start_register_date <= NOW() + INTERVAL '7 hours'
+          AND a.end_register_date > NOW() + INTERVAL '7 hours'
           AND (
             SELECT COUNT(*)
             FROM activity_detail ad
@@ -131,6 +131,39 @@ export class ActivityDao extends ErrorHandledDao {
     }
 
     params = [studentId];
+    
+    // ✅ Debug: ตรวจสอบกิจกรรมทั้งหมดที่ตรงเงื่อนไขพื้นฐาน
+    const debugQuery = `
+      SELECT a.activity_id, a.activity_name, a.activity_state, a.seat,
+             a.start_register_date, a.end_register_date, a.special_start_register_date,
+             NOW() as current_time,
+             (
+               SELECT COUNT(*)
+               FROM activity_detail ad
+               JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+               WHERE ad.activity_id = a.activity_id
+             ) as enrolled_count,
+             EXISTS (
+               SELECT 1
+               FROM activity_detail ad
+               JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+               WHERE ad.activity_id = a.activity_id
+                 AND j.students_id = $1
+             ) as already_enrolled
+      FROM activity a
+      WHERE a.activity_status = 'Public'
+        AND a.status = 'Active'
+        AND a.activity_state IN ('Special Open Register', 'Open Register')
+      ORDER BY a.create_activity_date DESC
+    `;
+    const debugResult = await this.dataSource!.query(debugQuery, [studentId]);
+    console.log(`🔍 [DEBUG] All matching activities for student ${studentId}:`, debugResult);
+    
+    // ✅ Debug: แสดงเวลาปัจจุบันที่ใช้ใน query
+    const timeQuery = `SELECT NOW() as current_db_time, CURRENT_TIMESTAMP as current_timestamp, NOW() + INTERVAL '7 hours' as thai_time`;
+    const timeResult = await this.dataSource!.query(timeQuery);
+    console.log(`🕐 [DEBUG] Current time used in query:`, timeResult[0]);
+    
     const result = await this.dataSource!.query(query, params);
 
     console.log(
@@ -165,10 +198,14 @@ export class ActivityDao extends ErrorHandledDao {
       INNER JOIN "join" j ON j.activity_detail_id = ad.activity_detail_id
       WHERE j.students_id = $1
         AND a.activity_status = 'Public'
+        AND ad.status = 'Registered'
+        AND ad.time_in IS NULL
+        AND ad.time_out IS NULL
       ORDER BY a.start_activity_date DESC
     `;
 
     const result = await this.dataSource!.query(query, [studentId]);
+    console.log(`📊 Found ${result.length} enrolled activities for student ${studentId} (Registered status, no check-in/out)`);
     return result;
   }
 

@@ -184,16 +184,14 @@ export class ActivityController extends ErrorHandledController {
       recieve_hours: this.parseOptionalInt(body.recieve_hours) ?? 0, // ✅ ใช้ 0 แทน null
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
-      special_start_register_date:
-        this.parseDate(body.special_start_register_date) || new Date(),
-      start_register_date:
-        this.parseDate(body.start_register_date) || new Date(),
-      end_register_date: this.parseDate(body.end_register_date) || new Date(),
-      start_activity_date:
-        this.parseDate(body.start_activity_date) || new Date(),
-      end_activity_date: this.parseDate(body.end_activity_date) || new Date(),
-      start_assessment: this.parseDate(body.start_assessment), // ✅ เพิ่ม start_assessment
-      end_assessment: this.parseDate(body.end_assessment), // ✅ เพิ่ม end_assessment
+      // ✅ ส่งผ่านค่าเวลาแบบเดิม (string) โดยไม่แปลง timezone
+      special_start_register_date: body.special_start_register_date ?? null,
+      start_register_date: body.start_register_date ?? null,
+      end_register_date: body.end_register_date ?? null,
+      start_activity_date: body.start_activity_date ?? null,
+      end_activity_date: body.end_activity_date ?? null,
+      start_assessment: body.start_assessment ?? null,
+      end_assessment: body.end_assessment ?? null,
       image_url: body.image_url || "ไม่ระบุ",
       activity_status: body.activity_status || "Private", // ENUM
       activity_state: body.activity_state || "Not Start", // ENUM

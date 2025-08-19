@@ -10,13 +10,11 @@ const activityDao = new ActivityDao();
 // cron.schedule("*/1 * * * *", async () => { 1 นาที
 cron.schedule("*/5 * * * *", async () => {
   const now = new Date();
-  const thaiTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // เพิ่ม 7 ชั่วโมง
   console.log(`🔁 [Cron] Running auto-update activity states job at ${now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`);
-  console.log(`🕐 [Cron] UTC time: ${now.toISOString()}`);
-  console.log(`🕐 [Cron] Thai time: ${thaiTime.toISOString()}`);
+  console.log(`🕐 [Cron] Current time: ${now.toISOString()}`);
   try {
     // Call advanceStatesOnce directly from DAO
-    const result = await activityDao.advanceStatesOnce(thaiTime);
+    const result = await activityDao.advanceStatesOnce(now);
     console.log(`✅ [Cron] advanceStatesOnce finished successfully at ${now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`);
     console.log(`📊 [Cron] Result:`, result);
   } catch (error) {

@@ -2,7 +2,7 @@ import { DataSource } from "typeorm";
 import { Activity } from "../../entity/activity.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
-import { formatTimeToLocal, add7Hours } from "../../utils/formatTimeToLocal";
+
 
 export type TransitionResult = {
   notStartToSpecial: number;
@@ -59,10 +59,7 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  private formatDateToLocalString(date: Date): string {
-    // ✅ ใช้ formatTimeToLocal utility แทนการแปลงเอง
-    return formatTimeToLocal(date, "Asia/Bangkok");
-  }
+
 
   private sanitizeDate(input: unknown): string | null {
     // ✅ ถ้าเป็น null หรือ empty string ให้ return null
@@ -71,19 +68,30 @@ export class ActivityDao extends ErrorHandledDao {
     }
 
     if (input instanceof Date) {
-      // ✅ บวก 7 ชั่วโมงก่อนบันทึก
-      return add7Hours(this.formatDateToLocalString(input));
+      // ✅ สำหรับ Date object ให้ใช้ UTC time components เพื่อไม่ให้ shift timezone
+      const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+      return `${input.getUTCFullYear()}-${pad(input.getUTCMonth() + 1)}-${pad(input.getUTCDate())} ${pad(input.getUTCHours())}:${pad(input.getUTCMinutes())}:${pad(input.getUTCSeconds())}`;
     }
 
     if (typeof input === "string" && input.trim() !== "") {
-      const parsed = new Date(input);
-      if (isNaN(parsed.getTime())) {
-        // ✅ ถ้า parse ไม่ได้ ให้ return null
-        return null;
-      } else {
-        // ✅ บวก 7 ชั่วโมงก่อนบันทึก
-        return add7Hours(this.formatDateToLocalString(parsed));
+      const trimmed = input.trim();
+      
+      // ✅ เอา timezone ออก (Z หรือ +07:00 ฯลฯ) เพื่อไม่ให้ Postgres shift เวลา
+      // ตัวอย่าง: 2025-08-24T09:00:00.000Z -> 2025-08-24 09:00:00
+      // หรือ 2025-08-24T09:00:00+07:00 -> 2025-08-24 09:00:00
+      const noTz = trimmed
+        .replace(/Z$/i, "")
+        .replace(/[\+\-]\d{2}:?\d{2}$/i, "");
+
+      // รองรับทั้งรูปแบบมี T และมี space
+      const parts = noTz.replace("T", " ");
+      const match = parts.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(\.\d+)?$/);
+      if (match) {
+        // คืนแบบ 'YYYY-MM-DD HH:mm:ss' โดยตรงจาก string ไม่แปลง timezone
+        return `${match[1]} ${match[2]}`;
       }
+
+      return null;
     }
 
     // ✅ ถ้าไม่มีข้อมูล ให้ return null
@@ -432,27 +440,25 @@ export class ActivityDao extends ErrorHandledDao {
           return null;
         }
 
-        // ✅ จัดการ date fields ให้บวก 7 ชั่วโมงก่อนบันทึก
-        if (value instanceof Date) {
-          return add7Hours(this.formatDateToLocalString(value));
+              // ✅ จัดการ date fields ให้เขียนแบบไม่มี timezone เพื่อเลี่ยง +7 ชม.
+      if (field.includes("_date") || field.includes("_assessment")) {
+        // ✅ ถ้าเป็น string ที่มี timezone ให้เอา timezone ออก
+        if (typeof value === "string" && value.trim() !== "") {
+          const trimmed = value.trim();
+          // เอา timezone ออก (Z หรือ +07:00 ฯลฯ)
+          const noTz = trimmed
+            .replace(/Z$/i, "")
+            .replace(/[\+\-]\d{2}:?\d{2}$/i, "");
+          
+          // รองรับทั้งรูปแบบมี T และมี space
+          const parts = noTz.replace("T", " ");
+          const match = parts.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(\.\d+)?$/);
+          if (match) {
+            return `${match[1]} ${match[2]}`;
+          }
         }
-
-        // ✅ จัดการ date fields ที่เป็น string ให้บวก 7 ชั่วโมงก่อนบันทึก
-        if (
-          typeof value === "string" &&
-          value.trim() !== "" &&
-          (field.includes("_date") || field.includes("_assessment"))
-        ) {
-          return add7Hours(value);
-        }
-
-        // ✅ จัดการ null หรือ empty string สำหรับ date fields
-        if (
-          (value === null || value === "" || value === undefined) &&
-          (field.includes("_date") || field.includes("_assessment"))
-        ) {
-          return null;
-        }
+        return this.sanitizeDate(value);
+      }
 
         return value ?? null;
       });
@@ -545,45 +551,47 @@ export class ActivityDao extends ErrorHandledDao {
   public async findById(id: number): Promise<Activity | null> {
     await this.checkConnection();
 
-    const result = await this.dataSource!.getRepository(Activity).findOne({
-      where: { activity_id: id },
-      relations: ["activityFood", "activityFood.food"], // 👈 ดึง relation มาด้วย
-    });
+    // ✅ ดึงข้อมูลด้วยรูปแบบเวลาเป็น string ไม่ทำให้ timezone ขยับ
+    const rows: any[] = await this.dataSource!.query(
+      `
+        SELECT 
+          activity_id,
+          activity_name,
+          presenter_company_name,
+          type,
+          description,
+          seat,
+          recieve_hours,
+          event_format,
+          to_char(create_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as create_activity_date,
+          to_char(special_start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as special_start_register_date,
+          to_char(start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_register_date,
+          to_char(end_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_register_date,
+          to_char(start_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_activity_date,
+          to_char(end_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_activity_date,
+          to_char(start_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_assessment,
+          to_char(end_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_assessment,
+          image_url,
+          activity_status,
+          activity_state,
+          status,
+          to_char(last_update_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as last_update_activity_date,
+          url,
+          room_id,
+          assessment_id
+        FROM activity
+        WHERE activity_id = $1
+      `,
+      [id]
+    );
 
-    // ✅ Log ข้อมูลอาหารที่ดึงออกมา
-    if (result && result.activityFood) {
-      console.log("🍽️ Activity foods found:", result.activityFood.length);
-      result.activityFood.forEach((af, index) => {
-        console.log(`🍽️ Food ${index + 1}:`, {
-          activity_food_id: af.activity_food_id,
-          food_id: af.food_id,
-          food_name: af.food?.food_name,
-        });
-      });
-    } else {
-      console.log("🍽️ No foods found for activity:", id);
-    }
+    const row = rows?.[0];
+    if (!row) return null;
 
-    // ✅ Log ข้อมูลที่ดึงออกมาจาก Database
-    if (result) {
-      console.log("🔍 === FIND BY ID - DATA FROM DATABASE ===");
-      console.log(
-        "📅 special_start_register_date:",
-        result.special_start_register_date
-      );
-      console.log("📅 start_register_date:", result.start_register_date);
-      console.log("📅 end_register_date:", result.end_register_date);
-      console.log("📅 start_activity_date:", result.start_activity_date);
-      console.log("📅 end_activity_date:", result.end_activity_date);
-      console.log("📅 start_assessment:", result.start_assessment);
-      console.log("📅 end_assessment:", result.end_assessment);
-      console.log("⏰ recieve_hours:", result.recieve_hours);
-      console.log("🏢 room_id:", result.room_id);
-      console.log("📊 assessment_id:", result.assessment_id);
-      console.log("🔍 === END LOG ===");
-    }
+    // เติม field ที่ frontend คาดหวัง
+    (row as any).activityFood = (row as any).activityFood ?? [];
 
-    return result;
+    return row as unknown as Activity;
   }
 
   // อัปเดตข้อมูลกิจกรรม (ใช้สำหรับ soft delete)
@@ -629,11 +637,9 @@ export class ActivityDao extends ErrorHandledDao {
     await qr.connect();
     await qr.startTransaction();
   
-    // ✅ แก้ไข: ใช้เวลาไทย (UTC+7) แทน UTC
+    // ✅ ใช้เวลาปัจจุบันโดยไม่เพิ่ม timezone offset
     const nowRef = freezeNow ?? new Date();
-    const thaiTime = new Date(nowRef.getTime() + (7 * 60 * 60 * 1000)); // เพิ่ม 7 ชั่วโมง
-    console.log(`🕐 [advanceStatesOnce] UTC time:`, nowRef.toISOString());
-    console.log(`🕐 [advanceStatesOnce] Thai time:`, thaiTime.toISOString());
+    console.log(`🕐 [advanceStatesOnce] Current time:`, nowRef.toISOString());
   
     const run = async (sql: string, params: unknown[]): Promise<number[]> => {
       const rows: Array<{ activity_id: number }> = await qr.query(sql, params);
@@ -683,7 +689,7 @@ export class ActivityDao extends ErrorHandledDao {
            AND (start_register_date IS NULL OR $1::timestamp < start_register_date)
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
   
       // 2) Not Start -> Open Register
@@ -699,7 +705,7 @@ export class ActivityDao extends ErrorHandledDao {
            AND (end_register_date IS NULL OR $1::timestamp < end_register_date)
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
   
       // 3) Special Open Register -> Open Register
@@ -715,7 +721,7 @@ export class ActivityDao extends ErrorHandledDao {
            AND (end_register_date IS NULL OR $1::timestamp < end_register_date)
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
   
       // 4) Open Register -> Close Register  ← (คุณพิมพ์ว่า "End Register" แต่ enum จริงคือ "Close Register")
@@ -731,7 +737,7 @@ export class ActivityDao extends ErrorHandledDao {
                       AND (start_activity_date IS NULL OR $1::timestamp < start_activity_date)
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
 
       // 5) Close Register -> Start Activity
@@ -747,7 +753,7 @@ export class ActivityDao extends ErrorHandledDao {
                       AND (end_activity_date IS NULL OR $1::timestamp < end_activity_date)
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
 
       // 6) Start Activity -> End Activity
@@ -762,7 +768,7 @@ export class ActivityDao extends ErrorHandledDao {
            AND $1::timestamp >= end_activity_date
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
   
       // 7) End Activity -> Start Assessment (เมื่อถึง start_assessment)
@@ -777,7 +783,7 @@ export class ActivityDao extends ErrorHandledDao {
            AND $1::timestamp >= start_assessment
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
 
       // 8) Start Assessment -> End Assessment (เมื่อถึง end_assessment)
@@ -792,7 +798,7 @@ export class ActivityDao extends ErrorHandledDao {
            AND $1::timestamp >= end_assessment
         RETURNING activity_id
         `,
-        [thaiTime]
+        [nowRef]
       );
   
       await qr.commitTransaction();
