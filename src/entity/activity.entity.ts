@@ -39,6 +39,7 @@ import { Certificate } from "./certificate.entity";
 @Index("IDX_ASSESSMENT_ID_ACTIVITY", ["assessment_id"])
 @Index("IDX_START_ASSESSMENT_ACTIVITY", ["start_assessment"])
 @Index("IDX_END_ASSESSMENT_ACTIVITY", ["end_assessment"])
+@Index("IDX_REGISTERED_COUNT_ACTIVITY", ["registered_count"])
 export class Activity {
   @PrimaryGeneratedColumn()
   activity_id!: number;
@@ -154,6 +155,9 @@ export class Activity {
 
   @Column({ type: "timestamp", nullable: true })
   end_assessment?: Date | null;
+
+  @Column({ type: "int", nullable: true, default: 0 })
+  registered_count?: number | null;
 
   @OneToMany(() => ActivityFood, (activityFood) => activityFood.activity)
   activityFood?: ActivityFood[];
