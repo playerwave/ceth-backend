@@ -85,15 +85,19 @@ export class ActivityDao extends ErrorHandledDao {
         FROM activity a
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
-          AND a.activity_state IN ('Special Open Register', 'Open Register')
-          AND a.special_start_register_date <= NOW() + INTERVAL '7 hours'
-          AND a.end_register_date > NOW() + INTERVAL '7 hours'
           AND (
-            SELECT COUNT(*)
-            FROM activity_detail ad
-            JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
-            WHERE ad.activity_id = a.activity_id
-          ) < a.seat
+            (a.activity_state IN ('Special Open Register', 'Open Register')
+             AND a.special_start_register_date <= NOW() + INTERVAL '7 hours'
+             AND a.end_register_date > NOW() + INTERVAL '7 hours'
+             AND (
+               SELECT COUNT(*)
+               FROM activity_detail ad
+               JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+               WHERE ad.activity_id = a.activity_id
+             ) < a.seat)
+            OR
+            (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
+          )
           AND NOT EXISTS (
             SELECT 1
             FROM activity_detail ad
@@ -110,15 +114,19 @@ export class ActivityDao extends ErrorHandledDao {
         FROM activity a
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
-          AND a.activity_state = 'Open Register'
-          AND a.start_register_date <= NOW() + INTERVAL '7 hours'
-          AND a.end_register_date > NOW() + INTERVAL '7 hours'
           AND (
-            SELECT COUNT(*)
-            FROM activity_detail ad
-            JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
-            WHERE ad.activity_id = a.activity_id
-          ) < a.seat
+            (a.activity_state = 'Open Register'
+             AND a.start_register_date <= NOW() + INTERVAL '7 hours'
+             AND a.end_register_date > NOW() + INTERVAL '7 hours'
+             AND (
+               SELECT COUNT(*)
+               FROM activity_detail ad
+               JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+               WHERE ad.activity_id = a.activity_id
+             ) < a.seat)
+            OR
+            (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
+          )
           AND NOT EXISTS (
             SELECT 1
             FROM activity_detail ad
@@ -134,7 +142,7 @@ export class ActivityDao extends ErrorHandledDao {
     
     // ✅ Debug: ตรวจสอบกิจกรรมทั้งหมดที่ตรงเงื่อนไขพื้นฐาน
     const debugQuery = `
-      SELECT a.activity_id, a.activity_name, a.activity_state, a.seat,
+      SELECT a.activity_id, a.activity_name, a.activity_state, a.event_format, a.seat,
              a.start_register_date, a.end_register_date, a.special_start_register_date,
              NOW() as current_time,
              (
@@ -153,7 +161,10 @@ export class ActivityDao extends ErrorHandledDao {
       FROM activity a
       WHERE a.activity_status = 'Public'
         AND a.status = 'Active'
-        AND a.activity_state IN ('Special Open Register', 'Open Register')
+        AND (
+          a.activity_state IN ('Special Open Register', 'Open Register')
+          OR (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
+        )
       ORDER BY a.create_activity_date DESC
     `;
     const debugResult = await this.dataSource!.query(debugQuery, [studentId]);
