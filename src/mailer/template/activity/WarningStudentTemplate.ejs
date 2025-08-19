@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Warning</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background-color: #F59E0B;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px 8px 0 0;
+      }
+      .content {
+        background-color: #fffbeb;
+        padding: 20px;
+        border-radius: 0 0 8px 8px;
+      }
+      .warning-box {
+        background-color: white;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+        border-left: 4px solid #F59E0B;
+      }
+      .button {
+        display: inline-block;
+        background-color: #F59E0B;
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #666;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>⚠️ คำเตือนสำหรับนักเรียน</h1>
+    </div>
+    
+    <div class="content">
+      <h2>สวัสดี <%= name || 'นักเรียน' %>!</h2>
+      
+      <p>นี่เป็นคำเตือนเกี่ยวกับพฤติกรรมหรือการปฏิบัติตัวของคุณ:</p>
+      
+      <div class="warning-box">
+        <h3>🚨 รายละเอียดคำเตือน</h3>
+        <p><strong>ประเภท:</strong> <%= warningType || 'พฤติกรรมไม่เหมาะสม' %></p>
+        <p><strong>วันที่:</strong> <%= warningDate || 'วันนี้' %></p>
+        <p><strong>รายละเอียด:</strong> <%= warningDetails || 'กรุณาปรับปรุงพฤติกรรม' %></p>
+        <p><strong>ผลกระทบ:</strong> <%= consequences || 'อาจส่งผลต่อการประเมินผล' %></p>
+      </div>
+
+      <% if (message) { %>
+        <div class="warning-box">
+          <h3>📝 ข้อความเพิ่มเติม</h3>
+          <p><%= message %></p>
+        </div>
+      <% } %>
+
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="<%= contactLink || '#' %>" class="button">
+          📞 ติดต่ออาจารย์ที่ปรึกษา
+        </a>
+      </div>
+
+      <p><strong>หมายเหตุ:</strong> กรุณาปรับปรุงพฤติกรรมและปฏิบัติตามกฎระเบียบของสถาบัน</p>
+    </div>
+
+    <div class="footer">
+      <p>หากมีคำถาม กรุณาติดต่อ: <%= contactEmail || 'advisor@buu.ac.th' %></p>
+      <p>© 2024 ระบบจัดการกิจกรรม. สงวนลิขสิทธิ์.</p>
+    </div>
+  </body>
+</html>

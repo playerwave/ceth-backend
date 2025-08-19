@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activity Reminder</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background-color: #DC2626;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px 8px 0 0;
+      }
+      .content {
+        background-color: #fef2f2;
+        padding: 20px;
+        border-radius: 0 0 8px 8px;
+      }
+      .reminder-box {
+        background-color: white;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+        border-left: 4px solid #DC2626;
+      }
+      .urgent {
+        background-color: #fef3c7;
+        border-left-color: #F59E0B;
+      }
+      .button {
+        display: inline-block;
+        background-color: #DC2626;
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #666;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>⏰ เตือนกิจกรรมพรุ่งนี้!</h1>
+    </div>
+    
+    <div class="content">
+      <h2>สวัสดี <%= name || 'ผู้ใช้' %>!</h2>
+      
+      <p>นี่เป็นการเตือนว่าคุณมีกิจกรรมพรุ่งนี้ กรุณาตรวจสอบรายละเอียด:</p>
+      
+      <div class="reminder-box urgent">
+        <h3>🚨 กิจกรรมพรุ่งนี้</h3>
+        <p><strong>ชื่อกิจกรรม:</strong> <%= activityName || 'กิจกรรมพัฒนาทักษะ' %></p>
+        <p><strong>วันที่:</strong> <%= activityDate || 'พรุ่งนี้' %></p>
+        <p><strong>เวลา:</strong> <%= activityTime || '09:00 - 16:00' %></p>
+        <p><strong>สถานที่:</strong> <%= activityLocation || 'ห้องประชุมใหญ่' %></p>
+        <p><strong>สิ่งที่ต้องเตรียม:</strong> <%= requirements || 'เอกสารและเครื่องเขียน' %></p>
+      </div>
+
+      <% if (message) { %>
+        <div class="reminder-box">
+          <h3>📝 ข้อความเพิ่มเติม</h3>
+          <p><%= message %></p>
+        </div>
+      <% } %>
+
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="<%= activityLink || '#' %>" class="button">
+          📋 ดูรายละเอียดกิจกรรม
+        </a>
+      </div>
+
+      <p><strong>หมายเหตุ:</strong> กรุณามาให้ตรงเวลาและเตรียมเอกสารที่จำเป็น</p>
+    </div>
+
+    <div class="footer">
+      <p>หากมีคำถาม กรุณาติดต่อ: <%= contactEmail || 'support@example.com' %></p>
+      <p>© 2024 ระบบจัดการกิจกรรม. สงวนลิขสิทธิ์.</p>
+    </div>
+  </body>
+</html>
+
