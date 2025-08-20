@@ -298,8 +298,7 @@ export const sendCourseStartEmail = async (activityData: any): Promise<void> => 
       activityImage: activityData.image_url,
       organizerName: activityData.presenter_company_name || "คณะวิทยาการสารสนเทศ",
       activityType: activityData.type || "Hard Skill",
-      hoursEarned: activityData.recieve_hours || "6",
-      message: `คอร์ส ${activityData.activity_name} ได้เริ่มต้นแล้ว กรุณาเข้าร่วมตามเวลาที่กำหนด`
+      hoursEarned: activityData.recieve_hours || "6"
     };
 
     // อ่าน template
