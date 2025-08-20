@@ -174,6 +174,9 @@ export class StudentsController extends ErrorHandledController {
     department_id?: number;
     grade_id?: number;
     eventcoop_id?: number;
+    soft_hours?: number;
+    hard_hours?: number;
+    risk_status?: string;
   } {
     return {
       users_id: body.users_id,
@@ -185,6 +188,9 @@ export class StudentsController extends ErrorHandledController {
       department_id: body.department_id,
       grade_id: body.grade_id,
       eventcoop_id: body.eventcoop_id,
+      soft_hours: body.soft_hours,
+      hard_hours: body.hard_hours,
+      risk_status: body.risk_status,
     };
   }
 

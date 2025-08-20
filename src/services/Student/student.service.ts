@@ -128,6 +128,9 @@ export class StudentsService extends ErrorHandledService {
       department_id?: number;
       grade_id?: number;
       eventcoop_id?: number;
+      soft_hours?: number;
+      hard_hours?: number;
+      risk_status?: string;
     }
   ): Promise<Students | null> {
     try {
@@ -147,7 +150,10 @@ export class StudentsService extends ErrorHandledService {
           data.department_id || null,
           data.grade_id || null,
           data.eventcoop_id || null,
-          students_id
+          students_id,
+          data.soft_hours || null,
+          data.hard_hours || null,
+          data.risk_status || null
         );
       } else {
         const emailExists = await this.studentsDao.getStudentsByEmail(
@@ -167,7 +173,10 @@ export class StudentsService extends ErrorHandledService {
           data.department_id || null,
           data.grade_id || null,
           data.eventcoop_id || null,
-          students_id
+          students_id,
+          data.soft_hours || null,
+          data.hard_hours || null,
+          data.risk_status || null
         );
       }
 

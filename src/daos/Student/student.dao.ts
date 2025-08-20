@@ -184,11 +184,14 @@ export class StudentsDao extends ErrorHandledDao {
     department_id: number | null,
     grade_id: number | null,
     eventcoop_id: number | null,
-    students_id: number
+    students_id: number,
+    soft_hours?: number | null,
+    hard_hours?: number | null,
+    risk_status?: string | null
   ): Promise<Students[]> {
     this.checkConnection();
     try {
-      const sql = `UPDATE students SET first_name = $1, last_name = $2, email = $3, education_status = $4, faculty_id = $5, department_id = $6, grade_id = $7, eventcoop_id = $8 WHERE students_id = $9`;
+      const sql = `UPDATE students SET first_name = $1, last_name = $2, email = $3, education_status = $4, faculty_id = $5, department_id = $6, grade_id = $7, eventcoop_id = $8, soft_hours = $9, hard_hours = $10, risk_status = $11 WHERE students_id = $12`;
       return await this.dataSource!.query(sql, [
         first_name,
         last_name,
@@ -198,6 +201,9 @@ export class StudentsDao extends ErrorHandledDao {
         department_id,
         grade_id,
         eventcoop_id,
+        soft_hours,
+        hard_hours,
+        risk_status,
         students_id,
       ]);
     } catch (error) {
@@ -214,11 +220,14 @@ export class StudentsDao extends ErrorHandledDao {
     department_id: number | null,
     grade_id: number | null,
     eventcoop_id: number | null,
-    students_id: number
+    students_id: number,
+    soft_hours?: number | null,
+    hard_hours?: number | null,
+    risk_status?: string | null
   ): Promise<Students[]> {
     this.checkConnection();
     try {
-      const sql = `UPDATE students SET first_name = $1, last_name = $2, education_status = $3, faculty_id = $4, department_id = $5, grade_id = $6, eventcoop_id = $7 WHERE students_id = $8`;
+      const sql = `UPDATE students SET first_name = $1, last_name = $2, education_status = $3, faculty_id = $4, department_id = $5, grade_id = $6, eventcoop_id = $7, soft_hours = $8, hard_hours = $9, risk_status = $10 WHERE students_id = $11`;
       return await this.dataSource!.query(sql, [
         first_name,
         last_name,
@@ -227,6 +236,9 @@ export class StudentsDao extends ErrorHandledDao {
         department_id,
         grade_id,
         eventcoop_id,
+        soft_hours,
+        hard_hours,
+        risk_status,
         students_id,
       ]);
     } catch (error) {
