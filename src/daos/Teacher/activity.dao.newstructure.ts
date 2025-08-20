@@ -645,7 +645,7 @@ export class ActivityDao extends ErrorHandledDao {
     console.log(`🕐 [advanceStatesOnce] Current time:`, nowRef.toISOString());
   
     const run = async (sql: string, params: unknown[]): Promise<any[]> => {
-      const rows: any[] = await qr.query(sql, params);
+      const [rows, rowCount] = await qr.query(sql, params);
       console.log(`🔍 [advanceStatesOnce] Query result:`, rows);
       console.log(`🔍 [advanceStatesOnce] SQL:`, sql);
       console.log(`🔍 [advanceStatesOnce] Params:`, params);
@@ -713,6 +713,26 @@ export class ActivityDao extends ErrorHandledDao {
       );
 
       // 2.5) Not Start -> Start Activity (สำหรับกิจกรรมที่เป็น Course)
+      
+      // 🔍 Debug: ตรวจสอบกิจกรรม Course ที่เป็น Not Start
+      const debugCourseQuery = `
+        SELECT 
+          activity_id, 
+          activity_name, 
+          activity_state, 
+          event_format,
+          start_activity_date,
+          end_activity_date,
+          $1::timestamp as current_time,
+          $1::timestamp >= start_activity_date as time_check
+        FROM activity 
+        WHERE status = 'Active' 
+          AND event_format = 'Course' 
+          AND activity_state = 'Not Start'
+      `;
+      const debugCourseResult = await qr.query(debugCourseQuery, [nowRef]);
+      console.log(`🔍 [advanceStatesOnce] Course activities with Not Start state:`, debugCourseResult);
+      
       const ids2_5 = await run(
         `
         UPDATE activity
@@ -724,21 +744,42 @@ export class ActivityDao extends ErrorHandledDao {
            AND start_activity_date IS NOT NULL
            AND $1::timestamp >= start_activity_date
            AND (end_activity_date IS NULL OR $1::timestamp < end_activity_date)
-        RETURNING activity_id, activity_name, presenter_company_name, type, recieve_hours, image_url, url, start_activity_date, end_activity_date
+        RETURNING activity_id, activity_name, presenter_company_name, type, recieve_hours, image_url, url, start_activity_date, end_activity_date, description
         `,
         [nowRef]
       );
 
-      // ส่งอีเมลแจ้งเตือนเมื่อ Course เริ่มต้น
+      // ส่งอีเมลแจ้งเตือนเมื่อ Course เริ่มต้น (เฉพาะกิจกรรมที่เพิ่งเปลี่ยน state)
       if (ids2_5.length > 0) {
-        console.log(`📧 Sending course start emails for ${ids2_5.length} activities`);
+        console.log(`📧 [advanceStatesOnce] Found ${ids2_5.length} Course activities that just started`);
+        console.log(`📧 [advanceStatesOnce] Activities:`, ids2_5.map(a => ({ id: a.activity_id, name: a.activity_name })));
+        
         for (const activity of ids2_5) {
           try {
-            await sendCourseStartEmail(activity);
+            console.log(`📧 [advanceStatesOnce] Processing activity: ${activity.activity_id} - ${activity.activity_name}`);
+            
+            // ตรวจสอบว่า activity ยังเป็น Start Activity อยู่หรือไม่
+            const currentState = await qr.query(
+              `SELECT activity_state FROM activity WHERE activity_id = $1`,
+              [activity.activity_id]
+            );
+            
+            console.log(`📧 [advanceStatesOnce] Current state for activity ${activity.activity_id}:`, currentState[0]?.activity_state);
+            
+            if (currentState.length > 0 && currentState[0].activity_state === 'Start Activity') {
+              console.log(`📧 [advanceStatesOnce] Calling sendCourseStartEmail for activity: ${activity.activity_id}`);
+              await sendCourseStartEmail(activity);
+              console.log(`✅ [advanceStatesOnce] Email sent successfully for activity: ${activity.activity_id}`);
+            } else {
+              console.log(`⚠️ [advanceStatesOnce] Activity ${activity.activity_id} state changed, skipping email send`);
+            }
           } catch (emailError) {
-            console.error(`❌ Failed to send course start email for activity ${activity.activity_id}:`, emailError);
+            console.error(`❌ [advanceStatesOnce] Failed to send course start email for activity ${activity.activity_id}:`, emailError);
+            console.error(`❌ [advanceStatesOnce] Error details:`, emailError);
           }
         }
+      } else {
+        console.log(`📧 [advanceStatesOnce] No new Course activities started at ${nowRef.toISOString()}`);
       }
   
       // 3) Special Open Register -> Open Register

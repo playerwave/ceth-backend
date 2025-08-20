@@ -47,7 +47,7 @@
 
       <div style="margin-bottom: 20px;">
         <p style="margin-bottom: 4px;"><strong>Description:</strong></p>
-        <p style="margin-top: 0; color: #666;">คอร์สได้เริ่มต้นแล้ว กรุณาเข้าร่วมตามเวลาที่กำหนด</p>
+        <p style="margin-top: 0; color: #666;"><%= description || 'คอร์สได้เริ่มต้นแล้ว กรุณาเข้าร่วมตามเวลาที่กำหนด' %></p>
       </div>
 
       <div style="margin-bottom: 20px;">
@@ -62,7 +62,7 @@
       <% } %>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="<%= activityLink || '#' %>" style="
+        <a href="<%= activityLink %>" style="
           display: inline-block;
           background-color: #1E3A8A;
           color: white;

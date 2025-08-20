@@ -273,10 +273,24 @@ export const sendEmailTemplate = async (req: Request, res: Response): Promise<vo
 export const sendCourseStartEmail = async (activityData: any): Promise<void> => {
   try {
     // ตรวจสอบ environment variables
+    console.log("🔍 [sendCourseStartEmail] Checking environment variables...");
+    console.log("🔍 [sendCourseStartEmail] EMAIL_SENDER:", process.env.EMAIL_SENDER ? "SET" : "MISSING");
+    console.log("🔍 [sendCourseStartEmail] EMAIL_APP_PASSWORD:", process.env.EMAIL_APP_PASSWORD ? "SET" : "MISSING");
+    
     if (!process.env.EMAIL_SENDER || !process.env.EMAIL_APP_PASSWORD) {
-      console.error("Missing email configuration for course start notification");
+      console.error("❌ Missing email configuration for course start notification");
+      console.error("❌ EMAIL_SENDER:", process.env.EMAIL_SENDER);
+      console.error("❌ EMAIL_APP_PASSWORD:", process.env.EMAIL_APP_PASSWORD);
       return;
     }
+
+    // ตรวจสอบว่า activity ยังเป็น Start Activity อยู่หรือไม่ (ป้องกันการส่งซ้ำ)
+    if (!activityData.activity_id) {
+      console.log(`⚠️ Activity ID not provided, skipping email send`);
+      return;
+    }
+
+    console.log(`📧 Preparing to send course start email for activity: ${activityData.activity_id} - ${activityData.activity_name}`);
 
     // สร้าง transporter
     const transporter = nodemailer.createTransport({
@@ -293,13 +307,19 @@ export const sendCourseStartEmail = async (activityData: any): Promise<void> => 
     const emailData = {
       recipientEmail: "tanapatwave14@gmail.com",
       activityName: activityData.activity_name,
-      activityLink: activityData.url || "#",
-      contactEmail: activityData.contact_email || "instructor@buu.ac.th",
+      activityLink: activityData.url || "https://example.com", // ใช้ลิงก์จากฐานข้อมูล หรือ default
+      contactEmail: "kamonwans@go.buu.ac.th", // ใช้ค่า default เพราะไม่มี contact_email ในฐานข้อมูล
       activityImage: activityData.image_url,
       organizerName: activityData.presenter_company_name || "คณะวิทยาการสารสนเทศ",
       activityType: activityData.type || "Hard Skill",
-      hoursEarned: activityData.recieve_hours || "6"
+      hoursEarned: activityData.recieve_hours || "6",
+      description: activityData.description || "คอร์สได้เริ่มต้นแล้ว กรุณาเข้าร่วมตามเวลาที่กำหนด"
     };
+
+    // 🔍 Log ข้อมูลกิจกรรมก่อนส่งอีเมล
+    console.log("📧 [sendCourseStartEmail] Activity data before sending email:");
+    console.log("📧 [sendCourseStartEmail] Raw activityData:", JSON.stringify(activityData, null, 2));
+    console.log("📧 [sendCourseStartEmail] Processed emailData:", JSON.stringify(emailData, null, 2));
 
     // อ่าน template
     const templatePath = path.join(__dirname, "../mailer/template/activity/NewCourseTemplate.ejs");
@@ -307,14 +327,20 @@ export const sendCourseStartEmail = async (activityData: any): Promise<void> => 
     const renderedHtml = ejs.render(templateContent, emailData);
 
     // ส่งอีเมล
-    await transporter.sendMail({
+    console.log("📧 [sendCourseStartEmail] Attempting to send email...");
+    console.log("📧 [sendCourseStartEmail] From:", process.env.EMAIL_SENDER);
+    console.log("📧 [sendCourseStartEmail] To:", emailData.recipientEmail);
+    console.log("📧 [sendCourseStartEmail] Subject:", `🎓 คอร์สเริ่มต้นแล้ว: ${activityData.activity_name}`);
+    
+    const mailResult = await transporter.sendMail({
       from: `"ระบบจัดการกิจกรรม" <${process.env.EMAIL_SENDER}>`,
       to: emailData.recipientEmail,
       subject: `🎓 คอร์สเริ่มต้นแล้ว: ${activityData.activity_name}`,
       html: renderedHtml,
     });
 
-    console.log(`✅ Course start email sent for activity: ${activityData.activity_name}`);
+    console.log(`✅ Course start email sent successfully for activity: ${activityData.activity_name}`);
+    console.log(`✅ Message ID: ${mailResult.messageId}`);
   } catch (error) {
     console.error("❌ Error sending course start email:", error);
   }
