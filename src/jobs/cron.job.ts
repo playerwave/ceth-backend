@@ -16,7 +16,17 @@ cron.schedule("*/5 * * * *", async () => {
     // Call advanceStatesOnce directly from DAO
     const result = await activityDao.advanceStatesOnce(now);
     console.log(`✅ [Cron] advanceStatesOnce finished successfully at ${now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`);
-    console.log(`📊 [Cron] Result:`, result);
+    console.log(`📊 [Cron] Result:`, {
+      notStartToSpecial: result.notStartToSpecial,
+      notStartToOpen: result.notStartToOpen,
+      notStartToStartActivity: result.notStartToStartActivity, // เพิ่ม transition ใหม่
+      specialToOpen: result.specialToOpen,
+      openToClose: result.openToClose,
+      closeToStart: result.closeToStart,
+      startToEnd: result.startToEnd,
+      endToStartAssess: result.endToStartAssess,
+      startAssessToEnd: result.startAssessToEnd,
+    });
   } catch (error) {
     console.error(`❌ [Cron] Error running advanceStatesOnce at ${now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}:`, error);
   }

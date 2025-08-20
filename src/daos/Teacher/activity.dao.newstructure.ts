@@ -7,6 +7,7 @@ import { ErrorHandledDao } from "../error.handled.dao";
 export type TransitionResult = {
   notStartToSpecial: number;
   notStartToOpen: number;
+  notStartToStartActivity: number; // เพิ่ม transition ใหม่
   specialToOpen: number;
   openToClose: number;
   closeToStart: number;
@@ -16,6 +17,7 @@ export type TransitionResult = {
   updatedIds: {
     notStartToSpecial: number[];
     notStartToOpen: number[];
+    notStartToStartActivity: number[]; // เพิ่ม transition ใหม่
     specialToOpen: number[];
     openToClose: number[];
     closeToStart: number[];
@@ -676,7 +678,7 @@ export class ActivityDao extends ErrorHandledDao {
     };
   
     try {
-      // 1) Not Start -> Special Open Register
+      // 1) Not Start -> Special Open Register (สำหรับกิจกรรมที่ไม่ใช่ Course)
       const ids1 = await run(
         `
         UPDATE activity
@@ -684,6 +686,7 @@ export class ActivityDao extends ErrorHandledDao {
                last_update_activity_date = $1::timestamp
          WHERE status = 'Active'
            AND activity_state = 'Not Start'
+           AND event_format != 'Course'
            AND special_start_register_date IS NOT NULL
            AND $1::timestamp >= special_start_register_date
            AND (start_register_date IS NULL OR $1::timestamp < start_register_date)
@@ -692,7 +695,7 @@ export class ActivityDao extends ErrorHandledDao {
         [nowRef]
       );
   
-      // 2) Not Start -> Open Register
+      // 2) Not Start -> Open Register (สำหรับกิจกรรมที่ไม่ใช่ Course)
       const ids2 = await run(
         `
         UPDATE activity
@@ -700,9 +703,27 @@ export class ActivityDao extends ErrorHandledDao {
                last_update_activity_date = $1::timestamp
          WHERE status = 'Active'
            AND activity_state = 'Not Start'
+           AND event_format != 'Course'
            AND start_register_date IS NOT NULL
            AND $1::timestamp >= start_register_date
            AND (end_register_date IS NULL OR $1::timestamp < end_register_date)
+        RETURNING activity_id
+        `,
+        [nowRef]
+      );
+
+      // 2.5) Not Start -> Start Activity (สำหรับกิจกรรมที่เป็น Course)
+      const ids2_5 = await run(
+        `
+        UPDATE activity
+           SET activity_state = 'Start Activity',
+               last_update_activity_date = $1::timestamp
+         WHERE status = 'Active'
+           AND activity_state = 'Not Start'
+           AND event_format = 'Course'
+           AND start_activity_date IS NOT NULL
+           AND $1::timestamp >= start_activity_date
+           AND (end_activity_date IS NULL OR $1::timestamp < end_activity_date)
         RETURNING activity_id
         `,
         [nowRef]
@@ -805,6 +826,7 @@ export class ActivityDao extends ErrorHandledDao {
       return {
         notStartToSpecial: ids1.length,
         notStartToOpen: ids2.length,
+        notStartToStartActivity: ids2_5.length, // เพิ่ม transition ใหม่
         specialToOpen: ids3.length,
         openToClose: ids4.length,
         closeToStart: ids5.length,
@@ -814,6 +836,7 @@ export class ActivityDao extends ErrorHandledDao {
         updatedIds: {
           notStartToSpecial: ids1,
           notStartToOpen: ids2,
+          notStartToStartActivity: ids2_5, // เพิ่ม transition ใหม่
           specialToOpen: ids3,
           openToClose: ids4,
           closeToStart: ids5,

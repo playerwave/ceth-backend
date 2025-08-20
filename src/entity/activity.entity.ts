@@ -74,14 +74,14 @@ export class Activity {
   @Column({ type: "timestamp" })
   create_activity_date?: Date;
 
-  @Column({ type: "timestamp" })
-  special_start_register_date?: Date;
+  @Column({ type: "timestamp" , nullable: true })
+  special_start_register_date?: Date | null;
 
-  @Column({ type: "timestamp" })
-  start_register_date?: Date;
+  @Column({ type: "timestamp", nullable: true })
+  start_register_date?: Date | null ;
 
-  @Column({ type: "timestamp" })
-  end_register_date?: Date;
+  @Column({ type: "timestamp", nullable: true })
+  end_register_date?: Date | null;
 
   @Column({ type: "timestamp" })
   start_activity_date?: Date;
