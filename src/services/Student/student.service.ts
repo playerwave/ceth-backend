@@ -82,10 +82,13 @@ export class StudentsService extends ErrorHandledService {
     last_name: string;
     email: string;
     education_status: string;
-    faculty_id?: number;
-    department_id?: number;
-    grade_id?: number;
-    eventcoop_id?: number;
+    faculty_id?: number | null;
+    department_id?: number | null;
+    grade_id?: number | null;
+    eventcoop_id?: number | null;
+    soft_hours?: number | null;
+    hard_hours?: number | null;
+    risk_status?: string;
   }): Promise<Students | null> {
     try {
       const existing = await this.studentsDao.getStudentsByEmail(data.email);
@@ -105,6 +108,24 @@ export class StudentsService extends ErrorHandledService {
         data.grade_id || null,
         data.eventcoop_id || null
       );
+
+      // อัปเดต soft_hours, hard_hours, risk_status
+      const student = await this.studentsDao.getStudentsByEmail(data.email);
+      if (student.length > 0) {
+        await this.studentsDao.updatedStudentNotEmail(
+          data.first_name,
+          data.last_name,
+          data.education_status,
+          data.faculty_id || null,
+          data.department_id || null,
+          data.grade_id || null,
+          data.eventcoop_id || null,
+          student[0].students_id,
+          data.soft_hours || null,
+          data.hard_hours || null,
+          data.risk_status || null
+        );
+      }
 
       await redis.del("students:all");
       this.logInfo("🆕 Student created", { email: data.email });
@@ -253,6 +274,91 @@ export class StudentsService extends ErrorHandledService {
       return deleted ? (hasRelation ? "soft" : "hard") : null;
     } catch (error) {
       this.logError("❌ Error in deletedStudents", error);
+      throw error;
+    }
+  }
+
+  public async createUserAndStudent(data: {
+    username: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    education_status: string;
+    faculty_id?: number | null;
+    department_id?: number | null;
+    grade_id?: number | null;
+    eventcoop_id?: number | null;
+    soft_hours?: number | null;
+    hard_hours?: number | null;
+    risk_status?: string;
+  }): Promise<Students | null> {
+    try {
+      // ตรวจสอบ email ซ้ำ
+      const existing = await this.studentsDao.getStudentsByEmail(data.email);
+      if (existing.length > 0) {
+        this.logInfo("🚫 Duplicate email", { email: data.email });
+        return null;
+      }
+
+      // ตรวจสอบ username ซ้ำ
+      const existingUser = await this.usersDao.getUsersByUsername(data.username);
+      if (existingUser.length > 0) {
+        this.logInfo("🚫 Duplicate username", { username: data.username });
+        return null;
+      }
+
+      // สร้าง user ก่อน (roles_id = 3 สำหรับ Student)
+      const createdUser = await this.usersDao.addUsers(
+        data.username,
+        data.password,
+        3 // roles_id = 3 สำหรับ Student
+      );
+
+      if (!createdUser) {
+        this.logInfo("❌ Failed to create user", { username: data.username });
+        return null;
+      }
+
+      // สร้าง student
+      await this.studentsDao.addStudents(
+        createdUser.users_id,
+        data.first_name,
+        data.last_name,
+        data.email,
+        data.education_status,
+        data.faculty_id || null,
+        data.department_id || null,
+        data.grade_id || null,
+        data.eventcoop_id || null
+      );
+
+      // อัปเดต soft_hours, hard_hours, risk_status
+      const student = await this.studentsDao.getStudentByUserId(createdUser.users_id);
+      if (student) {
+        await this.studentsDao.updatedStudentNotEmail(
+          data.first_name,
+          data.last_name,
+          data.education_status,
+          data.faculty_id || null,
+          data.department_id || null,
+          data.grade_id || null,
+          data.eventcoop_id || null,
+          student.students_id,
+          data.soft_hours || null,
+          data.hard_hours || null,
+          data.risk_status || null
+        );
+      }
+
+      await redis.del("students:all");
+      await redis.del("users:all");
+      this.logInfo("🆕 Student with user created", { email: data.email, username: data.username });
+
+      const inserted = await this.studentsDao.getStudentByUserId(createdUser.users_id);
+      return inserted || null;
+    } catch (error) {
+      this.logError("❌ Error in createUserAndStudent", error);
       throw error;
     }
   }

@@ -18,7 +18,7 @@ import { UsersDao } from "../../daos/users.dao";
 import { Admin } from "../../middleware/CheckRole";
 import { wrapAsync } from "../../utils/wrapAsync";
 import { validateDTO } from "../../middleware/validateDTO.validator";
-import { CreateStudentDto } from "../../dtos/Teacher/student.dto";
+import { CreateStudentDto, CreateStudentWithUserDto } from "../../dtos/Teacher/student.dto";
 import { UpdateStudentDto } from "../../dtos/Teacher/student.dto";
 import { verifyToken } from "../../middleware/verifyToken";
 
@@ -81,6 +81,14 @@ router.post(
   verifyToken,
   validateDTO(CreateStudentDto),
   wrapAsync(studentsController.create.bind(studentsController))
+);
+
+// ✅ POST: Create student with user (ใหม่)
+router.post(
+  "/create-student-with-user",
+  verifyToken,
+  validateDTO(CreateStudentWithUserDto),
+  wrapAsync(studentsController.createStudentWithUser.bind(studentsController))
 );
 
 // ✅ PUT: Update student
