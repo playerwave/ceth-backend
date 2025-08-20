@@ -185,10 +185,32 @@ export const sendEmailTemplate = async (req: Request, res: Response): Promise<vo
 
     // อ่านไฟล์ template
     const templateContent = fs.readFileSync(templatePath, "utf-8");
+    console.log("Template content length:", templateContent.length);
     
     // Render template ด้วยข้อมูลที่ส่งมา
     const renderedHtml = ejs.render(templateContent, data || {});
+    console.log("Rendered HTML length:", renderedHtml.length);
+    console.log("Template data:", JSON.stringify(data, null, 2));
     
+    // ตรวจสอบ environment variables
+    if (!process.env.EMAIL_SENDER || !process.env.EMAIL_APP_PASSWORD) {
+      console.error("Missing email configuration:", {
+        EMAIL_SENDER: process.env.EMAIL_SENDER ? "SET" : "MISSING",
+        EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ? "SET" : "MISSING"
+      });
+      res.status(500).json({
+        success: false,
+        message: "Email configuration is missing"
+      });
+      return;
+    }
+
+    console.log("Email configuration:", {
+      sender: process.env.EMAIL_SENDER,
+      recipient: data.recipientEmail,
+      subject: `กิจกรรม: ${data.activityName || 'กิจกรรมใหม่'}`
+    });
+
     // สร้าง transporter
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
@@ -200,12 +222,32 @@ export const sendEmailTemplate = async (req: Request, res: Response): Promise<vo
       },
     });
 
+    // ตรวจสอบการเชื่อมต่อ
+    try {
+      await transporter.verify();
+      console.log("SMTP connection verified successfully");
+    } catch (verifyError) {
+      console.error("SMTP verification failed:", verifyError);
+      res.status(500).json({
+        success: false,
+        message: "SMTP connection failed",
+        error: verifyError instanceof Error ? verifyError.message : "Unknown error"
+      });
+      return;
+    }
+
     // ส่งอีเมล
-    await transporter.sendMail({
+    const mailResult = await transporter.sendMail({
       from: `"ระบบจัดการกิจกรรม" <${process.env.EMAIL_SENDER}>`,
       to: data.recipientEmail,
       subject: `กิจกรรม: ${data.activityName || 'กิจกรรมใหม่'}`,
       html: renderedHtml,
+    });
+    
+    console.log("Email sent successfully:", {
+      messageId: mailResult.messageId,
+      recipient: data.recipientEmail,
+      templateName
     });
     
     // ส่งกลับผลลัพธ์
@@ -213,7 +255,8 @@ export const sendEmailTemplate = async (req: Request, res: Response): Promise<vo
       success: true,
       message: "Email sent successfully",
       templateName,
-      recipientEmail: data.recipientEmail
+      recipientEmail: data.recipientEmail,
+      messageId: mailResult.messageId
     });
 
   } catch (error) {

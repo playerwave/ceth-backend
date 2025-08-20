@@ -1,0 +1,244 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activity Cancellation Notification</title>
+  </head>
+  <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    
+    <div style="
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 24px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      background-color: #ffffff;
+      font-family: Arial, sans-serif;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    ">
+      <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px; margin-left: 10px;">
+        <h1 style="color: #DC2626; margin: 0;">❌ <%= activityName || 'กิจกรรมถูกยกเลิก' %></h1>
+        <span style="
+  background-color: #DC2626;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  height: 32px; /* เพิ่มความสูง */
+  text-align: center;
+">ยกเลิกแล้ว</span>
+
+      </div>
+      
+      <div style="
+        background-color: #FEF2F2;
+        border: 1px solid #FECACA;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+      ">
+        <p style="margin: 0; color: #DC2626; font-weight: bold;">
+          ⚠️ กิจกรรมที่ท่านลงทะเบียนไปถูกยกเลิก ขออภัยมา ณ ที่นี้
+        </p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>ผู้จัด:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= organizerName || 'คณะวิทยาการสารสนเทศ' %></p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>ประเภท:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= activityType || 'Soft Skill' %> • ( + <%= hoursEarned || '3' %> ชั่วโมง )</p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>Description:</strong></p>
+        <p style="margin-top: 0; color: #666;">กิจกรรมที่ท่านลงทะเบียนไปได้ถูกยกเลิกแล้ว กรุณาติดต่อผู้จัดหากมีข้อสงสัย</p>
+      </div>
+
+      <div style="margin-bottom: 20px;"> 
+        <p style="margin-bottom: 4px;"><strong>วันที่ที่เคยกำหนด:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= activityDate || '20 ธันวาคม 2024' %> · <%= activityTime || '09:00-16:00' %> (เวลา ประเทศไทย)</p>
+      </div>
+
+      <div style="margin-bottom: 20px;"> 
+        <p style="margin-bottom: 4px;"><strong>สถานที่ที่เคยกำหนด:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= building || 'อาคารคณะวิทยาการสารสนเทศ' %> ชั้น <%= floor || '3' %> ห้อง <%= room || '301' %></p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>จำนวนที่เคยรับ:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= maxParticipants || '50' %> คน</p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="margin-bottom: 4px;"><strong>ผู้จัด:</strong></p>
+        <p style="margin-top: 0; color: #666;"><%= contactEmail || 'support@example.com' %></p>
+      </div>
+      
+      <% if (activityImage) { %>
+        <img src="<%= activityImage %>" alt="กิจกรรม" style="width:100%; margin: 15px 0; border-radius: 8px; opacity: 0.6;" />
+      <% } else { %>
+        <img src="https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/F1F2/production/_118283916_b19c5a1f-162b-410b-8169-f58f0d153752.jpg" alt="กิจกรรม" style="width:100%; margin: 15px 0; border-radius: 8px; opacity: 0.6;" />
+      <% } %>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="<%= contactLink || '#' %>" style="
+          display: inline-block;
+          background-color: #DC2626;
+          color: white;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 5px;
+          font-weight: bold;
+        ">
+          📞 ติดต่อผู้จัด
+        </a>
+      </div>
+
+      <div style="
+        background-color: #F0F9FF;
+        border: 1px solid #BAE6FD;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+      ">
+        <p style="margin: 0; color: #0369A1; font-weight: bold;">
+          💡 หมายเหตุ: กิจกรรมใหม่จะถูกแจ้งเตือนผ่านอีเมลเมื่อมีการเปิดรับสมัคร
+        </p>
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 0.9em;">
+        <p>หากมีคำถาม กรุณาติดต่อ: <%= contactEmail || 'support@example.com' %></p>
+        <p>© 2024 ระบบจัดการกิจกรรม. สงวนลิขสิทธิ์.</p>
+      </div>
+    </div>
+  </body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activity Cancellation Notification</title>
+    <meta name="x-apple-disable-message-reformatting">
+  </head>
+  <body style="margin:0; padding:20px; font-family:Arial, sans-serif; background-color:#f5f5f5;">
+
+    <!-- Wrapper table -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f5f5;">
+      <tr>
+        <td align="center">
+          <!-- Container -->
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff; border:1px solid #ddd; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+            <tr>
+              <td style="padding:24px 30px; font-family:Arial, sans-serif;">
+
+                <!-- Header row -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td valign="middle" style="font-size:22px; color:#DC2626; font-weight:bold;">
+                      ❌ <%= activityName || 'กิจกรรมถูกยกเลิก' %>
+                    </td>
+                    <td valign="middle" align="right">
+                      <!-- Badge -->
+                      <span style="background-color:#DC2626; color:#ffffff; padding:6px 16px; border-radius:20px; font-size:12px; font-weight:bold; text-transform:uppercase; display:inline-block; text-align:center;">
+                        ยกเลิกแล้ว
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Spacer -->
+                <div style="height:16px; line-height:16px;">&nbsp;</div>
+
+                <!-- Alert box -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#FEF2F2; border:1px solid #FECACA; border-radius:8px;">
+                  <tr>
+                    <td style="padding:14px 16px; font-family:Arial, sans-serif; font-size:14px; color:#DC2626; font-weight:bold;">
+                      ⚠️ กิจกรรมที่ท่านลงทะเบียนไปถูกยกเลิก ขออภัยมา ณ ที่นี้
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Spacer -->
+                <div style="height:20px; line-height:20px;">&nbsp;</div>
+
+                <!-- Organizer -->
+                <p style="margin:0; font-weight:bold;">ผู้จัด:</p>
+                <p style="margin:0 0 20px 0; color:#666;"><%= organizerName || 'คณะวิทยาการสารสนเทศ' %></p>
+
+                <!-- Type -->
+                <p style="margin:0; font-weight:bold;">ประเภท:</p>
+                <p style="margin:0 0 20px 0; color:#666;"><%= activityType || 'Soft Skill' %> • (+ <%= hoursEarned || '3' %> ชั่วโมง)</p>
+
+                <!-- Description -->
+                <p style="margin:0; font-weight:bold;">Description:</p>
+                <p style="margin:0 0 20px 0; color:#666;">กิจกรรมที่ท่านลงทะเบียนไปได้ถูกยกเลิกแล้ว กรุณาติดต่อผู้จัดหากมีข้อสงสัย</p>
+
+                <!-- Date -->
+                <p style="margin:0; font-weight:bold;">วันที่ที่เคยกำหนด:</p>
+                <p style="margin:0 0 20px 0; color:#666;"><%= activityDate || '20 ธันวาคม 2024' %> · <%= activityTime || '09:00-16:00' %> (เวลา ประเทศไทย)</p>
+
+                <!-- Place -->
+                <p style="margin:0; font-weight:bold;">สถานที่ที่เคยกำหนด:</p>
+                <p style="margin:0 0 20px 0; color:#666;"><%= building || 'อาคารคณะวิทยาการสารสนเทศ' %> ชั้น <%= floor || '3' %> ห้อง <%= room || '301' %></p>
+
+                <!-- Max participants -->
+                <p style="margin:0; font-weight:bold;">จำนวนที่เคยรับ:</p>
+                <p style="margin:0 0 20px 0; color:#666;"><%= maxParticipants || '50' %> คน</p>
+
+                <!-- Contact -->
+                <p style="margin:0; font-weight:bold;">ผู้จัด:</p>
+                <p style="margin:0 0 20px 0; color:#666;"><%= contactEmail || 'support@example.com' %></p>
+
+                <!-- Image -->
+                <% if (activityImage) { %>
+                  <img src="<%= activityImage %>" alt="กิจกรรม" style="width:100%; margin:15px 0; border-radius:8px; display:block; opacity:0.6;" />
+                <% } else { %>
+                  <img src="https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/F1F2/production/_118283916_b19c5a1f-162b-410b-8169-f58f0d153752.jpg" alt="กิจกรรม" style="width:100%; margin:15px 0; border-radius:8px; display:block; opacity:0.6;" />
+                <% } %>
+
+                <!-- Contact button -->
+                <div style="text-align:center; margin:30px 0;">
+                  <a href="<%= contactLink || '#' %>" style="display:inline-block; background-color:#DC2626; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:5px; font-weight:bold; font-size:14px;">
+                    📞 ติดต่อผู้จัด
+                  </a>
+                </div>
+
+                <!-- Note -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#F0F9FF; border:1px solid #BAE6FD; border-radius:8px;">
+                  <tr>
+                    <td style="padding:14px 16px; font-family:Arial, sans-serif; font-size:14px; color:#0369A1; font-weight:bold;">
+                      💡 หมายเหตุ: กิจกรรมใหม่จะถูกแจ้งเตือนผ่านอีเมลเมื่อมีการเปิดรับสมัคร
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Footer -->
+                <div style="text-align:center; margin-top:30px; padding-top:20px; border-top:1px solid #eee; color:#666; font-size:12px;">
+                  <p style="margin:0;">หากมีคำถาม กรุณาติดต่อ: <%= contactEmail || 'support@example.com' %></p>
+                  <p style="margin:0;">© 2024 ระบบจัดการกิจกรรม. สงวนลิขสิทธิ์.</p>
+                </div>
+
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+  </body>
+</html>
