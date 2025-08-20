@@ -2,7 +2,7 @@ import { DataSource } from "typeorm";
 import { Activity } from "../../entity/activity.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
-import { sendCourseStartEmail } from "../../controllers/email.controller";
+import { sendCourseStartEmail, sendOpenRegisterEmail } from "../../controllers/email.controller";
 
 
 export type TransitionResult = {
@@ -707,10 +707,43 @@ export class ActivityDao extends ErrorHandledDao {
            AND start_register_date IS NOT NULL
            AND $1::timestamp >= start_register_date
            AND (end_register_date IS NULL OR $1::timestamp < end_register_date)
-        RETURNING activity_id
+        RETURNING activity_id, activity_name, presenter_company_name, type, recieve_hours, image_url, url, start_activity_date, end_activity_date, description, seat, end_register_date
         `,
         [nowRef]
       );
+
+      // ส่งอีเมลแจ้งเตือนเมื่อกิจกรรมเปิดรับสมัคร (สำหรับ Onsite/Online)
+      if (ids2.length > 0) {
+        console.log(`📧 [advanceStatesOnce] Found ${ids2.length} activities that just opened for registration`);
+        console.log(`📧 [advanceStatesOnce] Activities:`, ids2.map(a => ({ id: a.activity_id, name: a.activity_name, format: a.event_format })));
+        
+        for (const activity of ids2) {
+          try {
+            console.log(`📧 [advanceStatesOnce] Processing open register activity: ${activity.activity_id} - ${activity.activity_name}`);
+            
+            // ตรวจสอบว่า activity ยังเป็น Open Register อยู่หรือไม่
+            const currentState = await qr.query(
+              `SELECT activity_state FROM activity WHERE activity_id = $1`,
+              [activity.activity_id]
+            );
+            
+            console.log(`📧 [advanceStatesOnce] Current state for activity ${activity.activity_id}:`, currentState[0]?.activity_state);
+            
+            if (currentState.length > 0 && currentState[0].activity_state === 'Open Register') {
+              console.log(`📧 [advanceStatesOnce] Calling sendOpenRegisterEmail for activity: ${activity.activity_id}`);
+              await sendOpenRegisterEmail(activity);
+              console.log(`✅ [advanceStatesOnce] Open register email sent successfully for activity: ${activity.activity_id}`);
+            } else {
+              console.log(`⚠️ [advanceStatesOnce] Activity ${activity.activity_id} state changed, skipping email send`);
+            }
+          } catch (emailError) {
+            console.error(`❌ [advanceStatesOnce] Failed to send open register email for activity ${activity.activity_id}:`, emailError);
+            console.error(`❌ [advanceStatesOnce] Error details:`, emailError);
+          }
+        }
+      } else {
+        console.log(`📧 [advanceStatesOnce] No new activities opened for registration at ${nowRef.toISOString()}`);
+      }
 
       // 2.5) Not Start -> Start Activity (สำหรับกิจกรรมที่เป็น Course)
       
@@ -793,10 +826,43 @@ export class ActivityDao extends ErrorHandledDao {
            AND start_register_date IS NOT NULL
            AND $1::timestamp >= start_register_date
            AND (end_register_date IS NULL OR $1::timestamp < end_register_date)
-        RETURNING activity_id
+        RETURNING activity_id, activity_name, presenter_company_name, type, recieve_hours, image_url, url, start_activity_date, end_activity_date, description, seat, end_register_date
         `,
         [nowRef]
       );
+
+      // ส่งอีเมลแจ้งเตือนเมื่อกิจกรรมเปลี่ยนจาก Special Open Register เป็น Open Register
+      if (ids3.length > 0) {
+        console.log(`📧 [advanceStatesOnce] Found ${ids3.length} activities that changed from Special to Open Register`);
+        console.log(`📧 [advanceStatesOnce] Activities:`, ids3.map(a => ({ id: a.activity_id, name: a.activity_name })));
+        
+        for (const activity of ids3) {
+          try {
+            console.log(`📧 [advanceStatesOnce] Processing special to open register activity: ${activity.activity_id} - ${activity.activity_name}`);
+            
+            // ตรวจสอบว่า activity ยังเป็น Open Register อยู่หรือไม่
+            const currentState = await qr.query(
+              `SELECT activity_state FROM activity WHERE activity_id = $1`,
+              [activity.activity_id]
+            );
+            
+            console.log(`📧 [advanceStatesOnce] Current state for activity ${activity.activity_id}:`, currentState[0]?.activity_state);
+            
+            if (currentState.length > 0 && currentState[0].activity_state === 'Open Register') {
+              console.log(`📧 [advanceStatesOnce] Calling sendOpenRegisterEmail for activity: ${activity.activity_id}`);
+              await sendOpenRegisterEmail(activity);
+              console.log(`✅ [advanceStatesOnce] Open register email sent successfully for activity: ${activity.activity_id}`);
+            } else {
+              console.log(`⚠️ [advanceStatesOnce] Activity ${activity.activity_id} state changed, skipping email send`);
+            }
+          } catch (emailError) {
+            console.error(`❌ [advanceStatesOnce] Failed to send open register email for activity ${activity.activity_id}:`, emailError);
+            console.error(`❌ [advanceStatesOnce] Error details:`, emailError);
+          }
+        }
+      } else {
+        console.log(`📧 [advanceStatesOnce] No activities changed from Special to Open Register at ${nowRef.toISOString()}`);
+      }
   
       // 4) Open Register -> Close Register  ← (คุณพิมพ์ว่า "End Register" แต่ enum จริงคือ "Close Register")
       const ids4 = await run(

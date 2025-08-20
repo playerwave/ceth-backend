@@ -345,3 +345,90 @@ export const sendCourseStartEmail = async (activityData: any): Promise<void> => 
     console.error("❌ Error sending course start email:", error);
   }
 };
+
+// ฟังก์ชันส่งอีเมลแจ้งเตือนเมื่อกิจกรรมเปิดรับสมัคร
+export const sendOpenRegisterEmail = async (activityData: any): Promise<void> => {
+  try {
+    // ตรวจสอบ environment variables
+    console.log("🔍 [sendOpenRegisterEmail] Checking environment variables...");
+    console.log("🔍 [sendOpenRegisterEmail] EMAIL_SENDER:", process.env.EMAIL_SENDER ? "SET" : "MISSING");
+    console.log("🔍 [sendOpenRegisterEmail] EMAIL_APP_PASSWORD:", process.env.EMAIL_APP_PASSWORD ? "SET" : "MISSING");
+    
+    if (!process.env.EMAIL_SENDER || !process.env.EMAIL_APP_PASSWORD) {
+      console.error("❌ Missing email configuration for open register notification");
+      console.error("❌ EMAIL_SENDER:", process.env.EMAIL_SENDER);
+      console.error("❌ EMAIL_APP_PASSWORD:", process.env.EMAIL_APP_PASSWORD);
+      return;
+    }
+
+    // ตรวจสอบว่า activity มีข้อมูลครบหรือไม่
+    if (!activityData.activity_id) {
+      console.log(`⚠️ Activity ID not provided, skipping email send`);
+      return;
+    }
+
+    console.log(`📧 Preparing to send open register email for activity: ${activityData.activity_id} - ${activityData.activity_name}`);
+
+    // สร้าง transporter
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_SENDER,
+        pass: process.env.EMAIL_APP_PASSWORD,
+      },
+    });
+
+    // เตรียมข้อมูลสำหรับ template
+    const emailData = {
+      recipientEmail: "tanapatwave14@gmail.com",
+      activityName: activityData.activity_name,
+      message: `กิจกรรม ${activityData.activity_name} ได้เปิดรับสมัครแล้ว กรุณาตรวจสอบรายละเอียดด้านล่าง`,
+      activityDate: activityData.start_activity_date ? new Date(activityData.start_activity_date).toLocaleDateString('th-TH') : "ไม่ระบุ",
+      activityTime: activityData.start_activity_date && activityData.end_activity_date ? 
+        `${new Date(activityData.start_activity_date).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} - ${new Date(activityData.end_activity_date).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}` : "ไม่ระบุ",
+      building: "อาคารคณะวิทยาการสารสนเทศ", // ค่า default
+      floor: "3", // ค่า default
+      room: "301", // ค่า default
+      maxParticipants: activityData.seat?.toString() || "50",
+      registrationLink: activityData.url || "https://example.com/register",
+      deadline: activityData.end_register_date ? new Date(activityData.end_register_date).toLocaleDateString('th-TH') : "ไม่ระบุ",
+      contactEmail: "kamonwans@go.buu.ac.th",
+      activityImage: activityData.image_url,
+      activityDateISO: activityData.start_activity_date ? new Date(activityData.start_activity_date).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '') : "20241220T090000Z",
+      activityEndDateISO: activityData.end_activity_date ? new Date(activityData.end_activity_date).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '') : "20241220T160000Z",
+      organizerName: activityData.presenter_company_name || "คณะวิทยาการสารสนเทศ",
+      activityType: activityData.type === "Hard" ? "Hard Skill" : "Soft Skill",
+      hoursEarned: activityData.recieve_hours?.toString() || "3"
+    };
+
+    // 🔍 Log ข้อมูลกิจกรรมก่อนส่งอีเมล
+    console.log("📧 [sendOpenRegisterEmail] Activity data before sending email:");
+    console.log("📧 [sendOpenRegisterEmail] Raw activityData:", JSON.stringify(activityData, null, 2));
+    console.log("📧 [sendOpenRegisterEmail] Processed emailData:", JSON.stringify(emailData, null, 2));
+
+    // อ่าน template
+    const templatePath = path.join(__dirname, "../mailer/template/activity/OpenRegisterTemplate.ejs");
+    const templateContent = fs.readFileSync(templatePath, "utf-8");
+    const renderedHtml = ejs.render(templateContent, emailData);
+
+    // ส่งอีเมล
+    console.log("📧 [sendOpenRegisterEmail] Attempting to send email...");
+    console.log("📧 [sendOpenRegisterEmail] From:", process.env.EMAIL_SENDER);
+    console.log("📧 [sendOpenRegisterEmail] To:", emailData.recipientEmail);
+    console.log("📧 [sendOpenRegisterEmail] Subject:", `🎉 กิจกรรมเปิดรับสมัคร: ${activityData.activity_name}`);
+    
+    const mailResult = await transporter.sendMail({
+      from: `"ระบบจัดการกิจกรรม" <${process.env.EMAIL_SENDER}>`,
+      to: emailData.recipientEmail,
+      subject: `🎉 กิจกรรมเปิดรับสมัคร: ${activityData.activity_name}`,
+      html: renderedHtml,
+    });
+
+    console.log(`✅ Open register email sent successfully for activity: ${activityData.activity_name}`);
+    console.log(`✅ Message ID: ${mailResult.messageId}`);
+  } catch (error) {
+    console.error("❌ Error sending open register email:", error);
+  }
+};
