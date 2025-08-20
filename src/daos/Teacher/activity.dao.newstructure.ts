@@ -2,6 +2,7 @@ import { DataSource } from "typeorm";
 import { Activity } from "../../entity/activity.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
+import { sendCourseStartEmail } from "../../controllers/email.controller";
 
 
 export type TransitionResult = {
@@ -643,8 +644,8 @@ export class ActivityDao extends ErrorHandledDao {
     const nowRef = freezeNow ?? new Date();
     console.log(`🕐 [advanceStatesOnce] Current time:`, nowRef.toISOString());
   
-    const run = async (sql: string, params: unknown[]): Promise<number[]> => {
-      const rows: Array<{ activity_id: number }> = await qr.query(sql, params);
+    const run = async (sql: string, params: unknown[]): Promise<any[]> => {
+      const rows: any[] = await qr.query(sql, params);
       console.log(`🔍 [advanceStatesOnce] Query result:`, rows);
       console.log(`🔍 [advanceStatesOnce] SQL:`, sql);
       console.log(`🔍 [advanceStatesOnce] Params:`, params);
@@ -672,9 +673,8 @@ export class ActivityDao extends ErrorHandledDao {
       
       // ✅ ตรวจสอบว่า rows เป็น array หรือไม่
       const safeRows = Array.isArray(rows) ? rows : [];
-      const ids = safeRows.map((r) => r.activity_id);
-      console.log(`🔍 [advanceStatesOnce] Extracted IDs:`, ids);
-      return ids;
+      console.log(`🔍 [advanceStatesOnce] Extracted rows:`, safeRows);
+      return safeRows;
     };
   
     try {
@@ -724,10 +724,22 @@ export class ActivityDao extends ErrorHandledDao {
            AND start_activity_date IS NOT NULL
            AND $1::timestamp >= start_activity_date
            AND (end_activity_date IS NULL OR $1::timestamp < end_activity_date)
-        RETURNING activity_id
+        RETURNING activity_id, activity_name, presenter_company_name, type, recieve_hours, image_url, url, start_activity_date, end_activity_date
         `,
         [nowRef]
       );
+
+      // ส่งอีเมลแจ้งเตือนเมื่อ Course เริ่มต้น
+      if (ids2_5.length > 0) {
+        console.log(`📧 Sending course start emails for ${ids2_5.length} activities`);
+        for (const activity of ids2_5) {
+          try {
+            await sendCourseStartEmail(activity);
+          } catch (emailError) {
+            console.error(`❌ Failed to send course start email for activity ${activity.activity_id}:`, emailError);
+          }
+        }
+      }
   
       // 3) Special Open Register -> Open Register
       const ids3 = await run(
@@ -834,15 +846,15 @@ export class ActivityDao extends ErrorHandledDao {
         endToStartAssess: ids7.length,
         startAssessToEnd: ids8.length,
         updatedIds: {
-          notStartToSpecial: ids1,
-          notStartToOpen: ids2,
-          notStartToStartActivity: ids2_5, // เพิ่ม transition ใหม่
-          specialToOpen: ids3,
-          openToClose: ids4,
-          closeToStart: ids5,
-          startToEnd: ids6,
-          endToStartAssess: ids7,
-          startAssessToEnd: ids8,
+          notStartToSpecial: ids1.map((r: any) => r.activity_id),
+          notStartToOpen: ids2.map((r: any) => r.activity_id),
+          notStartToStartActivity: ids2_5.map((r: any) => r.activity_id), // เพิ่ม transition ใหม่
+          specialToOpen: ids3.map((r: any) => r.activity_id),
+          openToClose: ids4.map((r: any) => r.activity_id),
+          closeToStart: ids5.map((r: any) => r.activity_id),
+          startToEnd: ids6.map((r: any) => r.activity_id),
+          endToStartAssess: ids7.map((r: any) => r.activity_id),
+          startAssessToEnd: ids8.map((r: any) => r.activity_id),
         },
       };
     } catch (err) {

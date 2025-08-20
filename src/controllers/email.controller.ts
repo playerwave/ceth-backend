@@ -268,3 +268,55 @@ export const sendEmailTemplate = async (req: Request, res: Response): Promise<vo
     });
   }
 };
+
+// ฟังก์ชันส่งอีเมลแจ้งเตือนเมื่อ Course เริ่มต้น
+export const sendCourseStartEmail = async (activityData: any): Promise<void> => {
+  try {
+    // ตรวจสอบ environment variables
+    if (!process.env.EMAIL_SENDER || !process.env.EMAIL_APP_PASSWORD) {
+      console.error("Missing email configuration for course start notification");
+      return;
+    }
+
+    // สร้าง transporter
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_SENDER,
+        pass: process.env.EMAIL_APP_PASSWORD,
+      },
+    });
+
+    // เตรียมข้อมูลสำหรับ template
+    const emailData = {
+      recipientEmail: "tanapatwave14@gmail.com",
+      activityName: activityData.activity_name,
+      activityLink: activityData.url || "#",
+      contactEmail: activityData.contact_email || "instructor@buu.ac.th",
+      activityImage: activityData.image_url,
+      organizerName: activityData.presenter_company_name || "คณะวิทยาการสารสนเทศ",
+      activityType: activityData.type || "Hard Skill",
+      hoursEarned: activityData.recieve_hours || "6",
+      message: `คอร์ส ${activityData.activity_name} ได้เริ่มต้นแล้ว กรุณาเข้าร่วมตามเวลาที่กำหนด`
+    };
+
+    // อ่าน template
+    const templatePath = path.join(__dirname, "../mailer/template/activity/NewCourseTemplate.ejs");
+    const templateContent = fs.readFileSync(templatePath, "utf-8");
+    const renderedHtml = ejs.render(templateContent, emailData);
+
+    // ส่งอีเมล
+    await transporter.sendMail({
+      from: `"ระบบจัดการกิจกรรม" <${process.env.EMAIL_SENDER}>`,
+      to: emailData.recipientEmail,
+      subject: `🎓 คอร์สเริ่มต้นแล้ว: ${activityData.activity_name}`,
+      html: renderedHtml,
+    });
+
+    console.log(`✅ Course start email sent for activity: ${activityData.activity_name}`);
+  } catch (error) {
+    console.error("❌ Error sending course start email:", error);
+  }
+};
