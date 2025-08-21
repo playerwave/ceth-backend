@@ -357,10 +357,17 @@ export class ActivityDao extends ErrorHandledDao {
   public async getAllActivitiesDao(): Promise<Activity[]> {
     await this.checkConnection();
 
-    const activities = await this.dataSource!.getRepository(Activity).find({
-      where: { status: "Active" }, // ดึงเฉพาะที่ยังไม่ soft delete
-      order: { create_activity_date: "DESC" },
-    });
+    // ✅ ใช้ raw query เพื่อดึง registered_count
+    const activities = await this.dataSource!.query(
+      `
+        SELECT 
+          *,
+          COALESCE(registered_count, 0) as registered_count
+        FROM activity 
+        WHERE status = 'Active'
+        ORDER BY create_activity_date DESC
+      `
+    );
 
     return activities;
   }
@@ -487,14 +494,27 @@ export class ActivityDao extends ErrorHandledDao {
         [...values, activity_id]
       );
 
-      // ✅ ลบข้อมูลอาหารเดิม
-      await queryRunner.query(
-        `DELETE FROM activity_food WHERE activity_id = $1`,
+      // ✅ ลบข้อมูลอาหารเดิม (ใช้ CASCADE หรือลบแบบปลอดภัย)
+      // ตรวจสอบว่ามี activity_detail ที่เกี่ยวข้องหรือไม่
+      const activityDetailCount = await queryRunner.query(
+        `SELECT COUNT(*) as count FROM activity_detail WHERE activity_id = $1`,
         [activity_id]
       );
+      
+      if (activityDetailCount[0].count > 0) {
+        console.log(`⚠️ Found ${activityDetailCount[0].count} activity_detail records for activity ${activity_id}`);
+        console.log("⚠️ Skipping food update to preserve student enrollment data");
+      } else {
+        // ✅ ถ้าไม่มี activity_detail สามารถลบ activity_food ได้อย่างปลอดภัย
+        await queryRunner.query(
+          `DELETE FROM activity_food WHERE activity_id = $1`,
+          [activity_id]
+        );
+        console.log("✅ Old foods deleted successfully");
+      }
 
-      // ✅ เพิ่มข้อมูลอาหารใหม่ (ถ้ามี)
-      if (foodIds.length > 0) {
+      // ✅ เพิ่มข้อมูลอาหารใหม่ (เฉพาะเมื่อไม่มี activity_detail)
+      if (activityDetailCount[0].count === 0 && foodIds.length > 0) {
         // ✅ กรอง foodIds ที่ถูกต้อง (ไม่ใช่ -1 หรือ 0)
         const validFoodIds = foodIds.filter((foodId) => foodId > 0);
 
@@ -513,6 +533,8 @@ export class ActivityDao extends ErrorHandledDao {
         } else {
           console.log("🍽️ No valid food IDs to add for activity:", activity_id);
         }
+      } else if (activityDetailCount[0].count > 0) {
+        console.log("🍽️ Skipping food update - activity has enrolled students");
       } else {
         console.log("🍽️ No foods to add for activity:", activity_id);
       }
@@ -527,6 +549,13 @@ export class ActivityDao extends ErrorHandledDao {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logDbError("updateActivityDao", error);
+      
+      // ✅ จัดการ error เฉพาะเจาะจง
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("foreign key constraint")) {
+        throw new Error("❌ ไม่สามารถอัปเดตอาหารได้เนื่องจากมีนักเรียนลงทะเบียนแล้ว กรุณาลบการลงทะเบียนก่อน");
+      }
+      
       throw new Error("❌ Failed to update activity");
     } finally {
       await queryRunner.release();
@@ -581,7 +610,8 @@ export class ActivityDao extends ErrorHandledDao {
           to_char(last_update_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as last_update_activity_date,
           url,
           room_id,
-          assessment_id
+          assessment_id,
+          COALESCE(registered_count, 0) as registered_count
         FROM activity
         WHERE activity_id = $1
       `,
@@ -1042,7 +1072,10 @@ export class ActivityDao extends ErrorHandledDao {
     try {
       await this.initialize();
       const query = `
-        SELECT * FROM activity 
+        SELECT 
+          *,
+          COALESCE(registered_count, 0) as registered_count
+        FROM activity 
         WHERE (
           LOWER(activity_name) LIKE LOWER($1) OR
           LOWER(description) LIKE LOWER($1) OR
