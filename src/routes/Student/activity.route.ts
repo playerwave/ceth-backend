@@ -54,6 +54,12 @@ router.delete(
   wrapAsync(activityController.unEnrollActivity)
 );
 
+// ✅ POST METHOD สำหรับรีเซ็ต registered_count
+router.post(
+  "/reset-registered-counts",
+  wrapAsync(activityController.resetRegisteredCounts)
+);
+
 // ✅ GET METHODS
 router.get(
   "/get-student-activities/:id",

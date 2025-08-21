@@ -1,5 +1,4 @@
 import { ActivityDao } from "../../daos/Student/activity.dao";
-import { JoinDao } from "../../daos/join.dao";
 import { Activity } from "../../entity/activity.entity";
 import { Join } from "../../entity/join.entity";
 import redis from "../../config/redis";
@@ -7,7 +6,6 @@ import { ErrorHandledService } from "../error.handdled.service";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
-  private readonly joinDao = new JoinDao();
 
   public async getStudentActivitiesService(
     studentId: number
@@ -129,7 +127,7 @@ export class ActivityService extends ErrorHandledService {
   ): Promise<Join> {
     try {
       // 1. ตรวจสอบว่าสมัครซ้ำหรือยัง
-      const existingJoin = await this.joinDao.findJoinByStudentAndActivityId(
+      const existingJoin = await this.activityDao.findJoinByStudentAndActivityId(
         studentId,
         activityId
       );
@@ -143,7 +141,7 @@ export class ActivityService extends ErrorHandledService {
       );
 
       // 3. สร้าง join ใหม่ (ใช้ activity_detail_id ที่เพิ่งสร้าง)
-      const join = await this.joinDao.createJoin(
+      const join = await this.activityDao.createJoin(
         studentId,
         activityDetail.activity_detail_id,
         foodChoices
@@ -151,11 +149,18 @@ export class ActivityService extends ErrorHandledService {
 
       // 4. ลบ cache
       await redis.del(`join:${studentId}`);
+      
+      // 5. ตรวจสอบ registered_count หลังจากลงทะเบียน
+      const finalCount = await this.activityDao.getActivityInfo(activityId);
+      
       this.logInfo("✅ Student enrolled in activity", {
         studentId,
         activityId,
         joinId: join.join_id,
         activityDetailId: activityDetail.activity_detail_id,
+        registeredCount: finalCount?.registered_count || 0,
+        totalSeats: finalCount?.seat || 0,
+        remainingSeats: (finalCount?.seat || 0) - (finalCount?.registered_count || 0)
       });
       return join;
     } catch (error) {
@@ -210,22 +215,56 @@ export class ActivityService extends ErrorHandledService {
     activityId: number
   ): Promise<boolean> {
     try {
-      const existing = await this.joinDao.findJoinByStudentAndActivityId(
-        studentId,
-        activityId
-      );
-      if (!existing) return false;
+      // ใช้ cancelEnrollment เพื่อเปลี่ยน status เป็น Cancelled แทนการลบ
+      const success = await this.activityDao.cancelEnrollment(studentId, activityId);
+      
+      if (success) {
+        // ลบ cache ของรายการ join ของนิสิต
+        await redis.del(`join:${studentId}`);
 
-      await this.joinDao.deleteJoin(existing.join_id);
-      await redis.del(`join:${studentId}`);
-
-      this.logInfo("🚫 Student unenrolled from activity", {
-        studentId,
-        activityId,
-      });
-      return true;
+        this.logInfo("🚫 Student unenrolled from activity (status changed to Cancelled)", {
+          studentId,
+          activityId,
+        });
+      }
+      
+      return success;
     } catch (error) {
       this.logError("❌ Error in unEnrollActivityService", error);
+      throw error;
+    }
+  }
+
+  // public async unEnrollActivityService(
+  //   studentId: number,
+  //   activityId: number
+  // ): Promise<boolean> {
+  //   try {
+  //     const ok = await this.activityDao.cancelEnrollment(studentId, activityId);
+  
+  //     // ลบ cache ของรายการ join ของนิสิต (ถ้ามี)
+  //     await redis.del(`join:${studentId}`);
+  
+  //     this.logInfo("🚪 Student unenrolled from activity", {
+  //       studentId,
+  //       activityId,
+  //       success: ok,
+  //     });
+  
+  //     return ok;
+  //   } catch (error) {
+  //     this.logError("❌ Error in unEnrollActivityService", error);
+  //     throw error;
+  //   }
+  // }
+
+  // เพิ่มเมธอดสำหรับรีเซ็ต registered_count ทั้งหมด
+  public async resetAllRegisteredCountsService(): Promise<void> {
+    try {
+      await this.activityDao.resetAllRegisteredCounts();
+      this.logInfo("🔄 Reset all registered counts completed");
+    } catch (error) {
+      this.logError("❌ Error in resetAllRegisteredCountsService", error);
       throw error;
     }
   }

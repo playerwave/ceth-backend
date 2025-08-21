@@ -137,6 +137,23 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  // เพิ่มเมธอดสำหรับรีเซ็ต registered_count ทั้งหมด
+  public async resetRegisteredCounts(req: Request, res: Response): Promise<void> {
+    try {
+      await this.activityService.resetAllRegisteredCountsService();
+      res.status(200).json({ 
+        message: "Successfully reset all registered counts",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      this.handleError(
+        "StudentActivityController.resetRegisteredCounts",
+        error,
+        res
+      );
+    }
+  }
+
   // 🔧 Utility Parsing Methods
   private parseId(value: any): number {
     const id = parseInt(value, 10);
@@ -172,4 +189,5 @@ export const activityController = {
   getEnrolledActivities: controller.getEnrolledActivities.bind(controller),
   searchActivity: controller.searchActivity.bind(controller),
   unEnrollActivity: controller.unEnrollActivity.bind(controller),
+  resetRegisteredCounts: controller.resetRegisteredCounts.bind(controller),
 };

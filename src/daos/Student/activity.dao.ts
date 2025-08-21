@@ -37,28 +37,6 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  // 🔹 กิจกรรมทั้งหมดที่นักศึกษายังไม่ได้สมัคร (public, active, ไม่หมดเวลา)
-  //   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
-  //     this.checkConnection();
-
-  //     const query = `
-  //   SELECT a.*
-  //   FROM activity a
-  //   WHERE a.activity_status = 'Public'
-  //     AND a.status = 'Active'
-  //     AND NOT EXISTS (
-  //       SELECT 1
-  //       FROM activity_detail ad
-  //       JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
-  //       WHERE ad.activity_id = a.activity_id
-  //         AND j.students_id = $1
-  //     )
-  //   ORDER BY a.create_activity_date DESC
-  // `;
-
-  //     const result = await this.dataSource!.query(query, [studentId]);
-  //     return result;
-  //   }
 
   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
     await this.checkConnection();
@@ -81,7 +59,7 @@ export class ActivityDao extends ErrorHandledDao {
     if (riskStatus === "Risk") {
       // ✅ สำหรับ Risk: เห็นกิจกรรมที่ถึง special_start_register_date แล้ว และยังไม่เกิน end_register_date
       query = `
-        SELECT a.*
+        SELECT a.*, COALESCE(a.registered_count, 0) as registered_count
         FROM activity a
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
@@ -89,12 +67,7 @@ export class ActivityDao extends ErrorHandledDao {
             (a.activity_state IN ('Special Open Register', 'Open Register')
              AND a.special_start_register_date <= NOW() + INTERVAL '7 hours'
              AND a.end_register_date > NOW() + INTERVAL '7 hours'
-             AND (
-               SELECT COUNT(*)
-               FROM activity_detail ad
-               JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
-               WHERE ad.activity_id = a.activity_id
-             ) < a.seat)
+             AND COALESCE(a.registered_count, 0) < a.seat)
             OR
             (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
           )
@@ -104,13 +77,14 @@ export class ActivityDao extends ErrorHandledDao {
             JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
             WHERE ad.activity_id = a.activity_id
               AND j.students_id = $1
+              AND ad.status = 'Registered'
           )
         ORDER BY a.create_activity_date DESC
       `;
     } else {
       // ✅ สำหรับ Normal: เห็นกิจกรรมที่ถึง start_register_date แล้ว และยังไม่เกิน end_register_date
       query = `
-        SELECT a.*
+        SELECT a.*, COALESCE(a.registered_count, 0) as registered_count
         FROM activity a
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
@@ -118,12 +92,7 @@ export class ActivityDao extends ErrorHandledDao {
             (a.activity_state = 'Open Register'
              AND a.start_register_date <= NOW() + INTERVAL '7 hours'
              AND a.end_register_date > NOW() + INTERVAL '7 hours'
-             AND (
-               SELECT COUNT(*)
-               FROM activity_detail ad
-               JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
-               WHERE ad.activity_id = a.activity_id
-             ) < a.seat)
+             AND COALESCE(a.registered_count, 0) < a.seat)
             OR
             (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
           )
@@ -133,6 +102,7 @@ export class ActivityDao extends ErrorHandledDao {
             JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
             WHERE ad.activity_id = a.activity_id
               AND j.students_id = $1
+              AND ad.status = 'Registered'
           )
         ORDER BY a.create_activity_date DESC
       `;
@@ -183,40 +153,25 @@ export class ActivityDao extends ErrorHandledDao {
     return result;
   }
 
-  // 🔹 ดึงกิจกรรมที่นักศึกษาเคยสมัครไว้แล้ว
-  // public async getEnrolledActivities(studentId: number): Promise<Activity[]> {
-  //   this.checkConnection();
-
-  //   const query = `
-  //     SELECT a.*
-  //     FROM activity a
-  //     INNER JOIN join j ON j.activity_id = a.activity_id
-  //     WHERE j.student_id = $1
-  //     ORDER BY a.start_activity_date DESC
-  //   `;
-
-  //   const result = await this.dataSource!.query(query, [studentId]);
-  //   return result;
-  // }
-
   public async getEnrolledActivities(studentId: number): Promise<Activity[]> {
     await this.checkConnection();
 
     const query = `
-      SELECT a.*
+      SELECT a.*, COALESCE(a.registered_count, 0) as registered_count
       FROM activity a
       INNER JOIN activity_detail ad ON ad.activity_id = a.activity_id
       INNER JOIN "join" j ON j.activity_detail_id = ad.activity_detail_id
       WHERE j.students_id = $1
         AND a.activity_status = 'Public'
         AND ad.status = 'Registered'
+        AND j.status = 'Pending'
         AND ad.time_in IS NULL
         AND ad.time_out IS NULL
       ORDER BY a.start_activity_date DESC
     `;
 
     const result = await this.dataSource!.query(query, [studentId]);
-    console.log(`📊 Found ${result.length} enrolled activities for student ${studentId} (Registered status, no check-in/out)`);
+    console.log(`📊 Found ${result.length} enrolled activities for student ${studentId} (Registered status, Pending join, no check-in/out)`);
     return result;
   }
 
@@ -225,7 +180,7 @@ export class ActivityDao extends ErrorHandledDao {
     await this.checkConnection();
 
     const query = `
-      SELECT *
+      SELECT *, COALESCE(registered_count, 0) as registered_count
       FROM activity
       WHERE activity_status = 'Public'
         AND status = 'Active'
@@ -249,7 +204,8 @@ export class ActivityDao extends ErrorHandledDao {
     if (studentId) {
       query = `
           SELECT a.*,
-            CASE WHEN j.join_id IS NOT NULL THEN true ELSE false END AS is_joined
+            CASE WHEN j.join_id IS NOT NULL THEN true ELSE false END AS is_joined,
+            COALESCE(a.registered_count, 0) as registered_count
           FROM activity a
           LEFT JOIN "join" j ON a.activity_id = j.activity_id
             AND j.students_id = $1
@@ -258,7 +214,7 @@ export class ActivityDao extends ErrorHandledDao {
       params = [studentId, activityId];
     } else {
       query = `
-    SELECT a.*, false AS is_joined
+    SELECT a.*, false AS is_joined, COALESCE(a.registered_count, 0) as registered_count
     FROM activity a
     WHERE a.activity_id = $1
   `;
@@ -289,16 +245,27 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  // public async getActivityDetailIdByActivityId(
-  //   activityId: number
-  // ): Promise<{ activity_detail_id: number } | null> {
-  //   this.checkConnection();
-  //   const result = await this.dataSource!.query(
-  //     `SELECT activity_detail_id FROM activity_detail WHERE activity_id = $1 LIMIT 1`,
-  //     [activityId]
-  //   );
-  //   return result[0] ?? null;
-  // }
+  // เพิ่มเมธอดใหม่สำหรับหา join โดย activity_id และ students_id
+  public async findJoinByStudentAndActivityId(
+    studentId: number,
+    activityId: number
+  ): Promise<Join | null> {
+    await this.checkConnection();
+
+    const query = `
+      SELECT j.*
+      FROM "join" j
+      INNER JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+      WHERE j.students_id = $1
+        AND ad.activity_id = $2
+        AND ad.status = 'Registered'
+        AND j.status = 'Pending'
+      LIMIT 1
+    `;
+
+    const result = await this.dataSource!.query(query, [studentId, activityId]);
+    return result[0] || null;
+  }
 
   public async getActivityDetailIdByActivityId(
     activityId: number
@@ -349,43 +316,32 @@ export class ActivityDao extends ErrorHandledDao {
     return result[0];
   }
 
-  // public async createJoin(
-  //   studentId: number,
-  //   activityId: number,
-  //   teacherId: number // ต้องส่ง teacherId มาด้วย
-  // ): Promise<Join> {
-  //   this.checkConnection();
-
-  //   // 1. หา activity_detail_id จาก activity_id
-  //   const activityDetailResult = await this.dataSource!.query(
-  //     `SELECT activity_detail_id FROM activity_detail WHERE activity_id = $1 LIMIT 1`,
-  //     [activityId]
-  //   );
-  //   const activityDetailId = activityDetailResult[0]?.activity_detail_id;
-  //   if (!activityDetailId) throw new Error("Activity detail not found");
-
-  //   // 2. สร้างข้อมูล join (ลงทะเบียนกิจกรรม)
-  //   const result = await this.dataSource!.query(
-  //     `INSERT INTO "join" (students_id, activity_detail_id, teacher_id, join_date, status)
-  //      VALUES ($1, $2, $3, $4, $5)
-  //      RETURNING *`,
-  //     [
-  //       studentId,
-  //       activityDetailId,
-  //       teacherId,
-  //       new Date(), // join_date เป็น timestamp
-  //       "Pending", // หรือ 'Completed', 'Cancelled' ตามต้องการ
-  //     ]
-  //   );
-  //   return result[0];
-  // }
-
   public async createActivityDetail(
     activityId: number,
     joinId: number,
     foodChoices: string[]
   ): Promise<{ activity_detail_id: number }> {
     await this.checkConnection();
+
+    // 0. ตรวจสอบว่า activity มีที่นั่งว่างหรือไม่
+    const activityQuery = `
+      SELECT seat, registered_count 
+      FROM activity 
+      WHERE activity_id = $1
+    `;
+    const activityResult = await this.dataSource!.query(activityQuery, [activityId]);
+    const activity = activityResult[0];
+    
+    if (!activity) {
+      throw new Error("Activity not found");
+    }
+    
+    if (activity.registered_count >= activity.seat) {
+      console.log(`❌ Activity ${activityId} is full: ${activity.registered_count}/${activity.seat}`);
+      throw new Error("Activity is full");
+    }
+    
+    console.log(`✅ Activity ${activityId} has available seats: ${activity.registered_count}/${activity.seat}`);
 
     // 1. สร้าง activity_food record สำหรับแต่ละ food choice
     let activityFoodId = null;
@@ -439,6 +395,10 @@ export class ActivityDao extends ErrorHandledDao {
             "Registered", // status
           ]
         );
+        
+        // อัพเดท registered_count หลังจากสร้าง activity_detail
+        await this.updateRegisteredCount(activityId);
+        
         return result[0];
       }
     }
@@ -457,7 +417,77 @@ export class ActivityDao extends ErrorHandledDao {
         "Registered", // status
       ]
     );
+    
+    // อัพเดท registered_count หลังจากสร้าง activity_detail
+    await this.updateRegisteredCount(activityId);
+    
     return result[0];
+  }
+
+  // เพิ่มเมธอดใหม่สำหรับอัพเดท registered_count
+  public async updateRegisteredCount(activityId: number): Promise<void> {
+    await this.checkConnection();
+    
+    const updateQuery = `
+      UPDATE activity 
+      SET registered_count = (
+        SELECT COUNT(*)
+        FROM activity_detail
+        WHERE activity_id = $1 AND status = 'Registered'
+      )
+      WHERE activity_id = $1
+    `;
+    
+    await this.dataSource!.query(updateQuery, [activityId]);
+    
+    // Log เพื่อ debug
+    const countQuery = `
+      SELECT registered_count 
+      FROM activity 
+      WHERE activity_id = $1
+    `;
+    const countResult = await this.dataSource!.query(countQuery, [activityId]);
+    console.log(`📊 Updated registered_count for activity ${activityId}: ${countResult[0]?.registered_count || 0}`);
+  }
+
+  // เพิ่มเมธอดสำหรับรีเซ็ต registered_count ทั้งหมด
+  public async resetAllRegisteredCounts(): Promise<void> {
+    await this.checkConnection();
+    
+    const resetQuery = `
+      UPDATE activity 
+      SET registered_count = (
+        SELECT COUNT(*)
+        FROM activity_detail ad
+        WHERE ad.activity_id = activity.activity_id 
+          AND ad.status = 'Registered'
+      )
+    `;
+    
+    await this.dataSource!.query(resetQuery);
+    
+    // Log สรุป
+    const summaryQuery = `
+      SELECT 
+        COUNT(*) as total_activities,
+        SUM(COALESCE(registered_count, 0)) as total_registrations
+      FROM activity
+    `;
+    const summaryResult = await this.dataSource!.query(summaryQuery);
+    console.log(`🔄 Reset all registered_counts: ${summaryResult[0]?.total_activities || 0} activities, ${summaryResult[0]?.total_registrations || 0} total registrations`);
+  }
+
+  // เพิ่มเมธอด public สำหรับ query ข้อมูล activity
+  public async getActivityInfo(activityId: number): Promise<{ registered_count: number; seat: number } | null> {
+    await this.checkConnection();
+    
+    const query = `
+      SELECT COALESCE(registered_count, 0) as registered_count, seat 
+      FROM activity 
+      WHERE activity_id = $1
+    `;
+    const result = await this.dataSource!.query(query, [activityId]);
+    return result[0] || null;
   }
 
   public async createJoin(
@@ -473,6 +503,36 @@ export class ActivityDao extends ErrorHandledDao {
       [studentId, activityDetailId, new Date(), "Pending"]
     );
     return result[0];
+  }
+
+  // เพิ่มเมธอดสำหรับลบ activity_detail และอัพเดท registered_count
+  public async deleteActivityDetailAndUpdateCount(activityDetailId: number): Promise<void> {
+    await this.checkConnection();
+    
+    // 1. หา activity_id ก่อนลบ
+    const activityQuery = `
+      SELECT activity_id 
+      FROM activity_detail 
+      WHERE activity_detail_id = $1
+    `;
+    const activityResult = await this.dataSource!.query(activityQuery, [activityDetailId]);
+    const activityId = activityResult[0]?.activity_id;
+    
+    if (!activityId) {
+      console.warn(`⚠️ Activity detail ${activityDetailId} not found`);
+      return;
+    }
+    
+    // 2. ลบ activity_detail
+    await this.dataSource!.query(
+      `DELETE FROM activity_detail WHERE activity_detail_id = $1`,
+      [activityDetailId]
+    );
+    
+    // 3. อัพเดท registered_count
+    await this.updateRegisteredCount(activityId);
+    
+    console.log(`🗑️ Deleted activity_detail ${activityDetailId} and updated registered_count for activity ${activityId}`);
   }
 
   public async createActivityDetailOnly(
@@ -497,5 +557,63 @@ export class ActivityDao extends ErrorHandledDao {
       `UPDATE activity_detail SET food_choices = $1 WHERE activity_detail_id = $2`,
       [foodChoices.join(","), activityDetailId]
     );
+  }
+
+  public async cancelEnrollment(
+    studentId: number,
+    activityId: number
+  ): Promise<boolean> {
+    await this.checkConnection();
+  
+    // หา activity_detail ของนิสิตในกิจกรรมนี้
+    const detailRow = await this.dataSource!.query(
+      `
+      SELECT ad.activity_detail_id
+      FROM activity_detail ad
+      JOIN "join" j ON j.activity_detail_id = ad.activity_detail_id
+      WHERE ad.activity_id = $1
+        AND j.students_id = $2
+        AND ad.status = 'Registered'
+      LIMIT 1
+      `,
+      [activityId, studentId]
+    );
+  
+    const activityDetailId: number | undefined = detailRow[0]?.activity_detail_id;
+    if (!activityDetailId) {
+      console.warn(`⚠️ Not found registered activity_detail for student=${studentId}, activity=${activityId}`);
+      return false;
+    }
+  
+    // เปลี่ยนสถานะเป็น Cancelled
+    const updated = await this.dataSource!.query(
+      `
+      UPDATE activity_detail
+      SET status = 'Cancelled'
+      WHERE activity_detail_id = $1
+        AND status = 'Registered'
+      RETURNING activity_detail_id
+      `,
+      [activityDetailId]
+    );
+  
+    // อัปเดตสถานะในตาราง join
+    await this.dataSource!.query(
+      `
+      UPDATE "join"
+      SET status = 'Cancelled'
+      WHERE activity_detail_id = $1
+      `,
+      [activityDetailId]
+    );
+  
+    // นับผู้ลงทะเบียนใหม่ (นับเฉพาะ Registered)
+    await this.updateRegisteredCount(activityId);
+  
+    const success = Boolean(updated[0]);
+    if (success) {
+      console.log(`🚪 Cancelled enrollment for student=${studentId} from activity=${activityId} (detail=${activityDetailId})`);
+    }
+    return success;
   }
 }
