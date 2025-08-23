@@ -78,7 +78,7 @@ export class ActivityDao extends ErrorHandledDao {
 
     if (typeof input === "string" && input.trim() !== "") {
       const trimmed = input.trim();
-      
+
       // ✅ เอา timezone ออก (Z หรือ +07:00 ฯลฯ) เพื่อไม่ให้ Postgres shift เวลา
       // ตัวอย่าง: 2025-08-24T09:00:00.000Z -> 2025-08-24 09:00:00
       // หรือ 2025-08-24T09:00:00+07:00 -> 2025-08-24 09:00:00
@@ -342,6 +342,18 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  public async getActivityByHistory(): Promise<Activity[]> {
+    await this.checkConnection();
+    try {
+      const sql = `SELECT * FROM activity WHERE (((event_format = 'Online' OR event_format = 'Onsite') AND activity_state = 'End Assessment') OR (event_format = 'Course' AND activity_state = 'End Activity')) ORDER BY activity_id ASC`
+      const result = await this.dataSource?.query(sql);
+      return result
+    } catch (error) {
+      this.logDbError("getActivityByHistory", error);
+      throw new Error("❌ Failed to update activity");
+    }
+  }
+
   public async getActivityByID(activity_id: number): Promise<Activity[]> {
     await this.checkConnection();
     try {
@@ -450,25 +462,25 @@ export class ActivityDao extends ErrorHandledDao {
           return null;
         }
 
-              // ✅ จัดการ date fields ให้เขียนแบบไม่มี timezone เพื่อเลี่ยง +7 ชม.
-      if (field.includes("_date") || field.includes("_assessment")) {
-        // ✅ ถ้าเป็น string ที่มี timezone ให้เอา timezone ออก
-        if (typeof value === "string" && value.trim() !== "") {
-          const trimmed = value.trim();
-          // เอา timezone ออก (Z หรือ +07:00 ฯลฯ)
-          const noTz = trimmed
-            .replace(/Z$/i, "")
-            .replace(/[\+\-]\d{2}:?\d{2}$/i, "");
-          
-          // รองรับทั้งรูปแบบมี T และมี space
-          const parts = noTz.replace("T", " ");
-          const match = parts.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(\.\d+)?$/);
-          if (match) {
-            return `${match[1]} ${match[2]}`;
+        // ✅ จัดการ date fields ให้เขียนแบบไม่มี timezone เพื่อเลี่ยง +7 ชม.
+        if (field.includes("_date") || field.includes("_assessment")) {
+          // ✅ ถ้าเป็น string ที่มี timezone ให้เอา timezone ออก
+          if (typeof value === "string" && value.trim() !== "") {
+            const trimmed = value.trim();
+            // เอา timezone ออก (Z หรือ +07:00 ฯลฯ)
+            const noTz = trimmed
+              .replace(/Z$/i, "")
+              .replace(/[\+\-]\d{2}:?\d{2}$/i, "");
+
+            // รองรับทั้งรูปแบบมี T และมี space
+            const parts = noTz.replace("T", " ");
+            const match = parts.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(\.\d+)?$/);
+            if (match) {
+              return `${match[1]} ${match[2]}`;
+            }
           }
+          return this.sanitizeDate(value);
         }
-        return this.sanitizeDate(value);
-      }
 
         return value ?? null;
       });
@@ -488,8 +500,7 @@ export class ActivityDao extends ErrorHandledDao {
       console.log("🔍 === END LOG ===");
 
       await queryRunner.query(
-        `UPDATE activity SET ${setClause} WHERE activity_id = $${
-          updateFields.length + 1
+        `UPDATE activity SET ${setClause} WHERE activity_id = $${updateFields.length + 1
         }`,
         [...values, activity_id]
       );
@@ -500,7 +511,7 @@ export class ActivityDao extends ErrorHandledDao {
         `SELECT COUNT(*) as count FROM activity_detail WHERE activity_id = $1`,
         [activity_id]
       );
-      
+
       if (activityDetailCount[0].count > 0) {
         console.log(`⚠️ Found ${activityDetailCount[0].count} activity_detail records for activity ${activity_id}`);
         console.log("⚠️ Skipping food update to preserve student enrollment data");
@@ -549,13 +560,13 @@ export class ActivityDao extends ErrorHandledDao {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logDbError("updateActivityDao", error);
-      
+
       // ✅ จัดการ error เฉพาะเจาะจง
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes("foreign key constraint")) {
         throw new Error("❌ ไม่สามารถอัปเดตอาหารได้เนื่องจากมีนักเรียนลงทะเบียนแล้ว กรุณาลบการลงทะเบียนก่อน");
       }
-      
+
       throw new Error("❌ Failed to update activity");
     } finally {
       await queryRunner.release();
@@ -643,12 +654,12 @@ export class ActivityDao extends ErrorHandledDao {
 
   public async advanceStatesOnce(freezeNow?: Date): Promise<TransitionResult> {
     await this.checkConnection();
-    
+
     // ✅ Debug: ตรวจสอบข้อมูลใน database
     const debugQuery = `SELECT activity_id, activity_name, activity_state, status, event_format FROM activity WHERE status = 'Active' LIMIT 5`;
     const debugResult = await this.dataSource!.query(debugQuery);
     console.log(`🔍 [advanceStatesOnce] Current activities in DB:`, debugResult);
-    
+
     // 🔍 Debug: ตรวจสอบกิจกรรมที่ควรส่งอีเมล
     const debugOpenRegisterQuery = `
       SELECT 
@@ -668,7 +679,7 @@ export class ActivityDao extends ErrorHandledDao {
     `;
     const debugOpenRegisterResult = await this.dataSource!.query(debugOpenRegisterQuery);
     console.log(`🔍 [advanceStatesOnce] Activities that should send email:`, debugOpenRegisterResult);
-    
+
     // ✅ Debug: ตรวจสอบวันที่ของกิจกรรม ID 14
     const debugActivity14Query = `
       SELECT 
@@ -685,21 +696,21 @@ export class ActivityDao extends ErrorHandledDao {
     `;
     const activity14Result = await this.dataSource!.query(debugActivity14Query);
     console.log(`🔍 [advanceStatesOnce] Activity 14 details:`, activity14Result);
-    
+
     const qr = this.dataSource!.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
-  
+
     // ✅ ใช้เวลาปัจจุบันโดยไม่เพิ่ม timezone offset
     const nowRef = freezeNow ?? new Date();
     console.log(`🕐 [advanceStatesOnce] Current time:`, nowRef.toISOString());
-  
+
     const run = async (sql: string, params: unknown[]): Promise<any[]> => {
       const [rows, rowCount] = await qr.query(sql, params);
       console.log(`🔍 [advanceStatesOnce] Query result:`, rows);
       console.log(`🔍 [advanceStatesOnce] SQL:`, sql);
       console.log(`🔍 [advanceStatesOnce] Params:`, params);
-      
+
       // ✅ Debug: ตรวจสอบการเปรียบเทียบเวลา
       if (sql.includes('Open Register') && sql.includes('Close Register')) {
         const timeCheckQuery = `
@@ -720,13 +731,13 @@ export class ActivityDao extends ErrorHandledDao {
         const timeCheckResult = await qr.query(timeCheckQuery, params);
         console.log(`🔍 [advanceStatesOnce] Time comparison check:`, timeCheckResult);
       }
-      
+
       // ✅ ตรวจสอบว่า rows เป็น array หรือไม่
       const safeRows = Array.isArray(rows) ? rows : [];
       console.log(`🔍 [advanceStatesOnce] Extracted rows:`, safeRows);
       return safeRows;
     };
-  
+
     try {
       // 1) Not Start -> Special Open Register (สำหรับกิจกรรมที่ไม่ใช่ Course)
       const ids1 = await run(
@@ -749,19 +760,19 @@ export class ActivityDao extends ErrorHandledDao {
       if (ids1.length > 0) {
         console.log(`📧 [advanceStatesOnce] Found ${ids1.length} activities that just changed to Special Open Register`);
         console.log(`📧 [advanceStatesOnce] Activities:`, ids1.map(a => ({ id: a.activity_id, name: a.activity_name, format: a.event_format, status: a.activity_status })));
-        
+
         for (const activity of ids1) {
           try {
             console.log(`📧 [advanceStatesOnce] Processing special open register activity: ${activity.activity_id} - ${activity.activity_name}`);
-            
+
             // ตรวจสอบว่า activity ยังเป็น Special Open Register อยู่หรือไม่
             const currentState = await qr.query(
               `SELECT activity_state FROM activity WHERE activity_id = $1`,
               [activity.activity_id]
             );
-            
+
             console.log(`📧 [advanceStatesOnce] Current state for activity ${activity.activity_id}:`, currentState[0]?.activity_state);
-            
+
             if (currentState.length > 0 && currentState[0].activity_state === 'Special Open Register') {
               console.log(`📧 [advanceStatesOnce] Calling sendEmailToStudentsByRiskStatus for activity: ${activity.activity_id}`);
               await sendEmailToStudentsByRiskStatus(activity, 'Risk', 'OpenRegisterTemplate');
@@ -777,7 +788,7 @@ export class ActivityDao extends ErrorHandledDao {
       } else {
         console.log(`📧 [advanceStatesOnce] No activities changed to Special Open Register at ${nowRef.toISOString()}`);
       }
-  
+
       // 2) Not Start -> Open Register (สำหรับกิจกรรมที่ไม่ใช่ Course)
       const ids2 = await run(
         `
@@ -800,19 +811,19 @@ export class ActivityDao extends ErrorHandledDao {
       if (ids2.length > 0) {
         console.log(`📧 [advanceStatesOnce] Found ${ids2.length} activities that just opened for registration`);
         console.log(`📧 [advanceStatesOnce] Activities:`, ids2.map(a => ({ id: a.activity_id, name: a.activity_name, format: a.event_format, status: a.activity_status })));
-        
+
         for (const activity of ids2) {
           try {
             console.log(`📧 [advanceStatesOnce] Processing open register activity: ${activity.activity_id} - ${activity.activity_name}`);
-            
+
             // ตรวจสอบว่า activity ยังเป็น Open Register อยู่หรือไม่
             const currentState = await qr.query(
               `SELECT activity_state FROM activity WHERE activity_id = $1`,
               [activity.activity_id]
             );
-            
+
             console.log(`📧 [advanceStatesOnce] Current state for activity ${activity.activity_id}:`, currentState[0]?.activity_state);
-            
+
             if (currentState.length > 0 && currentState[0].activity_state === 'Open Register') {
               console.log(`📧 [advanceStatesOnce] Calling sendEmailToStudentsByRiskStatus for activity: ${activity.activity_id}`);
               await sendEmailToStudentsByRiskStatus(activity, 'Normal', 'OpenRegisterTemplate');
@@ -830,7 +841,7 @@ export class ActivityDao extends ErrorHandledDao {
       }
 
       // 2.5) Not Start -> Start Activity (สำหรับกิจกรรมที่เป็น Course)
-      
+
       // 🔍 Debug: ตรวจสอบกิจกรรม Course ที่เป็น Not Start
       const debugCourseQuery = `
         SELECT 
@@ -849,7 +860,7 @@ export class ActivityDao extends ErrorHandledDao {
       `;
       const debugCourseResult = await qr.query(debugCourseQuery, [nowRef]);
       console.log(`🔍 [advanceStatesOnce] Course activities with Not Start state:`, debugCourseResult);
-      
+
       const ids2_5 = await run(
         `
         UPDATE activity
@@ -870,19 +881,19 @@ export class ActivityDao extends ErrorHandledDao {
       if (ids2_5.length > 0) {
         console.log(`📧 [advanceStatesOnce] Found ${ids2_5.length} Course activities that just started`);
         console.log(`📧 [advanceStatesOnce] Activities:`, ids2_5.map(a => ({ id: a.activity_id, name: a.activity_name })));
-        
+
         for (const activity of ids2_5) {
           try {
             console.log(`📧 [advanceStatesOnce] Processing activity: ${activity.activity_id} - ${activity.activity_name}`);
-            
+
             // ตรวจสอบว่า activity ยังเป็น Start Activity อยู่หรือไม่
             const currentState = await qr.query(
               `SELECT activity_state FROM activity WHERE activity_id = $1`,
               [activity.activity_id]
             );
-            
+
             console.log(`📧 [advanceStatesOnce] Current state for activity ${activity.activity_id}:`, currentState[0]?.activity_state);
-            
+
             if (currentState.length > 0 && currentState[0].activity_state === 'Start Activity') {
               console.log(`📧 [advanceStatesOnce] Calling sendCourseStartEmail for activity: ${activity.activity_id}`);
               await sendCourseStartEmail(activity);
@@ -898,7 +909,7 @@ export class ActivityDao extends ErrorHandledDao {
       } else {
         console.log(`📧 [advanceStatesOnce] No new Course activities started at ${nowRef.toISOString()}`);
       }
-  
+
       // 3) Special Open Register -> Open Register (ไม่ส่งอีเมล)
       const ids3 = await run(
         `
@@ -921,19 +932,19 @@ export class ActivityDao extends ErrorHandledDao {
       if (ids3.length > 0) {
         console.log(`📧 [advanceStatesOnce] Found ${ids3.length} activities that changed from Special to Open Register`);
         console.log(`📧 [advanceStatesOnce] Activities:`, ids3.map(a => ({ id: a.activity_id, name: a.activity_name, format: a.event_format, status: a.activity_status })));
-        
+
         for (const activity of ids3) {
           try {
             console.log(`📧 [advanceStatesOnce] Processing special to open register activity: ${activity.activity_id} - ${activity.activity_name}`);
-            
+
             // ตรวจสอบว่า activity ยังเป็น Open Register อยู่หรือไม่
             const currentState = await qr.query(
               `SELECT activity_state FROM activity WHERE activity_id = $1`,
               [activity.activity_id]
             );
-            
+
             console.log(`📧 [advanceStatesOnce] Current state for activity ${activity.activity_id}:`, currentState[0]?.activity_state);
-            
+
             if (currentState.length > 0 && currentState[0].activity_state === 'Open Register') {
               console.log(`📧 [advanceStatesOnce] Calling sendEmailToStudentsByRiskStatus for activity: ${activity.activity_id}`);
               await sendEmailToStudentsByRiskStatus(activity, 'Normal', 'OpenRegisterTemplate');
@@ -949,7 +960,7 @@ export class ActivityDao extends ErrorHandledDao {
       } else {
         console.log(`📧 [advanceStatesOnce] No activities changed from Special to Open Register at ${nowRef.toISOString()}`);
       }
-  
+
       // 4) Open Register -> Close Register  ← (คุณพิมพ์ว่า "End Register" แต่ enum จริงคือ "Close Register")
       const ids4 = await run(
         `
@@ -1005,7 +1016,7 @@ export class ActivityDao extends ErrorHandledDao {
         `,
         [nowRef]
       );
-  
+
       // 7) End Activity -> Start Assessment (เมื่อถึง start_assessment)
       const ids7 = await run(
         `
@@ -1035,7 +1046,7 @@ export class ActivityDao extends ErrorHandledDao {
         `,
         [nowRef]
       );
-  
+
       await qr.commitTransaction();
       return {
         notStartToSpecial: ids1.length,

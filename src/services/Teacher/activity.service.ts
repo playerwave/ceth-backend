@@ -72,6 +72,30 @@ export class ActivityService extends ErrorHandledService {
     }
   }
 
+  public async getActivityByHistory(): Promise<Activity[]> {
+    const cacheKey = "activity:all";
+
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        this.logInfo("📦 Returning cached activity data");
+        return JSON.parse(cached);
+      }
+
+      const activities = await this.activityDao.getActivityByHistory();
+      await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
+
+      this.logInfo("📤 Activity data retrieved and cached", {
+        count: activities.length,
+      });
+
+      return activities;
+    } catch (error) {
+      this.logError("❌ Error in getActivityByHistory", error);
+      throw error;
+    }
+  }
+
   public async getAllActivities(): Promise<Activity[]> {
     const cacheKey = "activity:all";
 

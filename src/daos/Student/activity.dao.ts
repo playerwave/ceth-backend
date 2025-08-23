@@ -37,6 +37,18 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  public async getActivityHistoryByStudentsID(students_id: number): Promise<Activity[]> {
+    await this.checkConnection();
+    try {
+      const sql = `SELECT ac.activity_id, ac.activity_name, ac.presenter_company_name, ac.type, ac.description, ac.seat, ac.recieve_hours, ac.event_format, ac.start_activity_date, ac.end_activity_date, ac.image_url, ac.activity_state, r.room_name, asm.assessment_name, ac.start_assessment, ac.end_assessment, ac.registered_count FROM students as st INNER JOIN "join" as j ON st.students_id = j.students_id INNER JOIN activity_detail as acd ON j.activity_detail_id = acd.activity_detail_id INNER JOIN activity as ac ON acd.activity_id = ac.activity_id INNER JOIN room as r ON ac.room_id = r.room_id INNER JOIN assessment as asm ON ac.assessment_id = asm.assessment_id WHERE ((((ac.event_format = 'Online' OR ac.event_format = 'Onsite') AND ac.activity_state = 'End Assessment') OR (ac.event_format = 'Course' AND ac.activity_state = 'End Activity')) AND (st.students_id = $1)) ORDER BY ac.activity_id ASC`
+      const result = await this.dataSource?.query(sql, [students_id]);
+      return result
+    } catch (error) {
+      this.logDbError("getActivityHistoryByStudentsID", error);
+      throw new Error("❌ Failed to update activity");
+    }
+  }
+
 
   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
     await this.checkConnection();
@@ -109,7 +121,7 @@ export class ActivityDao extends ErrorHandledDao {
     }
 
     params = [studentId];
-    
+
     // ✅ Debug: ตรวจสอบกิจกรรมทั้งหมดที่ตรงเงื่อนไขพื้นฐาน
     const debugQuery = `
       SELECT a.activity_id, a.activity_name, a.activity_state, a.event_format, a.seat,
@@ -139,12 +151,12 @@ export class ActivityDao extends ErrorHandledDao {
     `;
     const debugResult = await this.dataSource!.query(debugQuery, [studentId]);
     console.log(`🔍 [DEBUG] All matching activities for student ${studentId}:`, debugResult);
-    
+
     // ✅ Debug: แสดงเวลาปัจจุบันที่ใช้ใน query
     const timeQuery = `SELECT NOW() as current_db_time, CURRENT_TIMESTAMP as current_timestamp, NOW() + INTERVAL '7 hours' as thai_time`;
     const timeResult = await this.dataSource!.query(timeQuery);
     console.log(`🕐 [DEBUG] Current time used in query:`, timeResult[0]);
-    
+
     const result = await this.dataSource!.query(query, params);
 
     console.log(
@@ -331,16 +343,16 @@ export class ActivityDao extends ErrorHandledDao {
     `;
     const activityResult = await this.dataSource!.query(activityQuery, [activityId]);
     const activity = activityResult[0];
-    
+
     if (!activity) {
       throw new Error("Activity not found");
     }
-    
+
     if (activity.registered_count >= activity.seat) {
       console.log(`❌ Activity ${activityId} is full: ${activity.registered_count}/${activity.seat}`);
       throw new Error("Activity is full");
     }
-    
+
     console.log(`✅ Activity ${activityId} has available seats: ${activity.registered_count}/${activity.seat}`);
 
     // 1. สร้าง activity_food record สำหรับแต่ละ food choice
@@ -395,10 +407,10 @@ export class ActivityDao extends ErrorHandledDao {
             "Registered", // status
           ]
         );
-        
+
         // อัพเดท registered_count หลังจากสร้าง activity_detail
         await this.updateRegisteredCount(activityId);
-        
+
         return result[0];
       }
     }
@@ -417,17 +429,17 @@ export class ActivityDao extends ErrorHandledDao {
         "Registered", // status
       ]
     );
-    
+
     // อัพเดท registered_count หลังจากสร้าง activity_detail
     await this.updateRegisteredCount(activityId);
-    
+
     return result[0];
   }
 
   // เพิ่มเมธอดใหม่สำหรับอัพเดท registered_count
   public async updateRegisteredCount(activityId: number): Promise<void> {
     await this.checkConnection();
-    
+
     const updateQuery = `
       UPDATE activity 
       SET registered_count = (
@@ -437,9 +449,9 @@ export class ActivityDao extends ErrorHandledDao {
       )
       WHERE activity_id = $1
     `;
-    
+
     await this.dataSource!.query(updateQuery, [activityId]);
-    
+
     // Log เพื่อ debug
     const countQuery = `
       SELECT registered_count 
@@ -453,7 +465,7 @@ export class ActivityDao extends ErrorHandledDao {
   // เพิ่มเมธอดสำหรับรีเซ็ต registered_count ทั้งหมด
   public async resetAllRegisteredCounts(): Promise<void> {
     await this.checkConnection();
-    
+
     const resetQuery = `
       UPDATE activity 
       SET registered_count = (
@@ -463,9 +475,9 @@ export class ActivityDao extends ErrorHandledDao {
           AND ad.status = 'Registered'
       )
     `;
-    
+
     await this.dataSource!.query(resetQuery);
-    
+
     // Log สรุป
     const summaryQuery = `
       SELECT 
@@ -480,7 +492,7 @@ export class ActivityDao extends ErrorHandledDao {
   // เพิ่มเมธอด public สำหรับ query ข้อมูล activity
   public async getActivityInfo(activityId: number): Promise<{ registered_count: number; seat: number } | null> {
     await this.checkConnection();
-    
+
     const query = `
       SELECT COALESCE(registered_count, 0) as registered_count, seat 
       FROM activity 
@@ -508,7 +520,7 @@ export class ActivityDao extends ErrorHandledDao {
   // เพิ่มเมธอดสำหรับลบ activity_detail และอัพเดท registered_count
   public async deleteActivityDetailAndUpdateCount(activityDetailId: number): Promise<void> {
     await this.checkConnection();
-    
+
     // 1. หา activity_id ก่อนลบ
     const activityQuery = `
       SELECT activity_id 
@@ -517,21 +529,21 @@ export class ActivityDao extends ErrorHandledDao {
     `;
     const activityResult = await this.dataSource!.query(activityQuery, [activityDetailId]);
     const activityId = activityResult[0]?.activity_id;
-    
+
     if (!activityId) {
       console.warn(`⚠️ Activity detail ${activityDetailId} not found`);
       return;
     }
-    
+
     // 2. ลบ activity_detail
     await this.dataSource!.query(
       `DELETE FROM activity_detail WHERE activity_detail_id = $1`,
       [activityDetailId]
     );
-    
+
     // 3. อัพเดท registered_count
     await this.updateRegisteredCount(activityId);
-    
+
     console.log(`🗑️ Deleted activity_detail ${activityDetailId} and updated registered_count for activity ${activityId}`);
   }
 
@@ -564,7 +576,7 @@ export class ActivityDao extends ErrorHandledDao {
     activityId: number
   ): Promise<boolean> {
     await this.checkConnection();
-  
+
     // หา activity_detail ของนิสิตในกิจกรรมนี้
     const detailRow = await this.dataSource!.query(
       `
@@ -578,13 +590,13 @@ export class ActivityDao extends ErrorHandledDao {
       `,
       [activityId, studentId]
     );
-  
+
     const activityDetailId: number | undefined = detailRow[0]?.activity_detail_id;
     if (!activityDetailId) {
       console.warn(`⚠️ Not found registered activity_detail for student=${studentId}, activity=${activityId}`);
       return false;
     }
-  
+
     // เปลี่ยนสถานะเป็น Cancelled
     const updated = await this.dataSource!.query(
       `
@@ -596,7 +608,7 @@ export class ActivityDao extends ErrorHandledDao {
       `,
       [activityDetailId]
     );
-  
+
     // อัปเดตสถานะในตาราง join
     await this.dataSource!.query(
       `
@@ -606,10 +618,10 @@ export class ActivityDao extends ErrorHandledDao {
       `,
       [activityDetailId]
     );
-  
+
     // นับผู้ลงทะเบียนใหม่ (นับเฉพาะ Registered)
     await this.updateRegisteredCount(activityId);
-  
+
     const success = Boolean(updated[0]);
     if (success) {
       console.log(`🚪 Cancelled enrollment for student=${studentId} from activity=${activityId} (detail=${activityDetailId})`);

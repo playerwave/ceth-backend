@@ -149,10 +149,10 @@ export class ActivityService extends ErrorHandledService {
 
       // 4. ลบ cache
       await redis.del(`join:${studentId}`);
-      
+
       // 5. ตรวจสอบ registered_count หลังจากลงทะเบียน
       const finalCount = await this.activityDao.getActivityInfo(activityId);
-      
+
       this.logInfo("✅ Student enrolled in activity", {
         studentId,
         activityId,
@@ -165,6 +165,30 @@ export class ActivityService extends ErrorHandledService {
       return join;
     } catch (error) {
       this.logError("❌ Error in studentEnrollActivityService", error);
+      throw error;
+    }
+  }
+
+  public async getActivityHistoryByStudentsID(students_id: number): Promise<Activity[]> {
+    const cacheKey = "activity:all";
+
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        this.logInfo("📦 Returning cached activity data");
+        return JSON.parse(cached);
+      }
+
+      const activities = await this.activityDao.getActivityHistoryByStudentsID(students_id);
+      await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
+
+      this.logInfo("📤 Activity data retrieved and cached", {
+        count: activities.length,
+      });
+
+      return activities;
+    } catch (error) {
+      this.logError("❌ Error in getActivityHistoryByStudentsID", error);
       throw error;
     }
   }
@@ -217,7 +241,7 @@ export class ActivityService extends ErrorHandledService {
     try {
       // ใช้ cancelEnrollment เพื่อเปลี่ยน status เป็น Cancelled แทนการลบ
       const success = await this.activityDao.cancelEnrollment(studentId, activityId);
-      
+
       if (success) {
         // ลบ cache ของรายการ join ของนิสิต
         await redis.del(`join:${studentId}`);
@@ -227,7 +251,7 @@ export class ActivityService extends ErrorHandledService {
           activityId,
         });
       }
-      
+
       return success;
     } catch (error) {
       this.logError("❌ Error in unEnrollActivityService", error);
@@ -241,16 +265,16 @@ export class ActivityService extends ErrorHandledService {
   // ): Promise<boolean> {
   //   try {
   //     const ok = await this.activityDao.cancelEnrollment(studentId, activityId);
-  
+
   //     // ลบ cache ของรายการ join ของนิสิต (ถ้ามี)
   //     await redis.del(`join:${studentId}`);
-  
+
   //     this.logInfo("🚪 Student unenrolled from activity", {
   //       studentId,
   //       activityId,
   //       success: ok,
   //     });
-  
+
   //     return ok;
   //   } catch (error) {
   //     this.logError("❌ Error in unEnrollActivityService", error);

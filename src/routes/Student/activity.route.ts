@@ -60,6 +60,11 @@ router.post(
   wrapAsync(activityController.resetRegisteredCounts)
 );
 
+router.get(
+  "/history/:studentId",
+  wrapAsync(activityController.getActivityHistoryByStudentsID)
+);
+
 // ✅ GET METHODS
 router.get(
   "/get-student-activities/:id",
