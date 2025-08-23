@@ -50,7 +50,7 @@ export class ActivityDao extends ErrorHandledDao {
         await this.checkConnection();
         try {
             const offset = (page - 1) * limit;
-            const sql = `SELECT (activity_id, activity_name, presenter_company_name, type, description, seat, recieve_hours, event_format, special_start_register_date, end_register_date, start_activity_date, end_activity_date, image_url, activity_state, room.room_name ) FROM activity INNER JOIN room ON activity.room_id = room.room_id WHERE activity.status = 'Active' AND activity.activity_status = 'Public' AND (activity.activity_state = 'Not Start' OR activity.activity_state = 'Special Open Register' OR activity.activity_state = 'Open Register') ORDER BY activity_id ASC LIMIT $1 OFFSET $2`
+            const sql = `SELECT activity_id, activity_name, presenter_company_name, type, description, seat, recieve_hours, event_format, special_start_register_date, end_register_date, start_activity_date, end_activity_date, image_url, activity_state, room.room_name FROM activity INNER JOIN room ON activity.room_id = room.room_id WHERE activity.status = 'Active' AND activity.activity_status = 'Public' AND (activity.activity_state = 'Not Start' OR activity.activity_state = 'Special Open Register' OR activity.activity_state = 'Open Register') ORDER BY activity_id ASC LIMIT $1 OFFSET $2`
             const result = await this.activityDao?.query(sql, [limit, offset])
             return result
         } catch (error) {
