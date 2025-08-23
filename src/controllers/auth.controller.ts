@@ -81,8 +81,8 @@ export class AuthController extends ErrorHandledController {
           };
 
           // สร้าง token ก่อน
-          const token = generateTokenAndSetCookie(res, user.users_id);
-          res.status(200).json(responseBody);
+          const token = generateTokenAndSetCookie(res, user.users_id, user.roles_id);
+          res.status(200).json({ ...responseBody, token });
           return;
         }
       }
@@ -106,8 +106,8 @@ export class AuthController extends ErrorHandledController {
           };
 
           // สร้าง token ก่อน
-          const token = generateTokenAndSetCookie(res, user.users_id);
-          res.status(200).json(responseBody);
+          const token = generateTokenAndSetCookie(res, user.users_id, user.roles_id);
+          res.status(200).json({ ...responseBody, token });
           return;
         }
       }
@@ -125,7 +125,7 @@ export class AuthController extends ErrorHandledController {
 
       // สร้าง token ก่อน
       const token = generateTokenAndSetCookie(res, user.users_id);
-      res.status(200).json(responseBody);
+      res.status(200).json({ ...responseBody, token });
     } catch (error) {
       this.handleError("AuthController.login", error, res);
     }

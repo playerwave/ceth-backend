@@ -23,7 +23,7 @@ export class Students {
   @JoinColumn({ name: "users_id" })
   users!: Users;
 
-  @Column()
+  @Column({ type: "int" })
   users_id!: number;
 
   @Column({ type: "varchar", length: 255, nullable: true })
@@ -51,28 +51,28 @@ export class Students {
   @JoinColumn({ name: "faculty_id" })
   faculty!: Faculty;
 
-  @Column({ nullable: true })
+  @Column({ type: "int",nullable: true })
   faculty_id?: number;
 
   @ManyToOne(() => Department, (department) => department.students)
   @JoinColumn({ name: "department_id" })
   department!: Department;
 
-  @Column({ nullable: true })
+  @Column({ type: "int",nullable: true })
   department_id?: number;
 
   @ManyToOne(() => Grade, (grade) => grade.students)
   @JoinColumn({ name: "grade_id" })
   grade!: Grade;
 
-  @Column({ nullable: true })
+  @Column({ type: "int", nullable: true })
   grade_id?: number;
 
   @ManyToOne(() => EventCoop, (eventCoop) => eventCoop.students)
   @JoinColumn({ name: "eventcoop_id" })
   eventCoop!: EventCoop;
 
-  @Column({ nullable: true })
+  @Column({ type: "int", nullable: true })
   eventcoop_id?: number;
 
   @OneToMany(() => Join, (join) => join.students)

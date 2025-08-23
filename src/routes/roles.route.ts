@@ -9,28 +9,28 @@ const rolesController = new RolesController();
 // ✅ GET: บทบาททั้งหมด + count
 router.get(
   "/data",
-  Admin,
+  // Admin,
   wrapAsync(rolesController.getAll.bind(rolesController))
 );
 
 // ✅ POST: เพิ่มบทบาทใหม่
 router.post(
   "/add",
-  Admin,
+  // Admin,
   wrapAsync(rolesController.create.bind(rolesController))
 );
 
 // ✅ PUT: แก้ไขบทบาทตาม id
 router.put(
   "/edit/:roles_id",
-  Admin,
+  // Admin,
   wrapAsync(rolesController.update.bind(rolesController))
 );
 
 // ✅ DELETE: ลบบทบาทตาม id
 router.delete(
   "/delete/:roles_id",
-  Admin,
+  // Admin,
   wrapAsync(rolesController.delete.bind(rolesController))
 );
 

@@ -55,7 +55,7 @@ export class RolesDao extends ErrorHandledDao {
     try {
       const name = roles_name.trim();
       const sql = `SELECT roles_name FROM roles WHERE roles_name = $1`;
-      const result = await this.dataSource!.query(sql, [`%${name}%`]);
+      const result = await this.dataSource!.query(sql, [name]);
       return result;
     } catch (error) {
       this.logDbError("getRolesByName", error);

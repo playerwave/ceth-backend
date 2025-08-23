@@ -3,11 +3,16 @@ import { Response } from "express";
 
 export const generateTokenAndSetCookie = (
   res: Response,
-  userId: number
+  userId: number,
+  rolesId?: number
 ): string => {
-  const token = jwt.sign({ id: userId }, process.env.JWT_SECRET as string, {
-    expiresIn: "7d",
-  });
+  const token = jwt.sign(
+    { id: userId, roles_id: rolesId }, 
+    process.env.JWT_SECRET as string, 
+    {
+      expiresIn: "7d",
+    }
+  );
 
   res.cookie("token", token, {
     httpOnly: true,

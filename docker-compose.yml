@@ -1,0 +1,79 @@
+# services:
+#   ceth-backend-deploy:
+#     image: node:22-alpine
+#     container_name: ceth-backend-container
+#     working_dir: /app
+#     volumes:
+#       - .:/app
+#     ports:
+#       - "8069:5090"
+#     command: ["node", "server.js"]
+#     depends_on:
+#       - ceth-db-deploy
+
+#   ceth-db-deploy:
+#     image: postgres:17
+#     container_name: ceth_db_container
+#     restart: always
+#     environment:
+#       POSTGRES_USER: admin
+#       POSTGRES_PASSWORD: Wave_310847
+#       POSTGRES_DB: unizalbuu
+#     ports:
+#       - "8070:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+
+# volumes:
+#   postgres_data:
+
+
+services:
+  ceth-backend-deploy:
+    image: node:22
+    container_name: ceth-backend-container
+    working_dir: /app
+    volumes:
+      - /home/wave/ceth-backend:/app
+    ports:
+      - "8069:5090"
+    env_file:
+      - .env   # ← โหลด REDIS_HOST, REDIS_PORT, REDIS_USERNAME, REDIS_PASSWORD จากไฟล์ .env
+    environment:
+      # === DB ===
+      DB_HOST: ceth-db-deploy
+      DB_PORT: "5432"
+      DB_USER: admin
+      DB_PASSWORD: Wave_310847
+      DB_NAME: unizalbuu
+
+      # === Redis Cloud flags ===
+      REDIS_TLS: "true"          # ให้โค้ดรู้ว่าต้องต่อ TLS
+      REDIS_PROTOCOL: "rediss"   # หรือใช้ตัวนี้ในโค้ด
+
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      ceth-db-deploy:
+        condition: service_healthy
+
+  ceth-db-deploy:
+    image: postgres:17
+    container_name: ceth_db_container
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: Wave_310847
+      POSTGRES_DB: unizalbuu
+    ports:
+      - "8070:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d unizalbuu"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
+

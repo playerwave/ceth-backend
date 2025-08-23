@@ -19,14 +19,14 @@ export class Room {
   @JoinColumn({ name: "faculty_id" })
   faculty!: Faculty;
 
-  @Column()
+  @Column({ type: "int" })
   faculty_id!: number;
 
   @ManyToOne(() => Building, (building) => building.room)
   @JoinColumn({ name: "building_id" })
   building?: Building;
 
-  @Column()
+  @Column({ type: "int" })
   building_id?: number;
 
   @Column({ type: "varchar", length: 255, unique: true })

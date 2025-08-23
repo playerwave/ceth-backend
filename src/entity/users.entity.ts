@@ -27,7 +27,7 @@ export class Users {
   @JoinColumn({ name: 'roles_id' })
   roles!: Roles;
 
-  @Column()
+  @Column({ type: "int" })
   roles_id!: number;
 
   @OneToMany(() => Students, (students) => students.users)

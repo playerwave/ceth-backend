@@ -78,21 +78,21 @@ export class Certificate {
   @JoinColumn({ name: "students_id" })
   students!: Students;
 
-  @Column()
+  @Column({ type: "int" })
   students_id!: number;
 
   @ManyToOne(() => Teacher, (teacher) => teacher.certificate)
   @JoinColumn({ name: "teacher_id" })
   teacher?: Teacher;
 
-  @Column()
+  @Column({ type: "int" })
   teacher_id?: number;
 
   @ManyToOne(() => Activity, (activity) => activity.certificate)
   @JoinColumn({ name: "activity_id" })
   activity?: Activity;
 
-  @Column()
+  @Column({ type: "int" })
   activity_id?: number;
 
   @Column({ type: "timestamp" })

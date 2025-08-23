@@ -23,7 +23,7 @@ export class Food {
   @JoinColumn({ name: "faculty_id" })
   faculty!: Faculty;
 
-  @Column()
+  @Column({ type: "int" })
   faculty_id!: number;
 
   @OneToMany(() => ActivityFood, (activityFood) => activityFood.food)

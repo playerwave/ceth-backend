@@ -119,7 +119,6 @@ class DatabaseManager {
         ],
         synchronize: true,
         logging: false, // ✅ ปิด logging เพื่อลด overhead
-        ssl: { rejectUnauthorized: false },
         // ✅ ลด connection pooling settings
         extra: {
           max: 3, // ✅ ลดจำนวน connection สูงสุด

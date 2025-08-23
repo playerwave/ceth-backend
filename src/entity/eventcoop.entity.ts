@@ -65,14 +65,14 @@ export class EventCoop {
   @JoinColumn({ name: "department_id" })
   department!: Department;
 
-  @Column()
+  @Column({ type: "int" })
   department_id!: number;
 
   @ManyToOne(() => Grade, (grade) => grade.eventCoop)
   @JoinColumn({ name: "grade_id" })
   grade!: Grade;
 
-  @Column()
+  @Column({ type: "int" })
   grade_id!: number;
 
   @Column({ type: "timestamp" })

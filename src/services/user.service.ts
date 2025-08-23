@@ -38,21 +38,25 @@ export class UsersService {
     return result;
   }
 
-  async register(username: string, password: string): Promise<Users | null> {
+  async register(username: string, password: string, roles_id?: number): Promise<Users | null> {
     const exists = await this.usersDao.getUsersByUsername(username);
     if (exists.length > 0) return null;
 
     const hash = await bcrypt.hash(password, 10);
-    await this.usersDao.register(username, hash);
+    
+    // ใช้ roles_id ที่ส่งมา หรือ default เป็น Student (roles_id = 2)
+    const roleId = roles_id || 2;
+    const createdUser = await this.usersDao.addUsers(username, hash, roleId);
 
-    const users = await this.usersDao.getUsersByUsername(username);
-    if (users.length === 0) return null;
-
-    const user = users[0];
-    if (user.roles_id === 3) await this.studentsDao.add(user.users_id);
+    // สร้าง profile ตาม role
+    if (roleId === 2) { // Student
+      await this.studentsDao.add(createdUser.users_id);
+    } else if (roleId === 1) { // Teacher
+      await this.teacherDao.addUserIDTeacher(createdUser.users_id);
+    }
 
     await redis.del("users:all");
-    return user;
+    return createdUser;
   }
 
   async addUsers(

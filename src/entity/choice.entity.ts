@@ -13,7 +13,7 @@ export class Choice {
     @JoinColumn({ name: 'question_id' })
     question?: Question;
 
-    @Column()
+    @Column({ type: "int" })
     question_id?: number;
 
     @OneToMany(() => Answer, (answer) => answer.choice)

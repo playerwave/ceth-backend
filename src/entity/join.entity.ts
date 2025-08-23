@@ -28,7 +28,7 @@ export class Join {
   @JoinColumn({ name: "students_id" })
   students!: Students;
 
-  @Column()
+  @Column({ type: "int" })
   students_id!: number;
 
   @Column({ type: "timestamp" })
@@ -52,7 +52,7 @@ export class Join {
   @JoinColumn({ name: "activity_detail_id" })
   activityDetail?: ActivityDetail;
 
-  @Column()
+  @Column({ type: "int" })
   activity_detail_id!: number;
 
   @OneToMany(() => Answer, (answer) => answer.join)

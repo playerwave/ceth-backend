@@ -36,7 +36,8 @@ import jwt from "jsonwebtoken";
 import logger from "../utils/logger";
 
 export const verifyToken: RequestHandler = (req, res, next) => {
-  const token = req.cookies.token as string;
+  // ตรวจสอบ token จาก cookies หรือ Authorization header
+  const token = req.cookies.token || req.headers.authorization?.replace('Bearer ', '');
 
   if (!token) {
     res.status(401).json({ message: "No token provided" });

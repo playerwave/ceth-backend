@@ -19,7 +19,7 @@ export class Teacher {
   @JoinColumn({ name: "users_id" })
   users!: Users;
 
-  @Column()
+  @Column({ type: "int" })
   users_id!: number;
 
   @Column({ type: "varchar", length: 255 })
@@ -32,7 +32,7 @@ export class Teacher {
   @JoinColumn({ name: "faculty_id" })
   faculty!: Faculty;
 
-  @Column()
+  @Column({ type: "int" })
   faculty_id!: number;
 
   @OneToMany(() => Certificate, (certificate) => certificate.teacher)

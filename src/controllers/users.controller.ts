@@ -84,7 +84,8 @@ export class UsersController extends ErrorHandledController {
       const data = this.parseUserPayload(req.body);
       const registered = await this.usersService.register(
         data.username,
-        data.password
+        data.password,
+        data.roles_id
       );
 
       if (!registered) {

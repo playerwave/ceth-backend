@@ -113,7 +113,7 @@ export class Assessment {
   @JoinColumn({ name: "set_number_id" })
   setNumber?: SetNumber;
 
-  @Column()
+  @Column({ type: "int" })
   set_number_id?: number;
 
   @Column({

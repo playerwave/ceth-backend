@@ -2,7 +2,7 @@ import { AuthDao } from "../daos/auth.dao";
 import { StudentsDao } from "../daos/Student/student.dao";
 import { TeacherDao } from "../daos/Teacher/teacher.dao";
 import { Users } from "../entity/users.entity";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import redis from "../config/redis";
 import { ErrorHandledService } from "./error.handdled.service";
 
@@ -78,10 +78,23 @@ export class AuthService extends ErrorHandledService {
     username: string,
     password: string
   ): Promise<Users | null> {
+    console.log(`🔍 [Auth] Validating user: ${username}`);
     const user = await this.authDao.getUsersByUsername(username);
-    if (!user || !user.password) return null;
+    
+    if (!user) {
+      console.log(`❌ [Auth] User not found: ${username}`);
+      return null;
+    }
+    
+    if (!user.password) {
+      console.log(`❌ [Auth] User has no password: ${username}`);
+      return null;
+    }
 
+    console.log(`🔍 [Auth] Comparing passwords for user: ${username}`);
     const matched = await bcrypt.compare(password, user.password);
+    console.log(`✅ [Auth] Password match result: ${matched} for user: ${username}`);
+    
     return matched ? user : null;
   }
 

@@ -1,9 +1,9 @@
+import "reflect-metadata";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDatabase, closeDatabase } from "./db/database";
 import bodyParser from "body-parser";
-import "reflect-metadata";
 import { httpLogger, requestLogger, errorLogger } from "./utils/logger";
 // import { validationResult } from "express-validator";
 import cookieParser from "cookie-parser";
@@ -99,7 +99,16 @@ app.use((req, res, next) => {
 // ใช้ CORS
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3000"], // ระบุโดเมนที่อนุญาต
+    origin: [
+      "http://localhost:5173", 
+      "http://localhost:3000",
+      "http://vps.theapds.org",
+      "https://vps.theapds.org",
+      "http://45.144.164.136",
+      "https://45.144.164.136",
+      "https://4312c1b8.cooperative-system-buu.pages.dev", // ✅ เพิ่ม Frontend domain
+      "https://*.cooperative-system-buu.pages.dev" // ✅ รองรับ subdomain ทั้งหมด
+    ], // ระบุโดเมนที่อนุญาต
     credentials: true, // อนุญาตให้ใช้ credentials เช่น cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],

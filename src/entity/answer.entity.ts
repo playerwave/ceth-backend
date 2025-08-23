@@ -20,21 +20,21 @@ export class Answer {
   @JoinColumn({ name: "join_id" })
   join?: Join;
 
-  @Column()
+  @Column({ type: "int" })
   join_id?: number;
 
   @ManyToOne(() => Question, (question) => question.answer)
   @JoinColumn({ name: "question_id" })
   question?: Question;
 
-  @Column()
+  @Column({ type: "int" })
   question_id?: number;
 
   @ManyToOne(() => Choice, (choice) => choice.answer, { nullable: true })
   @JoinColumn({ name: "choice_id" })
   choice?: Choice | null;
 
-  @Column()
+  @Column({ type: "int" })
   choice_id?: number;
 
   @Column({ type: "text", nullable: true })
@@ -44,13 +44,13 @@ export class Answer {
   @JoinColumn({ name: "set_number_id" })
   setNumber!: SetNumber;
 
-  @Column()
+  @Column({ type: "int" })
   set_number_id?: number;
 
   @ManyToOne(() => Assessment, (assessment) => assessment.answer)
   @JoinColumn({ name: "assessment_id" })
   assessment?: Assessment;
 
-  @Column()
+  @Column({ type: "int" })
   assessment_id?: number;
 }

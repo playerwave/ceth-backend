@@ -11,7 +11,7 @@ export class Building {
     @JoinColumn({ name: 'faculty_id' })
     faculty!: Faculty;
 
-    @Column()
+    @Column({ type: "int" })
     faculty_id!: number;
 
     @Column({ type: 'varchar', length: 255, unique: true })

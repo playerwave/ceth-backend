@@ -9,7 +9,8 @@
     "resolveJsonModule": true,
     "experimentalDecorators": true,     // เปิดใช้งาน decorators
     "emitDecoratorMetadata": true,      // เปิดใช้งาน metadata reflection
-    "types": ["jest", "node"]           // เพิ่ม Jest types
+    "types": ["jest", "node"],
+    "outDir": "./dist"           // เพิ่ม Jest types
   },
   "include": ["src/**/*","src/types/**/*.d.ts","test/**/*"],              // รวมไฟล์ทั้งหมดในโฟลเดอร์ src และ test
   "exclude": ["node_modules"]           // ไม่รวม node_modules

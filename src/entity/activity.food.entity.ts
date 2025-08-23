@@ -12,14 +12,14 @@ export class ActivityFood {
     @JoinColumn({ name: 'activity_id' })
     activity!: Activity;
 
-    @Column()
+    @Column({ type: "int" })
     activity_id!: number;
 
     @ManyToOne(() => Food, (food) => food.activityFood)
     @JoinColumn({ name: 'food_id' })
     food!: Food;
 
-    @Column()
+    @Column({ type: "int" })
     food_id!: number;
 
     @OneToMany(() => ActivityDetail, (activityDetail) => activityDetail.activityFood)

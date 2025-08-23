@@ -17,7 +17,7 @@ export async function callTyphoonOCR(
   const ab = file.buffer.buffer.slice(
     file.buffer.byteOffset,
     file.buffer.byteOffset + file.buffer.byteLength
-  );
+  ) as ArrayBuffer;
   const blob = new Blob([ab], {
     type: file.mimetype || "application/octet-stream",
   });

@@ -28,14 +28,14 @@ export class ActivityDetail {
   @JoinColumn({ name: "activity_id" })
   activity!: Activity;
 
-  @Column()
+  @Column({ type: "int" })
   activity_id!: number;
 
   @ManyToOne(() => ActivityFood, (activityFood) => activityFood.activityDetail)
   @JoinColumn({ name: "activity_food_id" })
   activityFood?: ActivityFood;
 
-  @Column()
+  @Column({ type: "int" })
   activity_food_id?: number;
 
   @Column({ type: "timestamp" })
