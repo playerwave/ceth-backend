@@ -37,6 +37,7 @@ services:
       - /home/wave/ceth-backend:/app
     ports:
       - "8069:5090"
+      - "5090:5090"
     env_file:
       - .env   # ← โหลด REDIS_HOST, REDIS_PORT, REDIS_USERNAME, REDIS_PASSWORD จากไฟล์ .env
     environment:
@@ -46,6 +47,7 @@ services:
       DB_USER: admin
       DB_PASSWORD: Wave_310847
       DB_NAME: unizalbuu
+      PORT: "5090"
 
       # === Redis Cloud flags ===
       REDIS_TLS: "true"          # ให้โค้ดรู้ว่าต้องต่อ TLS
