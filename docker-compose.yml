@@ -34,12 +34,11 @@ services:
     container_name: ceth-backend-container
     working_dir: /app
     volumes:
-      - /home/wave/ceth-backend:/app
+      - .:/app
     ports:
       - "8069:5090"
-      - "5090:5090"
     env_file:
-      - .env   # ← โหลด REDIS_HOST, REDIS_PORT, REDIS_USERNAME, REDIS_PASSWORD จากไฟล์ .env
+      - .env.production   # ← โหลด environment variables สำหรับ production
     environment:
       # === DB ===
       DB_HOST: ceth-db-deploy

@@ -341,7 +341,14 @@ import facultyRoute from "./routes/faculty.route";
 import activityVisitorRoute from "./routes/visitor/activity.route";
 import emailRoute from "./routes/email.route";
 
-dotenv.config();
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+dotenv.config({ path: envFile });
+
+// Debug: Log which env file is being used
+console.log(`🔧 Loading environment from: ${envFile}`);
+console.log(`🔧 NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`🔧 DB_HOST: ${process.env.DB_HOST}`);
 
 const app = express();
 

@@ -5,7 +5,10 @@ import {
   getConnectionManager,
 } from "typeorm";
 import dotenv from "dotenv";
-dotenv.config();
+
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+dotenv.config({ path: envFile });
 
 //import entity
 import { Roles } from "../entity/roles.entity";
@@ -94,6 +97,9 @@ class DatabaseManager {
         username: process.env.DB_USERNAME,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_DATABASE,
+        ssl: {
+          rejectUnauthorized: false, // สำหรับ Render PostgreSQL
+        },
         entities: [
           Roles,
           Users,
