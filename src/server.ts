@@ -106,8 +106,10 @@ app.use(
       "https://vps.theapds.org",
       "http://45.144.164.136",
       "https://45.144.164.136",
-      "https://4312c1b8.cooperative-system-buu.pages.dev", // ✅ เพิ่ม Frontend domain
-      "https://*.cooperative-system-buu.pages.dev" // ✅ รองรับ subdomain ทั้งหมด
+      "https://*.pages.dev", // Cloudflare Pages
+      "https://*.cloudflare.com", // Cloudflare domains
+      "https://cooperative-system-buu.pages.dev", // Your specific Cloudflare domain
+      ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []) // Environment variable สำหรับ frontend URL
     ], // ระบุโดเมนที่อนุญาต
     credentials: true, // อนุญาตให้ใช้ credentials เช่น cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -157,6 +159,15 @@ app.use("/api/faculty", facultyRoute);
 app.use("/api/visitor", activityVisitorRoute);
 app.use("/api/email", emailRoute);
 
+// ✅ เพิ่ม fallback route เพื่อป้องกัน 404
+app.use("*", (req, res) => {
+  res.status(404).json({ 
+    error: "API endpoint not found", 
+    path: req.originalUrl,
+    method: req.method 
+  });
+});
+
 app.use(errorLogger); // ใช้ Error Logger ข้อความ Error ให้อ่านง่ายขึ้น
 
 // ✅ ฟังก์ชัน graceful shutdown
@@ -201,7 +212,7 @@ const startServer = async () => {
     await connectDatabase();
     console.log("✅ Database connected successfully");
 
-    const PORT = process.env.PORT || 5090;
+    const PORT = process.env.PORT || 8069;
     server = app.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
     });
