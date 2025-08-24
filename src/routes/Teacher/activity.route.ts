@@ -32,6 +32,8 @@ router.post(
   wrapAsync(activityController.create)
 );
 
+router.get("/get-search", (activityController.getSearch))
+
 // PUT METHOD
 router.put(
   "/update-activity/:id",

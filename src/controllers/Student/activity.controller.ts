@@ -61,6 +61,17 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  public async getSearch(req: Request, res: Response): Promise<void> {
+    const studentId = this.parseId(req.params.studentId);
+    const { text } = req.body
+    try {
+      const activities = await this.activityService.getSearch(studentId, text)
+      res.status(200).json(activities);
+    } catch (error) {
+      this.handleError("ActivityController.getSearch", error, res);
+    }
+  }
+
   public async enrollActivity(req: Request, res: Response): Promise<void> {
     try {
       const activityId = this.parseId(req.params.activityId);
@@ -196,6 +207,7 @@ export const activityController = {
   getStudentActivities: controller.getStudentActivities.bind(controller),
   getActivityById: controller.getActivityById.bind(controller),
   getActivityHistoryByStudentsID: controller.getActivityHistoryByStudentsID.bind(controller),
+  getSearch: controller.getSearch.bind(controller),
   enrollActivity: controller.enrollActivity.bind(controller),
   getEnrolledActivities: controller.getEnrolledActivities.bind(controller),
   searchActivity: controller.searchActivity.bind(controller),

@@ -193,6 +193,30 @@ export class ActivityService extends ErrorHandledService {
     }
   }
 
+  public async getSearch(students_id: number, text: string): Promise<Activity[]> {
+    const cacheKey = "activity:all";
+
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        this.logInfo("📦 Returning cached activity data");
+        return JSON.parse(cached);
+      }
+
+      const activities = await this.activityDao.getSearch(students_id, text)
+      await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
+
+      this.logInfo("📤 Activity data retrieved and cached", {
+        count: activities.length,
+      });
+
+      return activities;
+    } catch (error) {
+      this.logError("❌ Error in getSearch", error);
+      throw error;
+    }
+  }
+
   public async getEnrolledActivitiesService(
     studentId: number
   ): Promise<Activity[]> {

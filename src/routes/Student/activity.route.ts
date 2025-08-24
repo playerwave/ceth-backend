@@ -65,6 +65,11 @@ router.get(
   wrapAsync(activityController.getActivityHistoryByStudentsID)
 );
 
+router.get(
+  "/get-search/:studentId",
+  wrapAsync(activityController.getSearch)
+);
+
 // ✅ GET METHODS
 router.get(
   "/get-student-activities/:id",

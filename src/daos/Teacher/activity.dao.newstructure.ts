@@ -354,6 +354,20 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  public async getSearch(text: string): Promise<Activity[]> {
+    await this.checkConnection();
+    try {
+      const Text1 = text
+      const Text2 = `%${text}%`
+      const sql = `SELECT *, GREATEST(similarity(activity_name, $1), similarity(presenter_company_name, $1), similarity(type::text, $1)) AS relevance FROM activity WHERE activity_name ILIKE $2 OR presenter_company_name ILIKE $2 OR type::text ILIKE $2 ORDER BY relevance DESC`
+      const result = await this.dataSource?.query(sql, [Text1, Text2]);
+      return result;
+    } catch (error) {
+      this.logDbError("getSearch", error);
+      throw new Error("❌ Failed to Search getSearch");
+    }
+  }
+
   public async getActivityByID(activity_id: number): Promise<Activity[]> {
     await this.checkConnection();
     try {

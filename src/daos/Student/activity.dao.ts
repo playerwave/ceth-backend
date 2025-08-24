@@ -49,6 +49,20 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  public async getSearch(students_id: number, text: string): Promise<Activity[]> {
+    await this.checkConnection();
+    try {
+      const Text1 = text
+      const Text2 = `%${text}%`
+      const sql = `SELECT ac.activity_id, ac.activity_name, ac.presenter_company_name, ac.type, ac.description, ac.seat, ac.recieve_hours, ac.event_format, ac.start_activity_date, ac.end_activity_date, ac.image_url, ac.activity_state, r.room_name, asm.assessment_name, ac.start_assessment, ac.end_assessment, ac.registered_count, GREATEST(similarity(ac.activity_name, $1), similarity(ac.presenter_company_name, $1), similarity(ac.type::text, $1)) AS relevance FROM students as st INNER JOIN "join" as j ON st.students_id = j.students_id INNER JOIN activity_detail as acd ON j.activity_detail_id = acd.activity_detail_id INNER JOIN activity as ac ON acd.activity_id = ac.activity_id INNER JOIN room as r ON ac.room_id = r.room_id INNER JOIN assessment as asm ON ac.assessment_id = asm.assessment_id WHERE ((ac.activity_name ILIKE $2 OR ac.presenter_company_name ILIKE $2 OR ac.type::text ILIKE $2) AND st.students_id = $3) ORDER BY relevance DESC`
+      const result = await this.dataSource?.query(sql, [Text1, Text2, students_id]);
+      return result;
+    } catch (error) {
+      this.logDbError("getSearch", error);
+      throw new Error("❌ Failed to Search getSearch");
+    }
+  }
+
 
   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
     await this.checkConnection();

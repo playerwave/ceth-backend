@@ -41,6 +41,16 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  public async getSearch(req: Request, res: Response): Promise<void> {
+    const { text } = req.body
+    try {
+      const activities = await this.activityService.getSearch(text)
+      res.status(200).json(activities);
+    } catch (error) {
+      this.handleError("ActivityController.getSearch", error, res);
+    }
+  }
+
   public async getActivityByHistory(req: Request, res: Response): Promise<void> {
     try {
       const activities = await this.activityService.getActivityByHistory();
@@ -280,6 +290,7 @@ export const activityController = {
   getAll: controller.getAll.bind(controller),
   getActivity: controller.getActivity.bind(controller),
   getActivityByHistory: controller.getActivityByHistory.bind(controller),
+  getSearch: controller.getSearch.bind(controller),
   // getById: controller.getById.bind(controller),
   search: controller.search.bind(controller), // ✅ เพิ่ม search method
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
