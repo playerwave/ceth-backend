@@ -7,15 +7,30 @@ export class SetNumberService extends ErrorHandledService {
     super();
   }
 
-  public async createSetNumber(name: string, status: string): Promise<SetNumber> {
+  public async createSetNumber(name: string, status: string | undefined): Promise<SetNumber> {
     try {
-      const existing = await this.setNumberDao.getSetNumberByName(name);
+      // ข้อมูลจะถูก validate แล้วโดย DTO และ middleware
+      const trimmedName = name.trim();
+      const trimmedStatus = status?.trim() || 'Active'; // Default to 'Active' if status is undefined
+
+      // ตรวจสอบว่าชื่อไม่ว่างเปล่า
+      if (!trimmedName) {
+        throw new Error("ชื่อชุดคำถามไม่สามารถเป็นค่าว่างได้");
+      }
+
+      // ตรวจสอบ status ที่อนุญาต
+      const allowedStatuses = ["Active", "Inactive"];
+      if (!allowedStatuses.includes(trimmedStatus)) {
+        throw new Error(`สถานะต้องเป็น 'Active' หรือ 'Inactive' เท่านั้น`);
+      }
+
+      const existing = await this.setNumberDao.getSetNumberByName(trimmedName);
       if (existing.length > 0) {
-        this.logInfo("🚫 Duplicate set name", { name });
+        this.logInfo("🚫 Duplicate set name", { name: trimmedName });
         throw new Error("มีชุดคำถามนี้อยู่ในระบบแล้ว");
       }
 
-      const created = await this.setNumberDao.addSetNumber(name, status);
+      const created = await this.setNumberDao.addSetNumber(trimmedName, trimmedStatus);
       this.logInfo("🆕 SetNumber created", { set_number_id: created.set_number_id });
       return created;
     } catch (error) {
@@ -48,7 +63,7 @@ export class SetNumberService extends ErrorHandledService {
   public async updateSetNumber(
     set_number_id: number,
     name: string,
-    status: string
+    status: string | undefined
   ): Promise<SetNumber | null> {
     try {
       const updated = await this.setNumberDao.updateSetNumber(set_number_id, name, status);
