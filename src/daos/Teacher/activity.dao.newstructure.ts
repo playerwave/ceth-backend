@@ -3,6 +3,14 @@ import { Activity } from "../../entity/activity.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { sendCourseStartEmail, sendOpenRegisterEmail, sendEmailToStudentsByRiskStatus } from "../../controllers/email.controller";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { toUTCString, toThaiString, isTimeReached } from "../../utils/timeUtils";
+
+// ✨ ติดตั้ง dayjs plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 
 export type TransitionResult = {
@@ -674,6 +682,24 @@ export class ActivityDao extends ErrorHandledDao {
     const debugResult = await this.dataSource!.query(debugQuery);
     console.log(`🔍 [advanceStatesOnce] Current activities in DB:`, debugResult);
 
+    // ✅ Debug: ตรวจสอบข้อมูลเวลาของกิจกรรม ID 1
+    const debugTimeQuery = `
+      SELECT 
+        activity_id,
+        activity_name,
+        activity_state,
+        end_register_date,
+        start_activity_date,
+        to_char(end_register_date, 'YYYY-MM-DD HH24:MI:SS') as end_register_local,
+        to_char(start_activity_date, 'YYYY-MM-DD HH24:MI:SS') as start_activity_local,
+        to_char(end_register_date AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') as end_register_utc,
+        to_char(start_activity_date AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') as start_activity_utc
+      FROM activity 
+      WHERE activity_id = 1
+    `;
+    const debugTimeResult = await this.dataSource!.query(debugTimeQuery);
+    console.log(`🔍 [advanceStatesOnce] Activity 1 time details:`, debugTimeResult);
+
     // 🔍 Debug: ตรวจสอบกิจกรรมที่ควรส่งอีเมล
     const debugOpenRegisterQuery = `
       SELECT 
@@ -717,13 +743,33 @@ export class ActivityDao extends ErrorHandledDao {
 
     // ✅ ใช้เวลาปัจจุบันโดยไม่เพิ่ม timezone offset
     const nowRef = freezeNow ?? new Date();
+    
+    // ✅ แปลงเป็นเวลาท้องถิ่นสำหรับแสดงผล
+    const localTime = dayjs(nowRef).tz("Asia/Bangkok");
+    const utcTime = dayjs(nowRef).utc();
+    
+    // ✅ แปลงเวลาเป็น local time สำหรับการเปรียบเทียบ
+    const localTimeForDB = localTime.format('YYYY-MM-DD HH:mm:ss');
+    
+    console.log(`🕐 [advanceStatesOnce] Local time: ${localTime.format('DD/MM/YYYY HH:mm:ss')} (Asia/Bangkok)`);
+    console.log(`🕐 [advanceStatesOnce] UTC time: ${utcTime.format('DD/MM/YYYY HH:mm:ss')} (UTC)`);
+    console.log(`🕐 [advanceStatesOnce] Local time for DB: ${localTimeForDB}`);
     console.log(`🕐 [advanceStatesOnce] Current time:`, nowRef.toISOString());
 
     const run = async (sql: string, params: unknown[]): Promise<any[]> => {
-      const [rows, rowCount] = await qr.query(sql, params);
+      // ✅ ใช้ UTC time สำหรับการเปรียบเทียบ
+      const utcParams = params.map(param => {
+        if (param instanceof Date) {
+          return toUTCString(param); // ใช้ UTC time
+        }
+        return param;
+      });
+      
+      const [rows, rowCount] = await qr.query(sql, utcParams);
       console.log(`🔍 [advanceStatesOnce] Query result:`, rows);
       console.log(`🔍 [advanceStatesOnce] SQL:`, sql);
-      console.log(`🔍 [advanceStatesOnce] Params:`, params);
+      console.log(`🔍 [advanceStatesOnce] Original params:`, params);
+      console.log(`🔍 [advanceStatesOnce] UTC params:`, utcParams);
 
       // ✅ Debug: ตรวจสอบการเปรียบเทียบเวลา
       if (sql.includes('Open Register') && sql.includes('Close Register')) {
@@ -736,13 +782,17 @@ export class ActivityDao extends ErrorHandledDao {
             start_activity_date,
             $1::timestamp as current_time,
             $1::timestamp >= end_register_date as end_register_check,
-            $1::timestamp < start_activity_date as start_activity_check
+            $1::timestamp < start_activity_date as start_activity_check,
+            to_char(end_register_date, 'YYYY-MM-DD HH24:MI:SS') as end_register_local,
+            to_char(start_activity_date, 'YYYY-MM-DD HH24:MI:SS') as start_activity_local,
+            to_char($1::timestamp, 'YYYY-MM-DD HH24:MI:SS') as current_time_local,
+            to_char($1::timestamp AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM-DD HH24:MI:SS') as current_time_bangkok
           FROM activity 
           WHERE activity_state = 'Open Register' 
         AND status = 'Active'
             AND end_register_date IS NOT NULL
         `;
-        const timeCheckResult = await qr.query(timeCheckQuery, params);
+        const timeCheckResult = await qr.query(timeCheckQuery, utcParams);
         console.log(`🔍 [advanceStatesOnce] Time comparison check:`, timeCheckResult);
       }
 
@@ -800,7 +850,7 @@ export class ActivityDao extends ErrorHandledDao {
           }
         }
       } else {
-        console.log(`📧 [advanceStatesOnce] No activities changed to Special Open Register at ${nowRef.toISOString()}`);
+        console.log(`📧 [advanceStatesOnce] No activities changed to Special Open Register at ${localTime.format('DD/MM/YYYY HH:mm:ss')} (Local)`);
       }
 
       // 2) Not Start -> Open Register (สำหรับกิจกรรมที่ไม่ใช่ Course)
@@ -851,7 +901,7 @@ export class ActivityDao extends ErrorHandledDao {
           }
         }
       } else {
-        console.log(`📧 [advanceStatesOnce] No new activities opened for registration at ${nowRef.toISOString()}`);
+        console.log(`📧 [advanceStatesOnce] No new activities opened for registration at ${localTime.format('DD/MM/YYYY HH:mm:ss')} (Local)`);
       }
 
       // 2.5) Not Start -> Start Activity (สำหรับกิจกรรมที่เป็น Course)
@@ -921,7 +971,7 @@ export class ActivityDao extends ErrorHandledDao {
           }
         }
       } else {
-        console.log(`📧 [advanceStatesOnce] No new Course activities started at ${nowRef.toISOString()}`);
+        console.log(`📧 [advanceStatesOnce] No new Course activities started at ${localTime.format('DD/MM/YYYY HH:mm:ss')} (Local)`);
       }
 
       // 3) Special Open Register -> Open Register (ไม่ส่งอีเมล)
@@ -972,7 +1022,7 @@ export class ActivityDao extends ErrorHandledDao {
           }
         }
       } else {
-        console.log(`📧 [advanceStatesOnce] No activities changed from Special to Open Register at ${nowRef.toISOString()}`);
+        console.log(`📧 [advanceStatesOnce] No activities changed from Special to Open Register at ${localTime.format('DD/MM/YYYY HH:mm:ss')} (Local)`);
       }
 
       // 4) Open Register -> Close Register  ← (คุณพิมพ์ว่า "End Register" แต่ enum จริงคือ "Close Register")
@@ -985,7 +1035,7 @@ export class ActivityDao extends ErrorHandledDao {
            AND activity_state = 'Open Register'
            AND end_register_date IS NOT NULL
            AND $1::timestamp >= end_register_date
-                      AND (start_activity_date IS NULL OR $1::timestamp < start_activity_date)
+           AND (start_activity_date IS NULL OR $1::timestamp < start_activity_date)
         RETURNING activity_id
         `,
         [nowRef]
@@ -1013,7 +1063,7 @@ export class ActivityDao extends ErrorHandledDao {
       if (ids5.length > 0) {
         console.log(`📧 [advanceStatesOnce] Found ${ids5.length} activities that just started (Close Register -> Start Activity, no email sent)`);
       } else {
-        console.log(`📧 [advanceStatesOnce] No activities started (Close Register -> Start Activity) at ${nowRef.toISOString()}`);
+        console.log(`📧 [advanceStatesOnce] No activities started (Close Register -> Start Activity) at ${localTime.format('DD/MM/YYYY HH:mm:ss')} (Local)`);
       }
 
       // 6) Start Activity -> End Activity

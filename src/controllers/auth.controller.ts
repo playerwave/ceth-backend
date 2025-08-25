@@ -141,23 +141,42 @@ export class AuthController extends ErrorHandledController {
 
   public async getMe(req: Request, res: Response): Promise<void> {
     try {
+      // ✅ Debug logging
+      console.log("🔍 [getMe] Starting getMe request...");
+      console.log("🍪 [getMe] Cookies:", req.cookies);
+      console.log("🔑 [getMe] Authorization header:", req.headers.authorization);
+      console.log("👤 [getMe] User from token:", req.user);
+      console.log("🌍 [getMe] NODE_ENV:", process.env.NODE_ENV);
+
       const user = req.user as { users_id: number; roles_id: number };
+      
+      if (!user) {
+        console.log("❌ [getMe] No user found in request");
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
+      console.log("✅ [getMe] User found:", user);
       const result = await this.authService.findById(user.users_id);
 
       if (!result) {
+        console.log("❌ [getMe] User not found in database");
         res.status(404).json({ message: "User not found" });
         return;
       }
 
+      console.log("✅ [getMe] User data retrieved from database");
       const { password, ...safeUser } = result;
 
       // ถ้าเป็น Student ให้ดึงข้อมูล Student เพิ่มเติม
       if (result.roles.roles_name === "Student") {
+        console.log("👨‍🎓 [getMe] Fetching student data...");
         const studentData = await this.authService.getStudentData(
           user.users_id
         );
 
         if (studentData) {
+          console.log("✅ [getMe] Student data retrieved");
           res.setHeader("Cache-Control", "no-store");
           res.status(200).json({
             ...safeUser,
@@ -169,11 +188,13 @@ export class AuthController extends ErrorHandledController {
 
       // ถ้าเป็น Teacher ให้ดึงข้อมูล Teacher เพิ่มเติม
       if (result.roles.roles_name === "Teacher") {
+        console.log("👨‍🏫 [getMe] Fetching teacher data...");
         const teacherData = await this.authService.getTeacherData(
           user.users_id
         );
 
         if (teacherData) {
+          console.log("✅ [getMe] Teacher data retrieved");
           res.setHeader("Cache-Control", "no-store");
           res.status(200).json({
             ...safeUser,
@@ -184,9 +205,11 @@ export class AuthController extends ErrorHandledController {
       }
 
       // สำหรับ role อื่นๆ
+      console.log("✅ [getMe] Returning basic user data");
       res.setHeader("Cache-Control", "no-store");
       res.status(200).json(safeUser);
     } catch (error) {
+      console.log("❌ [getMe] Error occurred:", error);
       this.handleError("AuthController.getMe", error, res);
     }
   }

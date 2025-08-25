@@ -2,6 +2,13 @@ console.log("✅ cron.job.ts loaded");
 import cron from "node-cron";
 import { ActivityDao } from "../daos/Teacher/activity.dao.newstructure";
 import dotenv from "dotenv";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+// ✨ ติดตั้ง dayjs plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // โหลด environment variables
 dotenv.config();
@@ -18,7 +25,7 @@ let isRunning = false;
 // cron.schedule("*/10 * * * * *", async () => { สำหรับทำสอบรันทุกๆ 10 วิ
 // cron.schedule("0 0 * * *", async () => { ทุกวันเวลา 00:00
 // cron.schedule("*/1 * * * *", async () => { 1 นาที
-cron.schedule("*/5 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
   // 🔒 ป้องกันการรันซ้ำ
   if (isRunning) {
     console.log(`⚠️ [Cron] Previous job still running, skipping this execution`);
@@ -26,24 +33,28 @@ cron.schedule("*/5 * * * *", async () => {
   }
 
   isRunning = true;
-  const now = new Date();
-  console.log(`🔁 [Cron] Running auto-update activity states job at ${now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`);
-  console.log(`🕐 [Cron] Current time: ${now.toISOString()}`);
+  
+  // ✅ ใช้เวลาท้องถิ่น (Asia/Bangkok) แทน UTC
+  const now = dayjs().tz("Asia/Bangkok");
+  const utcNow = now.utc(); // แปลงเป็น UTC สำหรับ database
+  
+  console.log(`🕐 [Cron] Local time: ${now.format('DD/MM/YYYY HH:mm:ss')} (Asia/Bangkok)`);
+  console.log(`🕐 [Cron] UTC time: ${utcNow.format('DD/MM/YYYY HH:mm:ss')} (UTC)`);
   
   try {
     // Call advanceStatesOnce directly from DAO
-    const result = await activityDao.advanceStatesOnce(now);
-    console.log(`✅ [Cron] advanceStatesOnce finished successfully at ${now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`);
+    const result = await activityDao.advanceStatesOnce(utcNow.toDate()); // ส่ง utcNow.toDate() ไปยัง DAO
+    console.log(`✅ [Cron] advanceStatesOnce finished successfully at ${now.format('DD/MM/YYYY HH:mm:ss')}`);
     console.log(`📊 [Cron] Result:`, {
       notStartToSpecial: result.notStartToSpecial,
       notStartToOpen: result.notStartToOpen,
-      notStartToStartActivity: result.notStartToStartActivity, // เพิ่ม transition ใหม่
+      notStartToStartActivity: result.notStartToStartActivity,
       specialToOpen: result.specialToOpen,
       openToClose: result.openToClose,
       closeToStart: result.closeToStart,
       startToEnd: result.startToEnd,
       endToStartAssess: result.endToStartAssess,
-      startAssessToEnd: result.startAssessToEnd,
+      startAssessToEnd: result.startAssessToEnd
     });
     
     // ทดสอบส่งอีเมลโดยตรงถ้ามี Course เริ่มต้น
@@ -51,9 +62,10 @@ cron.schedule("*/5 * * * *", async () => {
       console.log(`🧪 [Cron] Testing direct email send for ${result.notStartToStartActivity} Course activities`);
     }
   } catch (error) {
-    console.error(`❌ [Cron] Error running advanceStatesOnce at ${now.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}:`, error);
+    console.error(`❌ [Cron] Error in advanceStatesOnce:`, error);
   } finally {
-    // 🔒 ปลดล็อคการรัน
     isRunning = false;
   }
+}, {
+  timezone: "Asia/Bangkok" // ✅ ตั้ง timezone ให้ cron job ใช้เวลาท้องถิ่น
 });

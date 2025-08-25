@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { ActivityService } from "../../services/Teacher/activity.service";
 import { ErrorHandledController } from "../error.handled.controller";
 import xss from "xss";
+import { subtract7Hours } from "../../utils/timeUtils";
 
 export class ActivityController extends ErrorHandledController {
   constructor(private readonly activityService: ActivityService) {
@@ -186,14 +187,6 @@ export class ActivityController extends ErrorHandledController {
   }
 
   private parseActivityPayload(body: any): any {
-    // ✅ เพิ่ม debug log
-    console.log("🔍 Parsing activity payload:", {
-      assessment_id: body.assessment_id,
-      room_id: body.room_id,
-      assessment_id_type: typeof body.assessment_id,
-      room_id_type: typeof body.room_id,
-    });
-
     return {
       activity_name: body.activity_name || "ไม่ระบุ",
       presenter_company_name: body.presenter_company_name || "ไม่ระบุ",
@@ -203,14 +196,14 @@ export class ActivityController extends ErrorHandledController {
       recieve_hours: this.parseOptionalInt(body.recieve_hours) ?? 0, // ✅ ใช้ 0 แทน null
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
-      // ✅ ส่งผ่านค่าเวลาแบบเดิม (string) โดยไม่แปลง timezone
-      special_start_register_date: body.special_start_register_date ?? null,
-      start_register_date: body.start_register_date ?? null,
-      end_register_date: body.end_register_date ?? null,
-      start_activity_date: body.start_activity_date ?? null,
-      end_activity_date: body.end_activity_date ?? null,
-      start_assessment: body.start_assessment ?? null,
-      end_assessment: body.end_assessment ?? null,
+      // ✅ ลบ 7 ชั่วโมงออกจากทุก field ที่เกี่ยวข้องกับเวลา
+      special_start_register_date: subtract7Hours(body.special_start_register_date),
+      start_register_date: subtract7Hours(body.start_register_date),
+      end_register_date: subtract7Hours(body.end_register_date),
+      start_activity_date: subtract7Hours(body.start_activity_date),
+      end_activity_date: subtract7Hours(body.end_activity_date),
+      start_assessment: subtract7Hours(body.start_assessment),
+      end_assessment: subtract7Hours(body.end_assessment),
       image_url: body.image_url || "ไม่ระบุ",
       activity_status: body.activity_status || "Private", // ENUM
       activity_state: body.activity_state || "Not Start", // ENUM

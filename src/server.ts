@@ -10,6 +10,7 @@ import session from "express-session";
 import passport from "passport";
 import "./jobs/cron.job";
 import { UsersService } from "./services/user.service";
+import { getSessionConfig } from "./config/cookie.config";
 
 // routes
 import userRoute from "./routes/user.route";
@@ -84,10 +85,21 @@ if (shouldEnableCors) {
       if (allowList.includes(origin)) return cb(null, true);
       return cb(new Error("Not allowed by CORS"));
     },
-    credentials: true,
+    credentials: true, // ✅ สำคัญมากสำหรับ cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    exposedHeaders: ["Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"],
+    allowedHeaders: [
+      "Content-Type", 
+      "Authorization", 
+      "Cookie",
+      "X-Requested-With",
+      "Accept",
+      "Origin"
+    ],
+    exposedHeaders: [
+      "Access-Control-Allow-Origin", 
+      "Access-Control-Allow-Credentials",
+      "Set-Cookie"
+    ],
   });
 
   app.use(corsMw);
@@ -104,18 +116,7 @@ app.use(cookieParser());
 app.set("trust proxy", 1);
 
 // session cookie: prod ต้อง Secure + SameSite=None
-app.use(
-  session({
-    secret: "secret-key",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      // ไม่ตั้ง domain → ให้ผูกกับ host ที่ตอบอัตโนมัติ
-    },
-  })
-);
+app.use(session(getSessionConfig()));
 
 app.use(passport.initialize());
 app.use(passport.session());

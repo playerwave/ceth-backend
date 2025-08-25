@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Response } from "express";
+import { getCookieConfig } from "../config/cookie.config";
 
 export const generateTokenAndSetCookie = (
   res: Response,
@@ -14,15 +15,17 @@ export const generateTokenAndSetCookie = (
     }
   );
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    // secure: process.env.NODE_ENV === "production",
-    secure: true,
-    // sameSite: "strict",
-    sameSite: "none",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  // ✅ Debug logging
+  console.log("🔐 Generating token for user:", userId);
+  console.log("🌍 NODE_ENV:", process.env.NODE_ENV);
 
-  console.log(token);
+  const cookieOptions = getCookieConfig();
+
+  // ✅ Debug cookie options
+  console.log("🍪 Cookie options:", cookieOptions);
+
+  res.cookie("token", token, cookieOptions);
+
+  console.log("✅ Token generated and cookie set");
   return token;
 };
