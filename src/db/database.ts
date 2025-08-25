@@ -97,9 +97,9 @@ class DatabaseManager {
         username: process.env.DB_USERNAME,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_DATABASE,
-        ssl: {
+        ssl: process.env.DB_HOST?.includes('render.com') ? {
           rejectUnauthorized: false, // สำหรับ Render PostgreSQL
-        },
+        } : false, // ไม่ใช้ SSL สำหรับ local Docker
         entities: [
           Roles,
           Users,

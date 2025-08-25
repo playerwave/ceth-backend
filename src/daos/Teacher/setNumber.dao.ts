@@ -83,15 +83,12 @@ export class SetNumberDao extends ErrorHandledDao {
     }
   }
 
-  async addSetNumber(name: string, status: string): Promise<SetNumber> {
+  async addSetNumber(name: string, status: string | undefined): Promise<SetNumber> {
     this.checkConnection();
 
+    // ข้อมูลจะถูก validate แล้วโดย DTO และ Service layer
     const trimmedName = name.trim();
-    const trimmedStatus = status.trim();
-    const allowedStatuses = ["Active", "Inactive"];
-    if (!allowedStatuses.includes(trimmedStatus)) {
-      throw new Error(`❌ Invalid status value: ${trimmedStatus}`);
-    }
+    const trimmedStatus = status?.trim() || 'Active'; // Default to 'Active' if status is undefined
 
     try {
       const result = await this.dataSource!.query(
@@ -112,18 +109,21 @@ export class SetNumberDao extends ErrorHandledDao {
   async updateSetNumber(
     set_number_id: number,
     name: string,
-    status: string
+    status: string | undefined
   ): Promise<SetNumber | null> {
     this.checkConnection();
 
     try {
+      const trimmedName = name.trim();
+      const trimmedStatus = status?.trim() || 'Active'; // Default to 'Active' if status is undefined
+
       const result = await this.dataSource!.query(
         `UPDATE set_number SET
           name = $1,
           status = $2
         WHERE set_number_id = $3
         RETURNING *`,
-        [name.trim(), status.trim(), set_number_id]
+        [trimmedName, trimmedStatus, set_number_id]
       );
 
       return result[0] || null;
