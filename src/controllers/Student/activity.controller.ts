@@ -63,7 +63,7 @@ export class ActivityController extends ErrorHandledController {
 
   public async getSearch(req: Request, res: Response): Promise<void> {
     const studentId = this.parseId(req.params.studentId);
-    const { text } = req.body
+    const text = (req.query.text as string);
     try {
       const activities = await this.activityService.getSearch(studentId, text)
       res.status(200).json(activities);

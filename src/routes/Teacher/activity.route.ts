@@ -55,7 +55,7 @@ router.get("/get-activities-history", wrapAsync(activityController.getActivityBy
 router.get("/get-activity/:id", wrapAsync(activityController.getActivity));
 
 // ✅ เพิ่ม search route
-router.get("/search", wrapAsync(activityController.search));
+router.get("/search", (activityController.search));
 
 // // เรียกดูรายกิจกรรม
 // router.get("/get-activity/:id", wrapAsync(activityController.getById));

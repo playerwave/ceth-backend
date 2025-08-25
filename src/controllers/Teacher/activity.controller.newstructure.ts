@@ -42,7 +42,7 @@ export class ActivityController extends ErrorHandledController {
   }
 
   public async getSearch(req: Request, res: Response): Promise<void> {
-    const { text } = req.body
+    const text = (req.query.text as string);
     try {
       const activities = await this.activityService.getSearch(text)
       res.status(200).json(activities);
