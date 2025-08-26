@@ -370,7 +370,7 @@ export class ActivityService extends ErrorHandledService {
     activityId: number,
     username: string,
     password: string
-  ): Promise<{ success: boolean; message: string; studentId?: number }> {
+  ): Promise<{ success: boolean; message: string; studentId?: number; studentInfo?: any }> {
     try {
       // 1. ตรวจสอบ username และ password
       const student = await this.activityDao.validateStudentCredentials(username, password);
@@ -421,7 +421,13 @@ export class ActivityService extends ErrorHandledService {
         return {
           success: true,
           message: "ลงชื่อเข้าร่วมกิจกรรมสำเร็จ!",
-          studentId: student.students_id
+          studentId: student.students_id,
+          studentInfo: {
+            first_name: student.first_name,
+            last_name: student.last_name,
+            department: student.department,
+            username: student.username
+          }
         };
       } else if (activityData.activity_state === "End Activity") {
         // ลงชื่อออก
@@ -444,7 +450,13 @@ export class ActivityService extends ErrorHandledService {
         return {
           success: true,
           message: "ลงชื่อออกจากกิจกรรมสำเร็จ!",
-          studentId: student.students_id
+          studentId: student.students_id,
+          studentInfo: {
+            first_name: student.first_name,
+            last_name: student.last_name,
+            department: student.department,
+            username: student.username
+          }
         };
       } else {
         return { success: false, message: "กิจกรรมนี้ยังไม่เปิดให้ลงชื่อ" };

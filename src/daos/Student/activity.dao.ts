@@ -778,17 +778,18 @@ export class ActivityDao extends ErrorHandledDao {
   public async validateStudentCredentials(
     username: string,
     password: string
-  ): Promise<{ students_id: number; username: string } | null> {
+  ): Promise<{ students_id: number; username: string; first_name: string; last_name: string; department: string } | null> {
     await this.checkConnection();
 
     try {
       console.log(`🔍 [DAO] Validating credentials for username: ${username}`);
       
-      // 1. หา user และ student โดย username
+      // 1. หา user และ student โดย username พร้อมข้อมูลเพิ่มเติม
       const query = `
-        SELECT s.students_id, u.username, u.password
+        SELECT s.students_id, u.username, u.password, s.first_name, s.last_name, d.department_name
         FROM students s
         INNER JOIN users u ON s.users_id = u.users_id
+        LEFT JOIN department d ON s.department_id = d.department_id
         WHERE u.username = $1
         LIMIT 1
       `;
@@ -808,7 +809,10 @@ export class ActivityDao extends ErrorHandledDao {
           console.log(`✅ [DAO] Credentials valid for student_id: ${user.students_id}`);
           return {
             students_id: user.students_id,
-            username: user.username
+            username: user.username,
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            department: user.department_name || 'ไม่ระบุ'
           };
         } else {
           console.log(`❌ [DAO] Password incorrect`);
