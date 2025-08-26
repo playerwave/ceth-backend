@@ -1,22 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15
-    container_name: ceth-postgres-container
-    environment:
-      POSTGRES_DB: ceth_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      TZ: Asia/Bangkok  # ✅ เพิ่ม timezone setting
-    ports:
-      - "8070:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - ceth-network
-
   redis:
     image: redis:7-alpine
     container_name: ceth-redis-container
@@ -31,10 +15,15 @@ services:
     environment:
       - NODE_ENV=development
       - TZ=Asia/Bangkok  # ✅ เพิ่ม timezone setting
+      # ใช้ Render database แทน local PostgreSQL
+      - DB_HOST=dpg-d2b6p1adbo4c73aia81g-a.singapore-postgres.render.com
+      - DB_PORT=5432
+      - DB_USERNAME=admin
+      - DB_PASSWORD=Wave_310847
+      - DB_DATABASE=unizalbuu
     ports:
       - "8069:5090"
     depends_on:
-      - postgres
       - redis
     volumes:
       - .:/app
@@ -42,9 +31,6 @@ services:
     networks:
       - ceth-network
     command: npm run dev
-
-volumes:
-  postgres_data:
 
 networks:
   ceth-network:

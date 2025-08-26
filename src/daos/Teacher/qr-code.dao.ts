@@ -100,6 +100,7 @@ export class QRCodeDao extends ErrorHandledDao {
         console.log("🔍 [QR DAO] Environment check:", {
           NODE_ENV: process.env.NODE_ENV,
           FRONTEND_URL: process.env.FRONTEND_URL,
+          DB_HOST: process.env.DB_HOST,
           isProduction: process.env.NODE_ENV === 'production'
         });
         
@@ -109,9 +110,16 @@ export class QRCodeDao extends ErrorHandledDao {
           return process.env.FRONTEND_URL;
         }
         
-        // ตรวจสอบ NODE_ENV - ใช้ strict comparison
+        // ตรวจสอบ NODE_ENV
         if (process.env.NODE_ENV === 'production') {
-          console.log("🔍 [QR DAO] Using production URL");
+          console.log("🔍 [QR DAO] Using production URL from NODE_ENV");
+          return 'https://cooperative-system-buu.pages.dev';
+        }
+        
+        // ตรวจสอบ hostname เพื่อ detect production
+        const hostname = process.env.DB_HOST || '';
+        if (hostname.includes('deploy') || hostname.includes('production') || hostname.includes('ceth-db-deploy')) {
+          console.log("🔍 [QR DAO] Detected production by hostname, using production URL");
           return 'https://cooperative-system-buu.pages.dev';
         }
         
@@ -224,6 +232,7 @@ export class QRCodeDao extends ErrorHandledDao {
         console.log("🔍 [QR DAO] Environment check:", {
           NODE_ENV: process.env.NODE_ENV,
           FRONTEND_URL: process.env.FRONTEND_URL,
+          DB_HOST: process.env.DB_HOST,
           isProduction: process.env.NODE_ENV === 'production'
         });
         
@@ -233,9 +242,16 @@ export class QRCodeDao extends ErrorHandledDao {
           return process.env.FRONTEND_URL;
         }
         
-        // ตรวจสอบ NODE_ENV - ใช้ strict comparison
+        // ตรวจสอบ NODE_ENV
         if (process.env.NODE_ENV === 'production') {
-          console.log("🔍 [QR DAO] Using production URL");
+          console.log("🔍 [QR DAO] Using production URL from NODE_ENV");
+          return 'https://cooperative-system-buu.pages.dev';
+        }
+        
+        // ตรวจสอบ hostname เพื่อ detect production
+        const hostname = process.env.DB_HOST || '';
+        if (hostname.includes('deploy') || hostname.includes('production') || hostname.includes('ceth-db-deploy')) {
+          console.log("🔍 [QR DAO] Detected production by hostname, using production URL");
           return 'https://cooperative-system-buu.pages.dev';
         }
         
