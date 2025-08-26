@@ -97,17 +97,26 @@ export class QRCodeDao extends ErrorHandledDao {
       
       // กำหนด URL ตาม environment
       const getFrontendUrl = () => {
+        console.log("🔍 [QR DAO] Environment check:", {
+          NODE_ENV: process.env.NODE_ENV,
+          FRONTEND_URL: process.env.FRONTEND_URL,
+          isProduction: process.env.NODE_ENV === 'production'
+        });
+        
         // ตรวจสอบ environment variables
         if (process.env.FRONTEND_URL) {
+          console.log("🔍 [QR DAO] Using FRONTEND_URL from env:", process.env.FRONTEND_URL);
           return process.env.FRONTEND_URL;
         }
         
-        // ตรวจสอบ NODE_ENV
+        // ตรวจสอบ NODE_ENV - ใช้ strict comparison
         if (process.env.NODE_ENV === 'production') {
+          console.log("🔍 [QR DAO] Using production URL");
           return 'https://cooperative-system-buu.pages.dev';
         }
         
         // Development fallback
+        console.log("🔍 [QR DAO] Using development URL");
         return 'http://localhost:5173';
       };
       
@@ -212,17 +221,26 @@ export class QRCodeDao extends ErrorHandledDao {
       
       // กำหนด URL ตาม environment
       const getFrontendUrl = () => {
+        console.log("🔍 [QR DAO] Environment check:", {
+          NODE_ENV: process.env.NODE_ENV,
+          FRONTEND_URL: process.env.FRONTEND_URL,
+          isProduction: process.env.NODE_ENV === 'production'
+        });
+        
         // ตรวจสอบ environment variables
         if (process.env.FRONTEND_URL) {
+          console.log("🔍 [QR DAO] Using FRONTEND_URL from env:", process.env.FRONTEND_URL);
           return process.env.FRONTEND_URL;
         }
         
-        // ตรวจสอบ NODE_ENV
+        // ตรวจสอบ NODE_ENV - ใช้ strict comparison
         if (process.env.NODE_ENV === 'production') {
+          console.log("🔍 [QR DAO] Using production URL");
           return 'https://cooperative-system-buu.pages.dev';
         }
         
         // Development fallback
+        console.log("🔍 [QR DAO] Using development URL");
         return 'http://localhost:5173';
       };
       

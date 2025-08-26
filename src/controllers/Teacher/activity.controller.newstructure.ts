@@ -54,9 +54,16 @@ export class ActivityController extends ErrorHandledController {
 
   public async getActivityByHistory(req: Request, res: Response): Promise<void> {
     try {
+      console.log("🔍 [CONTROLLER] getActivityByHistory: Starting...");
+      
       const activities = await this.activityService.getActivityByHistory();
+      
+      console.log("🔍 [CONTROLLER] getActivityByHistory: Activities count:", activities.length);
+      console.log("🔍 [CONTROLLER] getActivityByHistory: Sending response...");
+      
       res.status(200).json(activities);
     } catch (error) {
+      console.error("❌ [CONTROLLER] getActivityByHistory: Error:", error);
       this.handleError("ActivityController.getActivityByHistory", error, res);
     }
   }

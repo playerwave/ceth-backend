@@ -353,12 +353,22 @@ export class ActivityDao extends ErrorHandledDao {
   public async getActivityByHistory(): Promise<Activity[]> {
     await this.checkConnection();
     try {
-      const sql = `SELECT * FROM activity WHERE (((event_format = 'Online' OR event_format = 'Onsite') AND activity_state = 'End Assessment') OR (event_format = 'Course' AND activity_state = 'End Activity')) ORDER BY activity_id ASC`
+      console.log("🔍 [DAO] getActivityByHistory: Starting query...");
+      
+      const sql = `SELECT * FROM activity WHERE (((event_format = 'Online' OR event_format = 'Onsite') AND activity_state = 'End Assessment') OR (event_format = 'Course' AND activity_state = 'End Activity')) ORDER BY activity_id ASC`;
+      
+      console.log("🔍 [DAO] getActivityByHistory: SQL Query:", sql);
+      
       const result = await this.dataSource?.query(sql);
-      return result
+      
+      console.log("🔍 [DAO] getActivityByHistory: Query result count:", result?.length || 0);
+      console.log("🔍 [DAO] getActivityByHistory: First few results:", result?.slice(0, 3));
+      
+      return result || [];
     } catch (error) {
+      console.error("❌ [DAO] getActivityByHistory: Error:", error);
       this.logDbError("getActivityByHistory", error);
-      throw new Error("❌ Failed to update activity");
+      throw new Error("❌ Failed to get activity history");
     }
   }
 
