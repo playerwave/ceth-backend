@@ -151,19 +151,22 @@ export class ActivityService extends ErrorHandledService {
         }
       }
 
-      // 2. สร้าง activity_detail ใหม่ (หรืออัพเดทจาก Cancelled)
+      // 2. สร้าง activity_detail และ join ใหม่ (หรืออัพเดทจาก Cancelled)
       const activityDetail = await this.activityDao.createActivityDetail(
         activityId,
-        0, // ไม่ใช้ join_id
+        studentId, // ส่ง studentId แทน joinId
         foodChoices
       );
 
-      // 3. สร้าง join ใหม่ (ใช้ activity_detail_id ที่เพิ่งสร้าง)
-      const join = await this.activityDao.createJoin(
-        studentId,
+      // 3. หา join ที่เพิ่งสร้าง
+      const join = await this.activityDao.getJoinByActivityDetailAndStudent(
         activityDetail.activity_detail_id,
-        foodChoices
+        studentId
       );
+
+      if (!join) {
+        throw new Error("Failed to create join record");
+      }
 
       // 4. ลบ cache
       await redis.del(`join:${studentId}`);
@@ -262,6 +265,33 @@ export class ActivityService extends ErrorHandledService {
     }
   }
 
+  public async getOngoingActivitiesService(
+    studentId: number
+  ): Promise<Activity[]> {
+    try {
+      const cacheKey = `ongoing:${studentId}`;
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        this.logInfo("📦 Returning cached ongoing activities", { studentId });
+        return JSON.parse(cached);
+      }
+
+      const activities = await this.activityDao.getOngoingActivities(
+        studentId
+      );
+      await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
+
+      this.logInfo("📤 Retrieved and cached ongoing activities", {
+        studentId,
+        count: activities.length,
+      });
+      return activities;
+    } catch (error) {
+      this.logError("❌ Error in getOngoingActivitiesService", error);
+      throw error;
+    }
+  }
+
   public async searchActivityService(ac_name: string): Promise<Activity[]> {
     try {
       const results = await this.activityDao.searchActivitiesByName(ac_name);
@@ -351,7 +381,16 @@ export class ActivityService extends ErrorHandledService {
         };
       }
 
-      // 2. ตรวจสอบว่านิสิตลงทะเบียนกิจกรรมนี้แล้วหรือยัง
+      // 2. ตรวจสอบว่ากิจกรรมมีอยู่จริงและดึงข้อมูล activity_state
+      const activity = await this.activityDao.getActivityByID(activityId);
+      if (!activity || activity.length === 0) {
+        return { success: false, message: "ไม่พบกิจกรรมนี้" };
+      }
+
+      const activityData = activity[0];
+      console.log("🔍 Activity state:", activityData.activity_state);
+
+      // 3. ตรวจสอบว่านิสิตลงทะเบียนกิจกรรมนี้แล้วหรือยัง
       const enrollment = await this.activityDao.findEnrollmentByStudentAndActivity(
         student.students_id,
         activityId
@@ -364,28 +403,52 @@ export class ActivityService extends ErrorHandledService {
         };
       }
 
-      // 3. ตรวจสอบว่าได้ check-in แล้วหรือยัง
-      if (enrollment.time_in) {
+      // 4. ตรวจสอบ activity_state และดำเนินการตามนั้น
+      if (activityData.activity_state === "Start Activity") {
+        // ลงชื่อเข้าร่วม
+        if (enrollment.time_in) {
+          return { success: false, message: "คุณได้ลงชื่อเข้าร่วมกิจกรรมนี้แล้ว" };
+        }
+        
+        await this.activityDao.updateTimeIn(student.students_id, activityId);
+        
+        this.logInfo("✅ Student checked in to activity", {
+          studentId: student.students_id,
+          activityId,
+          activityDetailId: enrollment.activity_detail_id
+        });
+
         return {
-          success: false,
-          message: "คุณได้ลงทะเบียนเข้าร่วมกิจกรรมนี้แล้ว"
+          success: true,
+          message: "ลงชื่อเข้าร่วมกิจกรรมสำเร็จ!",
+          studentId: student.students_id
         };
+      } else if (activityData.activity_state === "End Activity") {
+        // ลงชื่อออก
+        if (!enrollment.time_in) {
+          return { success: false, message: "คุณยังไม่ได้ลงชื่อเข้าร่วมกิจกรรมนี้" };
+        }
+        
+        if (enrollment.time_out) {
+          return { success: false, message: "คุณได้ลงชื่อออกจากกิจกรรมนี้แล้ว" };
+        }
+        
+        await this.activityDao.updateTimeOut(student.students_id, activityId);
+        
+        this.logInfo("✅ Student checked out from activity", {
+          studentId: student.students_id,
+          activityId,
+          activityDetailId: enrollment.activity_detail_id
+        });
+
+        return {
+          success: true,
+          message: "ลงชื่อออกจากกิจกรรมสำเร็จ!",
+          studentId: student.students_id
+        };
+      } else {
+        return { success: false, message: "กิจกรรมนี้ยังไม่เปิดให้ลงชื่อ" };
       }
-
-      // 4. Update time_in เป็นเวลาปัจจุบัน
-      await this.activityDao.updateTimeIn(enrollment.activity_detail_id);
-
-      this.logInfo("✅ Student checked in to activity", {
-        studentId: student.students_id,
-        activityId,
-        activityDetailId: enrollment.activity_detail_id
-      });
-
-      return {
-        success: true,
-        message: "ลงทะเบียนเข้าร่วมกิจกรรมสำเร็จ!",
-        studentId: student.students_id
-      };
     } catch (error) {
       this.logError("❌ Error in checkInOutActivityService", error);
       throw error;

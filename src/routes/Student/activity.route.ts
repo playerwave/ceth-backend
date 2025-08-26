@@ -81,6 +81,11 @@ router.get(
   wrapAsync(activityController.getEnrolledActivities)
 );
 
+router.get(
+  "/get-ongoing-activities/:id",
+  wrapAsync(activityController.getOngoingActivities)
+);
+
 router.get("/get-activity/:id", wrapAsync(activityController.getActivityById));
 
 router.get("/searchActivity", wrapAsync(activityController.searchActivity));

@@ -1173,29 +1173,406 @@ export class ActivityDao extends ErrorHandledDao {
     try {
       await this.checkConnection();
       
-      const query = `
-        SELECT 
-          s.students_id as id,
-          s.first_name,
-          s.last_name,
-          d.department_name,
-          u.username
-        FROM students s
-        JOIN users u ON s.users_id = u.users_id
-        JOIN department d ON s.department_id = d.department_id
-        JOIN "join" j ON s.students_id = j.students_id
-        JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
-        WHERE ad.activity_id = $1 
-          AND ad.status = 'Registered'
-          AND j.status = 'Pending'
-        ORDER BY s.first_name, s.last_name
+      // 1. ดึงข้อมูล activity_state ก่อน
+      const activityQuery = `
+        SELECT activity_state 
+        FROM activity 
+        WHERE activity_id = $1
       `;
       
+      const activityResult = await this.dataSource!.query(activityQuery, [activityId]);
+      const activityState = activityResult[0]?.activity_state;
+      
+      console.log(`🔍 Activity state for activity ${activityId}: ${activityState}`);
+      
+      // 2. สร้าง query ตาม activity_state
+      let query: string;
+      
+      if (activityState === 'End Activity') {
+        // สำหรับ End Activity: ต้องมี time_in และ time_out ไม่เป็น null
+        query = `
+          SELECT 
+            s.students_id as id,
+            s.first_name,
+            s.last_name,
+            d.department_name,
+            u.username
+          FROM students s
+          JOIN users u ON s.users_id = u.users_id
+          JOIN department d ON s.department_id = d.department_id
+          JOIN "join" j ON s.students_id = j.students_id
+          JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+          WHERE ad.activity_id = $1 
+            AND ad.status = 'Registered'
+            AND j.status = 'Pending'
+            AND ad.time_in IS NOT NULL
+            AND ad.time_out IS NOT NULL
+          ORDER BY s.first_name, s.last_name
+        `;
+        console.log(`🔍 Using End Activity query - requires time_in AND time_out`);
+      } else {
+        // สำหรับ activity_state อื่นๆ: ต้องมี time_in ไม่เป็น null
+        query = `
+          SELECT 
+            s.students_id as id,
+            s.first_name,
+            s.last_name,
+            d.department_name,
+            u.username
+          FROM students s
+          JOIN users u ON s.users_id = u.users_id
+          JOIN department d ON s.department_id = d.department_id
+          JOIN "join" j ON s.students_id = j.students_id
+          JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+          WHERE ad.activity_id = $1 
+            AND ad.status = 'Registered'
+            AND j.status = 'Pending'
+            AND ad.time_in IS NOT NULL
+          ORDER BY s.first_name, s.last_name
+        `;
+        console.log(`🔍 Using default query - requires time_in only`);
+      }
+      
       const result = await this.dataSource!.query(query, [activityId]);
-      console.log(`📊 Found ${result.length} enrolled students for activity ${activityId}`);
+      console.log(`📊 Found ${result.length} enrolled students for activity ${activityId} (state: ${activityState})`);
       return result;
     } catch (error) {
       console.error("❌ Error getting enrolled students:", error);
+      throw error;
+    }
+  }
+
+  // ✅ ActivityDetail DAO Methods
+  public async getAllActivityDetails(): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        SELECT 
+          ad.activity_detail_id,
+          ad.activity_id,
+          ad.activity_food_id,
+          ad.register_date,
+          ad.time_in,
+          ad.time_out,
+          ad.status,
+          a.activity_name,
+          af.food_id,
+          f.food_name
+        FROM activity_detail ad
+        LEFT JOIN activity a ON ad.activity_id = a.activity_id
+        LEFT JOIN activity_food af ON ad.activity_food_id = af.activity_food_id
+        LEFT JOIN food f ON af.food_id = f.food_id
+        ORDER BY ad.register_date DESC
+      `;
+      
+      const result = await this.dataSource!.query(query);
+      console.log(`📊 Found ${result.length} activity details`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting all activity details:", error);
+      throw error;
+    }
+  }
+
+  public async getActivityDetailById(id: number): Promise<any | null> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        SELECT 
+          ad.activity_detail_id,
+          ad.activity_id,
+          ad.activity_food_id,
+          ad.register_date,
+          ad.time_in,
+          ad.time_out,
+          ad.status,
+          a.activity_name,
+          af.food_id,
+          f.food_name
+        FROM activity_detail ad
+        LEFT JOIN activity a ON ad.activity_id = a.activity_id
+        LEFT JOIN activity_food af ON ad.activity_food_id = af.activity_food_id
+        LEFT JOIN food f ON af.food_id = f.food_id
+        WHERE ad.activity_detail_id = $1
+      `;
+      
+      const result = await this.dataSource!.query(query, [id]);
+      console.log(`📊 Found activity detail: ${result.length > 0 ? 'Yes' : 'No'}`);
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      console.error("❌ Error getting activity detail by ID:", error);
+      throw error;
+    }
+  }
+
+  public async updateActivityDetail(id: number, data: any): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        UPDATE activity_detail
+        SET 
+          activity_id = $1,
+          activity_food_id = $2,
+          register_date = $3,
+          time_in = $4,
+          time_out = $5,
+          status = $6
+        WHERE activity_detail_id = $7
+        RETURNING *
+      `;
+      
+      const values = [
+        data.activity_id,
+        data.activity_food_id,
+        data.register_date,
+        data.time_in,
+        data.time_out,
+        data.status,
+        id
+      ];
+      
+      const result = await this.dataSource!.query(query, values);
+      console.log(`✅ Updated activity detail: ${result.length > 0 ? 'Success' : 'Not found'}`);
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      console.error("❌ Error updating activity detail:", error);
+      throw error;
+    }
+  }
+
+  public async resetActivityDetailsAndJoins(activityId: number): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      console.log(`🗑️ Starting DELETE ALL for activity ${activityId}...`);
+      
+      // 1. หาจำนวน records ที่จะลบ
+      const countQuery = `
+        SELECT 
+          COUNT(DISTINCT ad.activity_detail_id) as activity_detail_count,
+          COUNT(j.join_id) as join_count
+        FROM activity_detail ad
+        LEFT JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+        WHERE ad.activity_id = $1
+      `;
+      
+      const countResult = await this.dataSource!.query(countQuery, [activityId]);
+      const counts = countResult[0];
+      
+      console.log(`📊 Found ${counts.activity_detail_count} activity details and ${counts.join_count} joins to DELETE`);
+      
+      // 2. ลบ join records ก่อน (เพราะมี foreign key)
+      const deleteJoinQuery = `
+        DELETE FROM "join"
+        WHERE activity_detail_id IN (
+          SELECT activity_detail_id 
+          FROM activity_detail 
+          WHERE activity_id = $1
+        )
+        RETURNING join_id
+      `;
+      
+      const joinResult = await this.dataSource!.query(deleteJoinQuery, [activityId]);
+      console.log(`🗑️ Deleted ${joinResult.length} join records`);
+      
+      // 3. ลบ activity_detail records
+      const deleteActivityDetailQuery = `
+        DELETE FROM activity_detail
+        WHERE activity_id = $1
+        RETURNING activity_detail_id
+      `;
+      
+      const activityDetailResult = await this.dataSource!.query(deleteActivityDetailQuery, [activityId]);
+      console.log(`🗑️ Deleted ${activityDetailResult.length} activity detail records`);
+      
+      // 4. อัพเดท registered_count เป็น 0
+      const updateCountQuery = `
+        UPDATE activity
+        SET registered_count = 0
+        WHERE activity_id = $1
+        RETURNING activity_id, registered_count
+      `;
+      
+      const countUpdateResult = await this.dataSource!.query(updateCountQuery, [activityId]);
+      console.log(`✅ Updated registered_count to 0`);
+      
+      // 5. Reset sequence ของ activity_detail_id
+      const resetSequenceQuery = `
+        SELECT setval('activity_detail_activity_detail_id_seq', (SELECT COALESCE(MAX(activity_detail_id), 0) FROM activity_detail), true)
+      `;
+      
+      await this.dataSource!.query(resetSequenceQuery);
+      console.log(`✅ Reset activity_detail_id sequence`);
+      
+      const result = {
+        activityId,
+        activityDetailsDeleted: activityDetailResult.length,
+        joinsDeleted: joinResult.length,
+        newRegisteredCount: 0,
+        message: `DELETED ALL data for activity ${activityId}`
+      };
+      
+      console.log(`✅ DELETE ALL completed for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error deleting activity details and joins:", error);
+      throw error;
+    }
+  }
+
+  public async resetStudentTimes(activityId: number): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      console.log(`🔄 Starting reset student times for activity ${activityId}...`);
+      
+      // 1. หาจำนวน records ที่จะ reset
+      const countQuery = `
+        SELECT COUNT(*) as activity_detail_count
+        FROM activity_detail
+        WHERE activity_id = $1
+      `;
+      
+      const countResult = await this.dataSource!.query(countQuery, [activityId]);
+      const count = countResult[0].activity_detail_count;
+      
+      console.log(`📊 Found ${count} activity detail records to reset times`);
+      
+      // 2. Reset time_in และ time_out เป็น NULL
+      const resetTimesQuery = `
+        UPDATE activity_detail
+        SET 
+          time_in = NULL,
+          time_out = NULL
+        WHERE activity_id = $1
+        RETURNING activity_detail_id, time_in, time_out
+      `;
+      
+      const resetResult = await this.dataSource!.query(resetTimesQuery, [activityId]);
+      console.log(`✅ Reset ${resetResult.length} activity detail records`);
+      
+      const result = {
+        activityId,
+        activityDetailsReset: resetResult.length,
+        message: `Reset time_in and time_out to NULL for activity ${activityId}`,
+        details: {
+          resetRecords: resetResult
+        }
+      };
+      
+      console.log(`✅ Reset student times completed for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error resetting student times:", error);
+      throw error;
+    }
+  }
+
+  public async getActivityDetailsByActivityId(activityId: number): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      // Debug: ตรวจสอบข้อมูลทั้งหมดก่อน
+      const debugQuery = `
+        SELECT 
+          ad.activity_detail_id,
+          ad.activity_id,
+          ad.activity_food_id,
+          ad.register_date,
+          ad.time_in,
+          ad.time_out,
+          ad.status,
+          a.activity_name,
+          af.food_id,
+          f.food_name,
+          COUNT(j.join_id) as join_count
+        FROM activity_detail ad
+        LEFT JOIN activity a ON ad.activity_id = a.activity_id
+        LEFT JOIN activity_food af ON ad.activity_food_id = af.activity_food_id
+        LEFT JOIN food f ON af.food_id = f.food_id
+        LEFT JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+        WHERE ad.activity_id = $1
+        GROUP BY ad.activity_detail_id, ad.activity_id, ad.activity_food_id, ad.register_date, 
+                 ad.time_in, ad.time_out, ad.status, a.activity_name, af.food_id, f.food_name
+        ORDER BY ad.register_date DESC
+      `;
+      
+      const debugResult = await this.dataSource!.query(debugQuery, [activityId]);
+      console.log(`🔍 [DEBUG] Activity details for activity ${activityId}:`, debugResult);
+      
+      // แยก query เป็น 2 ส่วน: activity_detail และ students
+      const activityDetailQuery = `
+        SELECT 
+          ad.activity_detail_id,
+          ad.activity_id,
+          ad.activity_food_id,
+          ad.register_date,
+          ad.time_in,
+          ad.time_out,
+          ad.status,
+          a.activity_name,
+          af.food_id,
+          f.food_name
+        FROM activity_detail ad
+        LEFT JOIN activity a ON ad.activity_id = a.activity_id
+        LEFT JOIN activity_food af ON ad.activity_food_id = af.activity_food_id
+        LEFT JOIN food f ON af.food_id = f.food_id
+        WHERE ad.activity_id = $1
+        ORDER BY ad.register_date DESC
+      `;
+      
+      const joinQuery = `
+        SELECT 
+          j.activity_detail_id,
+          j.join_id,
+          j.students_id,
+          j.join_date,
+          j.status as join_status,
+          s.first_name,
+          s.last_name,
+          u.username
+        FROM "join" j
+        LEFT JOIN students s ON j.students_id = s.students_id
+        LEFT JOIN users u ON s.users_id = u.users_id
+        WHERE j.activity_detail_id IN (
+          SELECT activity_detail_id 
+          FROM activity_detail 
+          WHERE activity_id = $1
+        )
+        ORDER BY j.join_id
+      `;
+      
+      const [activityDetails, joins] = await Promise.all([
+        this.dataSource!.query(activityDetailQuery, [activityId]),
+        this.dataSource!.query(joinQuery, [activityId])
+      ]);
+      
+      console.log(`🔍 [DEBUG] Raw activity details:`, activityDetails);
+      console.log(`🔍 [DEBUG] Raw joins:`, joins);
+      
+      // รวมข้อมูล activity_detail กับ joins
+      const result = activityDetails.map((detail: any) => {
+        const detailJoins = joins.filter((join: any) => 
+          join.activity_detail_id === detail.activity_detail_id
+        );
+        
+        const finalResult = {
+          ...detail,
+          joins: detailJoins,
+          join_count: detailJoins.length
+        };
+        
+        console.log(`🔍 [DEBUG] Final result for activity_detail_id ${detail.activity_detail_id}:`, finalResult);
+        return finalResult;
+      });
+      
+      console.log(`📊 Found ${result.length} activity details with ${joins.length} joins for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting activity details by activity ID:", error);
       throw error;
     }
   }

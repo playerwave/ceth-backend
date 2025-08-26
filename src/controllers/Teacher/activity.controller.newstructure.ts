@@ -281,6 +281,93 @@ export class ActivityController extends ErrorHandledController {
       this.handleError("ActivityController.getEnrolledStudentsForActivity", error, res);
     }
   }
+
+  // ✅ ActivityDetail Controller Methods
+  public async getAllActivityDetails(req: Request, res: Response): Promise<void> {
+    try {
+      const activityDetails = await this.activityService.getAllActivityDetails();
+      res.status(200).json(activityDetails);
+    } catch (error) {
+      this.handleError("ActivityController.getAllActivityDetails", error, res);
+    }
+  }
+
+  public async getActivityDetailById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.id);
+      const activityDetail = await this.activityService.getActivityDetailById(id);
+      
+      if (!activityDetail) {
+        res.status(404).json({ message: "Activity detail not found" });
+        return;
+      }
+      
+      res.status(200).json(activityDetail);
+    } catch (error) {
+      this.handleError("ActivityController.getActivityDetailById", error, res);
+    }
+  }
+
+  public async updateActivityDetail(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.id);
+      const data = req.body;
+      const result = await this.activityService.updateActivityDetail(id, data);
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError("ActivityController.updateActivityDetail", error, res);
+    }
+  }
+
+  public async resetActivityDetailsAndJoins(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const result = await this.activityService.resetActivityDetailsAndJoins(activityId);
+      res.status(200).json({
+        success: true,
+        message: `DELETE ALL completed for activity ${activityId}`,
+        data: result
+      });
+    } catch (error) {
+      this.handleError("ActivityController.resetActivityDetailsAndJoins", error, res);
+    }
+  }
+
+  public async resetStudentTimes(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const result = await this.activityService.resetStudentTimes(activityId);
+      res.status(200).json({
+        success: true,
+        message: `Reset student times completed for activity ${activityId}`,
+        data: result
+      });
+    } catch (error) {
+      this.handleError("ActivityController.resetStudentTimes", error, res);
+    }
+  }
+
+  public async getActivityDetailsByActivityId(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const activityDetails = await this.activityService.getActivityDetailsByActivityId(activityId);
+      
+      res.status(200).json(activityDetails);
+    } catch (error) {
+      this.handleError("ActivityController.getActivityDetailsByActivityId", error, res);
+    }
+  }
+
+  private parseActivityDetailPayload(body: any): any {
+    return {
+      activity_id: this.parseOptionalInt(body.activity_id),
+      activity_food_id: this.parseOptionalInt(body.activity_food_id, null),
+      register_date: body.register_date ? new Date(body.register_date) : new Date(),
+      time_in: body.time_in ? new Date(body.time_in) : null,
+      time_out: body.time_out ? new Date(body.time_out) : null,
+      status: body.status || "Registered",
+    };
+  }
 }
 
 const activityService = new ActivityService();
@@ -298,5 +385,12 @@ export const activityController = {
   // getById: controller.getById.bind(controller),
   search: controller.search.bind(controller), // ✅ เพิ่ม search method
   getEnrolledStudentsForActivity: controller.getEnrolledStudentsForActivity.bind(controller),
+  // ActivityDetail methods
+  getAllActivityDetails: controller.getAllActivityDetails.bind(controller),
+  getActivityDetailById: controller.getActivityDetailById.bind(controller),
+  getActivityDetailsByActivityId: controller.getActivityDetailsByActivityId.bind(controller),
+  updateActivityDetail: controller.updateActivityDetail.bind(controller),
+  resetActivityDetailsAndJoins: controller.resetActivityDetailsAndJoins.bind(controller),
+  resetStudentTimes: controller.resetStudentTimes.bind(controller),
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
 };

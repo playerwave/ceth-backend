@@ -104,6 +104,31 @@ export class UsersService {
     return await this.usersDao.getUsersById(users_id).then((u) => u[0] || null);
   }
 
+  async updatedUsersWithPassword(
+    users_id: number,
+    username: string,
+    password: string,
+    roles_id: number
+  ): Promise<Users | null> {
+    const current = await this.usersDao.getUsersById(users_id);
+    if (current.length === 0) return null;
+
+    // Hash password ทุกครั้ง
+    const hash = await bcrypt.hash(password, 10);
+    
+    const currentUsername = current[0].username;
+    if (currentUsername === username) {
+      // ถ้า username ไม่เปลี่ยน ให้ update เฉพาะ password และ roles_id
+      await this.usersDao.updatedPasswordAndRoles(users_id, hash, roles_id);
+    } else {
+      // ถ้า username เปลี่ยน ให้ update ทั้งหมด
+      await this.usersDao.updatedUsersWithPassword(users_id, username, hash, roles_id);
+    }
+
+    await redis.del("users:all");
+    return await this.usersDao.getUsersById(users_id).then((u) => u[0] || null);
+  }
+
   async updatedPasswordByUsers(
     users_id: number,
     password: string,

@@ -104,21 +104,43 @@ export class UsersController extends ErrorHandledController {
       const id = this.parseId(req.params.users_id);
       const data = this.parseUserPayload(req.body);
 
-      const updatedUser = await this.usersService.updatedUsers(
-        id,
-        data.username,
-        data.roles_id
-      );
+      // ตรวจสอบว่ามี password ใน request หรือไม่
+      if (data.password) {
+        // ถ้ามี password ให้ update ทั้ง username, password, และ roles_id
+        const updatedUser = await this.usersService.updatedUsersWithPassword(
+          id,
+          data.username,
+          data.password,
+          data.roles_id
+        );
 
-      if (!updatedUser) {
-        res.status(404).json({ message: "ไม่พบผู้ใช้หรือมีชื่อซ้ำในระบบ!" });
-        return;
+        if (!updatedUser) {
+          res.status(404).json({ message: "ไม่พบผู้ใช้หรือมีชื่อซ้ำในระบบ!" });
+          return;
+        }
+
+        res.status(200).json({
+          message: "แก้ไขข้อมูลผู้ใช้สำเร็จ!",
+          user: updatedUser,
+        });
+      } else {
+        // ถ้าไม่มี password ให้ update เฉพาะ username และ roles_id
+        const updatedUser = await this.usersService.updatedUsers(
+          id,
+          data.username,
+          data.roles_id
+        );
+
+        if (!updatedUser) {
+          res.status(404).json({ message: "ไม่พบผู้ใช้หรือมีชื่อซ้ำในระบบ!" });
+          return;
+        }
+
+        res.status(200).json({
+          message: "แก้ชื่อผู้ใช้สำเร็จ!",
+          user: updatedUser,
+        });
       }
-
-      res.status(200).json({
-        message: "แก้ชื่อผู้ใช้สำเร็จ!",
-        user: updatedUser,
-      });
     } catch (error) {
       this.handleError("UsersController.update", error, res);
     }

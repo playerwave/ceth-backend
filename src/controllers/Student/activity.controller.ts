@@ -111,6 +111,25 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  public async getOngoingActivities(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const studentId = this.parseId(req.params.id);
+      const result = await this.activityService.getOngoingActivitiesService(
+        studentId
+      );
+      res.status(200).header("Cache-Control", "no-store").json(result);
+    } catch (error) {
+      this.handleError(
+        "StudentActivityController.getOngoingActivities",
+        error,
+        res
+      );
+    }
+  }
+
   public async searchActivity(req: Request, res: Response): Promise<void> {
     try {
       const { ac_name } = req.query;
@@ -236,6 +255,7 @@ export const activityController = {
   getSearch: controller.getSearch.bind(controller),
   enrollActivity: controller.enrollActivity.bind(controller),
   getEnrolledActivities: controller.getEnrolledActivities.bind(controller),
+  getOngoingActivities: controller.getOngoingActivities.bind(controller),
   searchActivity: controller.searchActivity.bind(controller),
   unEnrollActivity: controller.unEnrollActivity.bind(controller),
   resetRegisteredCounts: controller.resetRegisteredCounts.bind(controller),

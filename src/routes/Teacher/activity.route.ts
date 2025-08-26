@@ -57,23 +57,6 @@ router.get("/get-activity/:id", wrapAsync(activityController.getActivity));
 // ✅ เพิ่ม search route
 router.get("/search", (activityController.search));
 
-// // เรียกดูรายกิจกรรม
-// router.get("/get-activity/:id", wrapAsync(activityController.getById));
-
-// // ค้นหากิจกรรมตามชื่อ บริษัท/วิทยากร หรือ ชื่อกิจกรรม
-// router.get("/searchActivity", wrapAsync(activityController.search));
-
-// // เรียกดูนิสิตที่ enroll เข้ามาในแต่ละกิจกรรม
-// // เรียก controller ผิดตัวเดี๋ยวมาแก้ละกัน
-// router.get(
-//   "/get-enrolled-studentslist/:id",
-//   wrapAsync(activityController.getEnrolledStudents)
-// );
-
-// router.post("/update-activity-status/:id", async (req: Request, res: Response) => {
-//   await activityController.updateByStatus(req, res)
-// })
-
 router.patch(
   "/update-activity-status/:activity_id",
   wrapAsync(activityController.updateByStatus)
@@ -84,5 +67,17 @@ router.get(
   "/get-enrolled-students/:activityId",
   wrapAsync(activityController.getEnrolledStudentsForActivity)
 );
+
+// ✅ ActivityDetail Routes
+router.get("/activity-details", wrapAsync(activityController.getAllActivityDetails));
+router.get("/activity-detail/:id", wrapAsync(activityController.getActivityDetailById));
+router.get("/activity-details/by-activity/:activityId", wrapAsync(activityController.getActivityDetailsByActivityId));
+router.put("/update-activity-detail/:id", wrapAsync(activityController.updateActivityDetail));
+
+// เพิ่ม route สำหรับ reset ActivityDetail และ Join
+router.delete("/reset-activity-details/:activityId", wrapAsync(activityController.resetActivityDetailsAndJoins));
+
+// เพิ่ม route สำหรับ reset time_in และ time_out ของนักเรียน
+router.patch("/reset-student-times/:activityId", wrapAsync(activityController.resetStudentTimes));
 
 export default router;

@@ -154,6 +154,38 @@ export class UsersDao extends ErrorHandledDao {
     await this.usersRepository!.update(users_id, { password });
   }
 
+  public async updatedPasswordAndRoles(
+    users_id: number,
+    password: string,
+    roles_id: number
+  ): Promise<void> {
+    await this.checkConnection();
+    await this.usersRepository!.update(users_id, { password, roles_id });
+  }
+
+  public async updatedUsersWithPassword(
+    users_id: number,
+    username: string,
+    password: string,
+    roles_id: number
+  ): Promise<Users | null> {
+    await this.checkConnection();
+
+    // อัปเดตข้อมูลทั้งหมด
+    await this.usersRepository!.update(users_id, {
+      username: username.trim(),
+      password,
+      roles_id,
+    });
+
+    // ดึงข้อมูลล่าสุดกลับมา
+    const updated = await this.usersRepository!.findOne({
+      where: { users_id },
+    });
+
+    return updated || null;
+  }
+
   public async deleteUsers(users_id: number): Promise<void> {
     await this.checkConnection();
     await this.usersRepository!.delete(users_id);

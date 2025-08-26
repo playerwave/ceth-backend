@@ -368,4 +368,75 @@ export class ActivityService extends ErrorHandledService {
       throw error;
     }
   }
+
+  // ✅ ActivityDetail Service Methods
+  public async getAllActivityDetails(): Promise<any[]> {
+    try {
+      const activityDetails = await this.activityDao.getAllActivityDetails();
+      this.logInfo("📥 Retrieved all activity details", {
+        count: activityDetails.length
+      });
+      return activityDetails;
+    } catch (error) {
+      this.logError("❌ Error getting all activity details", error);
+      throw error;
+    }
+  }
+
+  public async getActivityDetailById(id: number): Promise<any | null> {
+    try {
+      const activityDetail = await this.activityDao.getActivityDetailById(id);
+      this.logInfo("📥 Retrieved activity detail by ID", { id });
+      return activityDetail;
+    } catch (error) {
+      this.logError("❌ Error getting activity detail by ID", error);
+      throw error;
+    }
+  }
+
+  public async updateActivityDetail(id: number, data: any): Promise<any> {
+    try {
+      const result = await this.activityDao.updateActivityDetail(id, data);
+      return result;
+    } catch (error) {
+      this.logError("❌ Error updating activity detail", error);
+      throw error;
+    }
+  }
+
+  public async resetActivityDetailsAndJoins(activityId: number): Promise<any> {
+    try {
+      const result = await this.activityDao.resetActivityDetailsAndJoins(activityId);
+      this.logInfo("✅ DELETE ALL activity details and joins completed", { activityId, result });
+      return result;
+    } catch (error) {
+      this.logError("❌ Error deleting activity details and joins", error);
+      throw error;
+    }
+  }
+
+  public async resetStudentTimes(activityId: number): Promise<any> {
+    try {
+      const result = await this.activityDao.resetStudentTimes(activityId);
+      this.logInfo("✅ Reset student times completed", { activityId, result });
+      return result;
+    } catch (error) {
+      this.logError("❌ Error resetting student times", error);
+      throw error;
+    }
+  }
+
+  public async getActivityDetailsByActivityId(activityId: number): Promise<any[]> {
+    try {
+      const activityDetails = await this.activityDao.getActivityDetailsByActivityId(activityId);
+      this.logInfo("📥 Retrieved activity details by activity ID", {
+        activityId,
+        count: activityDetails.length
+      });
+      return activityDetails;
+    } catch (error) {
+      this.logError("❌ Error getting activity details by activity ID", error);
+      throw error;
+    }
+  }
 }
