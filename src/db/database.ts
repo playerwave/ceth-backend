@@ -32,6 +32,7 @@ import { Activity } from "../entity/activity.entity";
 import { Join } from "../entity/join.entity";
 import { ActivityDetail } from "../entity/activitydetail.entity";
 import { Certificate } from "../entity/certificate.entity";
+import { QRCode } from "../entity/qr-code.entity";
 
 // ✅ Singleton Database Manager
 class DatabaseManager {
@@ -122,6 +123,7 @@ class DatabaseManager {
           Join,
           ActivityDetail,
           Certificate,
+          QRCode,
         ],
         synchronize: true,
         logging: false, // ✅ ปิด logging เพื่อลด overhead

@@ -353,4 +353,19 @@ export class ActivityService extends ErrorHandledService {
       throw error;
     }
   }
+
+  // ✅ เมธอดใหม่: ดึงข้อมูลนักเรียนที่ลงทะเบียน
+  public async getEnrolledStudentsForActivity(activityId: number): Promise<any[]> {
+    try {
+      const students = await this.activityDao.getEnrolledStudentsForActivity(activityId);
+      this.logInfo("📥 Retrieved enrolled students", {
+        activityId,
+        count: students.length
+      });
+      return students;
+    } catch (error) {
+      this.logError("❌ Error getting enrolled students", error);
+      throw error;
+    }
+  }
 }

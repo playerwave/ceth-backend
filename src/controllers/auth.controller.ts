@@ -75,7 +75,10 @@ export class AuthController extends ErrorHandledController {
               users_id: user.users_id,
               username: user.username,
               roles_id: user.roles_id,
-              roles_name: user.roles.roles_name,
+              roles: {
+                roles_id: user.roles.roles_id,
+                roles_name: user.roles.roles_name,
+              },
               student: studentData,
             },
           };
@@ -100,7 +103,10 @@ export class AuthController extends ErrorHandledController {
               users_id: user.users_id,
               username: user.username,
               roles_id: user.roles_id,
-              roles_name: user.roles.roles_name,
+              roles: {
+                roles_id: user.roles.roles_id,
+                roles_name: user.roles.roles_name,
+              },
               teacher: teacherData,
             },
           };
@@ -119,7 +125,10 @@ export class AuthController extends ErrorHandledController {
           users_id: user.users_id,
           username: user.username,
           roles_id: user.roles_id,
-          roles_name: user.roles.roles_name,
+          roles: {
+            roles_id: user.roles.roles_id,
+            roles_name: user.roles.roles_name,
+          },
         },
       };
 

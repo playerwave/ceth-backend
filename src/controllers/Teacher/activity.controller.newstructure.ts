@@ -270,6 +270,17 @@ export class ActivityController extends ErrorHandledController {
     const parsed = parseInt(value, 10);
     return !isNaN(parsed) ? parsed : fallback;
   }
+
+  // ✅ เมธอดใหม่: ดึงข้อมูลนักเรียนที่ลงทะเบียน
+  public async getEnrolledStudentsForActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const students = await this.activityService.getEnrolledStudentsForActivity(activityId);
+      res.status(200).json(students);
+    } catch (error) {
+      this.handleError("ActivityController.getEnrolledStudentsForActivity", error, res);
+    }
+  }
 }
 
 const activityService = new ActivityService();
@@ -286,5 +297,6 @@ export const activityController = {
   getSearch: controller.getSearch.bind(controller),
   // getById: controller.getById.bind(controller),
   search: controller.search.bind(controller), // ✅ เพิ่ม search method
+  getEnrolledStudentsForActivity: controller.getEnrolledStudentsForActivity.bind(controller),
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
 };

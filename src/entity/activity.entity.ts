@@ -12,6 +12,7 @@ import { ActivityFood } from "./activity.food.entity";
 import { ActivityDetail } from "./activitydetail.entity";
 import { Room } from "./room.entity";
 import { Certificate } from "./certificate.entity";
+import { QRCode } from "./qr-code.entity";
 
 @Entity()
 @Index("IDX_ACTIVITY_NAME_ACTIVITY", ["activity_name"])
@@ -167,4 +168,7 @@ export class Activity {
 
   @OneToMany(() => Certificate, (certificate) => certificate.activity)
   certificate?: Certificate[];
+
+  @OneToMany(() => QRCode, (qrCode) => qrCode.activity)
+  qrCodes?: QRCode[];
 }

@@ -131,9 +131,27 @@ export class ActivityService extends ErrorHandledService {
         studentId,
         activityId
       );
-      if (existingJoin) throw new Error("Already enrolled in this activity");
+      
+      if (existingJoin) {
+        // ถ้ามี join อยู่แล้ว ให้ตรวจสอบ status
+        if (existingJoin.status === 'Pending') {
+          throw new Error("Already enrolled in this activity");
+        } else if (existingJoin.status === 'Cancelled') {
+          // อัพเดท join status เป็น Pending
+          await this.activityDao.updateJoinStatus(existingJoin.join_id, 'Pending');
+          console.log(`🔄 Updated cancelled join to Pending: ${existingJoin.join_id}`);
+          
+          // อัพเดท registered_count
+          await this.activityDao.updateRegisteredCount(activityId);
+          
+          // ลบ cache
+          await redis.del(`join:${studentId}`);
+          
+          return existingJoin;
+        }
+      }
 
-      // 2. สร้าง activity_detail ใหม่
+      // 2. สร้าง activity_detail ใหม่ (หรืออัพเดทจาก Cancelled)
       const activityDetail = await this.activityDao.createActivityDetail(
         activityId,
         0, // ไม่ใช้ join_id
@@ -313,6 +331,63 @@ export class ActivityService extends ErrorHandledService {
       this.logInfo("🔄 Reset all registered counts completed");
     } catch (error) {
       this.logError("❌ Error in resetAllRegisteredCountsService", error);
+      throw error;
+    }
+  }
+
+  // ✅ เมธอดใหม่: Check-in/Check-out Activity
+  public async checkInOutActivityService(
+    activityId: number,
+    username: string,
+    password: string
+  ): Promise<{ success: boolean; message: string; studentId?: number }> {
+    try {
+      // 1. ตรวจสอบ username และ password
+      const student = await this.activityDao.validateStudentCredentials(username, password);
+      if (!student) {
+        return {
+          success: false,
+          message: "รหัสนิสิตหรือรหัสผ่านไม่ถูกต้อง"
+        };
+      }
+
+      // 2. ตรวจสอบว่านิสิตลงทะเบียนกิจกรรมนี้แล้วหรือยัง
+      const enrollment = await this.activityDao.findEnrollmentByStudentAndActivity(
+        student.students_id,
+        activityId
+      );
+
+      if (!enrollment) {
+        return {
+          success: false,
+          message: "คุณยังไม่ได้ลงทะเบียนกิจกรรมนี้"
+        };
+      }
+
+      // 3. ตรวจสอบว่าได้ check-in แล้วหรือยัง
+      if (enrollment.time_in) {
+        return {
+          success: false,
+          message: "คุณได้ลงทะเบียนเข้าร่วมกิจกรรมนี้แล้ว"
+        };
+      }
+
+      // 4. Update time_in เป็นเวลาปัจจุบัน
+      await this.activityDao.updateTimeIn(enrollment.activity_detail_id);
+
+      this.logInfo("✅ Student checked in to activity", {
+        studentId: student.students_id,
+        activityId,
+        activityDetailId: enrollment.activity_detail_id
+      });
+
+      return {
+        success: true,
+        message: "ลงทะเบียนเข้าร่วมกิจกรรมสำเร็จ!",
+        studentId: student.students_id
+      };
+    } catch (error) {
+      this.logError("❌ Error in checkInOutActivityService", error);
       throw error;
     }
   }

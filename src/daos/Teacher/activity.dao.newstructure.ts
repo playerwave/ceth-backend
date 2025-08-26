@@ -1168,5 +1168,36 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  // ✅ เมธอดใหม่: ดึงข้อมูลนักเรียนที่ลงทะเบียน
+  public async getEnrolledStudentsForActivity(activityId: number): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        SELECT 
+          s.students_id as id,
+          s.first_name,
+          s.last_name,
+          d.department_name,
+          u.username
+        FROM students s
+        JOIN users u ON s.users_id = u.users_id
+        JOIN department d ON s.department_id = d.department_id
+        JOIN "join" j ON s.students_id = j.students_id
+        JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+        WHERE ad.activity_id = $1 
+          AND ad.status = 'Registered'
+          AND j.status = 'Pending'
+        ORDER BY s.first_name, s.last_name
+      `;
+      
+      const result = await this.dataSource!.query(query, [activityId]);
+      console.log(`📊 Found ${result.length} enrolled students for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting enrolled students:", error);
+      throw error;
+    }
+  }
 
 }

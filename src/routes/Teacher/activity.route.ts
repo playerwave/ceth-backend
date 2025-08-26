@@ -79,4 +79,10 @@ router.patch(
   wrapAsync(activityController.updateByStatus)
 );
 
+// ✅ GET METHOD สำหรับดึงข้อมูลนักเรียนที่ลงทะเบียน
+router.get(
+  "/get-enrolled-students/:activityId",
+  wrapAsync(activityController.getEnrolledStudentsForActivity)
+);
+
 export default router;

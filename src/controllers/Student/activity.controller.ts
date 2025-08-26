@@ -175,6 +175,32 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  // ✅ เมธอดใหม่: Check-in/Check-out Activity
+  public async checkInOutActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        res.status(400).json({
+          success: false,
+          message: "กรุณากรอกรหัสนิสิตและรหัสผ่าน"
+        });
+        return;
+      }
+
+      const result = await this.activityService.checkInOutActivityService(
+        activityId,
+        username,
+        password
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError("StudentActivityController.checkInOutActivity", error, res);
+    }
+  }
+
   // 🔧 Utility Parsing Methods
   private parseId(value: any): number {
     const id = parseInt(value, 10);
@@ -213,4 +239,5 @@ export const activityController = {
   searchActivity: controller.searchActivity.bind(controller),
   unEnrollActivity: controller.unEnrollActivity.bind(controller),
   resetRegisteredCounts: controller.resetRegisteredCounts.bind(controller),
+  checkInOutActivity: controller.checkInOutActivity.bind(controller),
 };
