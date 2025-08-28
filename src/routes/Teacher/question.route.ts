@@ -24,31 +24,17 @@ router.get(
     "/get-questions", (questionController.getAll.bind(questionController))
 );
 
+router.post(
+    "/add", (questionController.create.bind(questionController))
+);
 
-// // ✅ POST เพิ่มตึก
-// router.post(
-//     "/add",
-//     verifyToken,
-//     Admin,
-//     validateDTO(CreateQuestionDto),
-//     wrapAsync(questionController.create.bind(questionController))
-// );
+router.put(
+    "/edit/:question_id", (questionController.update.bind(questionController))
+);
 
-// // ✅ PUT แก้ไขชื่อตึก
-// router.put(
-//     "/edit/:question_id",
-//     verifyToken,
-//     Admin,
-//     validateDTO(UpdateQuestionDto),
-//     wrapAsync(questionController.update.bind(questionController))
-// );
 
-// // ✅ DELETE ลบตึก
-// router.delete(
-//     "/delete/:question_id",
-//     verifyToken,
-//     Admin,
-//     wrapAsync(questionController.delete.bind(questionController))
-// );
+router.delete(
+    "/delete/:question_id", (questionController.delete.bind(questionController))
+);
 
 export default router;

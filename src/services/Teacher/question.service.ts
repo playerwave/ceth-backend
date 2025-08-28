@@ -47,19 +47,77 @@ export class QuestionService extends ErrorHandledService {
         }
     }
 
-    public async addQuestion(question_text: string,
+    public async addQuestion(
+        question_text: string,
         set_number_id: number,
-        question_type: string): Promise<Question | null> {
-        const cacheKey = "question:all";
+        question_type: string
+    ): Promise<Question> {
+        const text = (question_text ?? '').trim();
+        const type = (question_type ?? '').trim();
+
+        if (!Number.isInteger(set_number_id) || set_number_id <= 0) {
+            throw new Error('set_number_id ไม่ถูกต้อง');
+        }
+        if (!text) {
+            throw new Error('question_text ห้ามว่าง');
+        }
+        const allowed = ['Single answer', 'Multi answer', 'Text'];
+        if (!allowed.includes(type)) {
+            throw new Error('question_type ไม่ถูกต้อง');
+        }
+        const created = await this.questionDao.addQuestion(text, set_number_id, type);
+
+        await redis.del(`question:list:set:${set_number_id}`);
+
+        return created;
+    }
+
+    public async updateQuestion(question_id: number, question_text: string, question_type: string): Promise<Question[]> {
+        const Find_Question = await this.questionDao.getQuestionByID(question_id);
         try {
-            const countQuestion = await this.questionDao.countQuestionBySetNumberID(set_number_id)
-            const itemNumber = countQuestion + 1
-            const result = await this.questionDao.addQuestion(question_text, itemNumber, set_number_id, question_type)
-            await redis.del(cacheKey);
-            return result;
+            if (Find_Question.length > 0) {
+                const QuestionID = Find_Question[0].question_id
+                const TextStore = Find_Question[0].question_text
+                const TypeStore = Find_Question[0].question_type
+                const Text = question_text.trim();
+                const Types = question_type.trim();
+                if (question_text !== TextStore && question_type === TypeStore) {
+                    const result = await this.questionDao.updateQuestionByText(QuestionID, Text)
+                    return result;
+                }
+
+                if (question_text === TextStore && question_type !== TypeStore) {
+                    const result = await this.questionDao.updateQuestionByType(QuestionID, Types)
+                    return result;
+                } else {
+                    const result = await this.questionDao.updateQuestionByTextType(QuestionID, Text, Types)
+                    return result
+                }
+            } else {
+                console.log(`ไม่พบคำถาม ID ${question_id} อยู่ในระบบ`)
+                return [];
+            }
         } catch (error) {
-            this.logError("❌ Error in addBuilding", error);
+            this.logError("❌ Error in updateQuestion", error);
             throw error;
         }
     }
+
+    public async deleteQuestion(question_id: number): Promise<Question[]> {
+        const Find_Question = await this.questionDao.getQuestionByID(question_id);
+        try {
+            if (Find_Question.length > 0) {
+                const ID = Find_Question[0].question_id
+                const result = await this.questionDao.deleteQuestion(ID)
+                return result;
+            } else {
+                console.log(`ไม่พบคำถาม ID ${question_id} อยู่ในระบบ`)
+                return [];
+            }
+        } catch (error) {
+            this.logError("❌ Error in updateQuestion", error);
+            throw error;
+        }
+    }
+
 }

@@ -16,8 +16,7 @@ const setNumberController = new SetNumberController(setNumberService);
 // ✅ GET /get-set-numbers → ดึงข้อมูลชุดคำถามแบบแบ่งหน้า
 router.get(
   "/get-set-numbers",
-  verifyToken,
-  wrapAsync((req, res) => setNumberController.getAll(req, res))
+  ((req, res) => setNumberController.getAll(req, res))
 );
 
 // ✅ GET /get-set-number/:id → ดึงข้อมูลชุดคำถามตาม ID
@@ -25,6 +24,10 @@ router.get(
   "/get-set-number/:id",
   verifyToken,
   wrapAsync((req, res) => setNumberController.getById(req, res))
+);
+
+router.get(
+  "/get-set-number-qyestion/:id", ((req, res) => setNumberController.getSetNumbersQuestionByID(req, res))
 );
 
 // ✅ POST /create-set-number → เพิ่มชุดคำถาม

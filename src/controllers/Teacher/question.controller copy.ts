@@ -30,78 +30,75 @@ export class QuestionController extends ErrorHandledController {
         }
     }
 
-    // public async create(req: Request, res: Response): Promise<void> {
-    //     try {
-    //         const data = this.parseBuildingPayload(req.body);
-    //         const created = await this.buildingService.addBuilding(
-    //             data.faculty_id,
-    //             data.building_name
-    //         );
+    public async create(req: Request, res: Response): Promise<void> {
+        try {
+            const data = this.parseQuestionPayload(req.body);
+            const created = await this.questionService.addQuestion(
+                data.question_text,
+                data.set_number_id,
+                data.question_type
+            );
+            res.status(201).json({ message: "เพิ่มคำถามสำเร็จ!", question: created });
+        } catch (err: any) {
+            // แยก 400 จาก 500
+            if (
+                /ห้ามว่าง|ไม่ถูกต้อง/i.test(err?.message ?? "")
+            ) {
+                res.status(400).json({ error: err.message });
+                return;
+            }
+            this.handleError("QuestionController.create", err, res);
+        }
+    }
 
-    //         if (created) {
-    //             res.status(201).json({
-    //                 message: "เพิ่มชื่อตึกสำเร็จ!",
-    //                 building: created,
-    //             });
-    //         } else {
-    //             res.status(409).json({ message: "มีชื่อตึกนี้อยู่ในระบบแล้ว!" });
-    //         }
-    //     } catch (error) {
-    //         this.handleError("BuildingController.create", error, res);
-    //     }
-    // }
 
-    // public async update(req: Request, res: Response): Promise<void> {
-    //     try {
-    //         const building_id = this.parseId(req.params.building_id);
-    //         const data = this.parseBuildingPayload(req.body);
+    public async update(req: Request, res: Response): Promise<void> {
+        try {
+            const question_id = this.parseId(req.params.question_id);
+            const data = this.parseQuestionPayloadUpdate(req.body);
 
-    //         const updated = await this.buildingService.updatedBuildingByName(
-    //             building_id,
-    //             data.faculty_id,
-    //             data.building_name
-    //         );
+            const updated = await this.questionService.updateQuestion(question_id, data.question_text, data.question_type)
+            if (updated.length > 0) {
+                res.status(200).json({
+                    message: "แก้ไขคำถามสำเร็จ!",
+                    updated,
+                });
+            } else {
+                res.status(404).json({
+                    message: "แก้ไขคำถาม ไม่สำเร็จ !",
+                });
+            }
+        } catch (error) {
+            this.handleError("QuestionController.update", error, res);
+        }
+    }
 
-    //         if (updated) {
-    //             res.status(200).json({
-    //                 message: "แก้ไขชื่อตึกสำเร็จ!",
-    //                 updated,
-    //             });
-    //         } else {
-    //             res.status(409).json({
-    //                 message: "มีชื่อตึกนี้อยู่ในระบบแล้ว หรือไม่พบตึกที่ต้องการแก้ไข!",
-    //             });
-    //         }
-    //     } catch (error) {
-    //         this.handleError("BuildingController.update", error, res);
-    //     }
-    // }
+    public async delete(req: Request, res: Response): Promise<void> {
+        try {
+            const question_id = this.parseId(req.params.question_id);
 
-    // public async delete(req: Request, res: Response): Promise<void> {
-    //     try {
-    //         const building_id = this.parseId(req.params.building_id);
-    //         const deleted = await this.buildingService.deletedBuilding(building_id);
+            const deleted = await this.questionService.deleteQuestion(question_id)
 
-    //         if (deleted) {
-    //             res.status(200).json({
-    //                 message: "ลบชื่อตึกสำเร็จ !",
-    //             });
-    //         } else {
-    //             res.status(404).json({
-    //                 message: "ไม่พบข้อมูลตึกที่ต้องการลบ !",
-    //             });
-    //         }
-    //     } catch (error) {
-    //         if (
-    //             this.isErrorWithMessage(error) &&
-    //             error.message.includes("มีห้องที่ผูกอยู่")
-    //         ) {
-    //             res.status(400).json({ message: error.message });
-    //         } else {
-    //             this.handleError("BuildingController.delete", error, res);
-    //         }
-    //     }
-    // }
+            if (deleted.length > 0) {
+                res.status(200).json({
+                    message: "ลบคำถามสำเร็จ !",
+                });
+            } else {
+                res.status(404).json({
+                    message: "ไม่พบข้อมูลของคำถามที่ต้องการลบ !",
+                });
+            }
+        } catch (error) {
+            if (
+                this.isErrorWithMessage(error) &&
+                error.message.includes("มีห้องที่ผูกอยู่")
+            ) {
+                res.status(400).json({ message: error.message });
+            } else {
+                this.handleError("QuestionController.delete", error, res);
+            }
+        }
+    }
 
     // 🔍 Type guard เพื่อให้แน่ใจว่า error มี message
     private isErrorWithMessage(error: unknown): error is Error {
@@ -124,19 +121,39 @@ export class QuestionController extends ErrorHandledController {
         return isNaN(num) ? fallback : num;
     }
 
-    private parseQuestionPayload(body: any): {
-        question_id: number;
+    private parseQuestionPayloadUpdate(body: any): {
         question_text: string;
-        quesiion_number: number;
-        set_number: number;
         question_type: string;
     } {
         return {
-            question_id: this.parseId(this.sanitize(body.question_id)),
-            question_text: this.sanitize(body.building_name),
-            quesiion_number: this.parseId(this.sanitize(body.quesiion_number)),
-            set_number: this.parseId(this.sanitize(body.set_number)),
-            question_type: this.sanitize(body.question_type),
+            question_text: this.sanitize(body.question_text),
+            question_type: this.sanitize(body.question_type)
         };
     }
+
+    private parseQuestionPayload(body: any) {
+        // รองรับทั้ง root และภายใต้ data
+        const question_text =
+            (body?.question_text ?? body?.data?.question_text ?? "").toString().trim();
+
+        const set_number_id_raw = body?.set_number_id ?? body?.data?.set_number_id;
+        const set_number_id = Number.parseInt(set_number_id_raw, 10);
+
+        // เผื่อมีคนส่ง key แบบ "data.question_type"
+        const dotKey = body["data.question_type"];
+        const question_type =
+            (body?.question_type ?? body?.data?.question_type ?? dotKey ?? "")
+                .toString()
+                .trim();
+
+        if (!question_text) throw new Error("question_text ห้ามว่าง");
+        if (!Number.isInteger(set_number_id) || set_number_id <= 0)
+            throw new Error("set_number_id ไม่ถูกต้อง");
+        const allowed = ["Single answer", "Multi answer", "Text"];
+        if (!allowed.includes(question_type))
+            throw new Error("question_type ไม่ถูกต้อง");
+
+        return { question_text, set_number_id, question_type };
+    }
+
 }

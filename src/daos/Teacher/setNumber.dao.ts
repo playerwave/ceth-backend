@@ -57,6 +57,19 @@ export class SetNumberDao extends ErrorHandledDao {
     }
   }
 
+  async getSetNumbersQuestionByID(set_number_id: number): Promise<SetNumber[]> {
+    this.checkConnection();
+
+    try {
+      const sql = `SELECT q.question_id, q.question_number, question_text, question_type FROM set_number as sm INNER JOIN question as q ON sm.set_number_id = q.set_number_id WHERE sm.set_number_id = $1 ORDER BY q.question_number ASC`
+      const result = await this.dataSource!.query(sql, [set_number_id]);
+      return result;
+    } catch (error) {
+      this.logDbError("getSetNumbersQuestionByID", error);
+      throw error;
+    }
+  }
+
   async getSetNumberByID(set_number_id: number): Promise<SetNumber[]> {
     this.checkConnection();
     try {

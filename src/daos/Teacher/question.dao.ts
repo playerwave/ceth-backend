@@ -44,7 +44,7 @@ export class QuestionDao extends ErrorHandledDao {
         try {
             const result = await this.questionDao!.query(
                 `SELECT COUNT(*) FROM question WHERE set_number_id = $1`
-            );
+                , [set_number_id]);
             return parseInt(result[0].count);
         } catch (error) {
             this.logDbError("countQuestion", error);
@@ -66,24 +66,106 @@ export class QuestionDao extends ErrorHandledDao {
         }
     }
 
-    public async addQuestion(
+    public async getQuestionByID(question_id: number): Promise<Question[]> {
+        this.checkConnection();
+        try {
+            return await this.questionDao!.query(
+                `SELECT * FROM question WHERE question_id = $1`,
+                [question_id]
+            );
+        } catch (error) {
+            this.logDbError("getQuestionByID", error);
+            throw error;
+        }
+    }
+
+    async addQuestion(
         question_text: string,
-        question_number: number,
         set_number_id: number,
         question_type: string
     ): Promise<Question> {
         this.checkConnection();
+
+        const q = question_text.trim();
+        const t = question_type.trim();
+
         try {
-            const Question = question_text.trim();
-            const Type = question_type.trim();
-            const result = await this.questionDao!.query(
-                `INSERT INTO question (question_text, question_number, set_number_id, question_type) VALUES ($1, $2, $3, $4) RETURNING *`,
-                [Question, question_number, set_number_id, Type]
+            await this.questionDao!.query("BEGIN");
+            // 🔒 ล็อกกันแข่งในชุดนี้
+            await this.questionDao!.query("SELECT pg_advisory_xact_lock($1)", [set_number_id]);
+
+            // หาหมายเลขข้อถัดไป
+            const nextRows = await this.questionDao!.query(
+                `SELECT COALESCE(MAX(question_number), 0) + 1 AS n FROM question WHERE set_number_id = $1`,
+                [set_number_id]
             );
-            return result[0];
+            const nextNumber = Number(nextRows?.[0]?.n ?? 1);
+
+            // แทรกคำถามใหม่
+            const rows = await this.questionDao!.query(
+                `INSERT INTO question (question_text, question_number, set_number_id, question_type) VALUES ($1, $2, $3, $4)RETURNING *`,
+                [q, nextNumber, set_number_id, t]
+            );
+
+            await this.questionDao!.query("COMMIT");
+            return rows[0];
+        } catch (err) {
+            await this.questionDao!.query("ROLLBACK");
+            this.logDbError("addQuestion", err);
+            throw err;
+        }
+    }
+
+    public async updateQuestionByText(question_id: number, question_text: string): Promise<Question[]> {
+        this.checkConnection();
+        try {
+            return await this.questionDao!.query(
+                `UPDATE question SET question_text = $1 WHERE question_id = $2 RETURNING *`,
+                [question_text, question_id]
+            );
         } catch (error) {
-            this.logDbError("addQuestion", error);
+            this.logDbError("getQuestion", error);
             throw error;
         }
     }
+
+    public async updateQuestionByType(question_id: number, question_type: string): Promise<Question[]> {
+        this.checkConnection();
+        try {
+            return await this.questionDao!.query(
+                `UPDATE question SET question_type = $1 WHERE question_id = $2 RETURNING *`,
+                [question_type, question_id]
+            );
+        } catch (error) {
+            this.logDbError("getQuestion", error);
+            throw error;
+        }
+    }
+
+    public async updateQuestionByTextType(question_id: number, question_text: string, question_type: string): Promise<Question[]> {
+        this.checkConnection();
+        try {
+            return await this.questionDao!.query(
+                `UPDATE question SET question_text = $1, question_type = $2 WHERE question_id = $3 RETURNING *`,
+                [question_text, question_type, question_id]
+            );
+        } catch (error) {
+            this.logDbError("getQuestion", error);
+            throw error;
+        }
+    }
+
+    public async deleteQuestion(question_id: number): Promise<Question[]> {
+        this.checkConnection();
+        try {
+            return await this.questionDao!.query(
+                `DELETE FROM question WHERE question_id = $1`,
+                [question_id]
+            );
+        } catch (error) {
+            this.logDbError("deleteQuestion", error);
+            throw error;
+        }
+    }
+
 }

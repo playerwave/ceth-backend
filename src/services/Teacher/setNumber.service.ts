@@ -39,6 +39,19 @@ export class SetNumberService extends ErrorHandledService {
     }
   }
 
+
+
+  public async getSetNumbersQuestionByID(set_number_id: number): Promise<SetNumber[]> {
+    try {
+      const result = await this.setNumberDao.getSetNumbersQuestionByID(set_number_id)
+      this.logInfo("📦 SetNumbers fetched");
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in getSetNumbers", error);
+      throw error;
+    }
+  }
+
   public async getSetNumbers(page: number, limit: number): Promise<SetNumber[]> {
     try {
       const result = await this.setNumberDao.getSetNumbers(page, limit);

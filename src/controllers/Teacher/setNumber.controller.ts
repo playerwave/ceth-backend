@@ -11,7 +11,7 @@ export class SetNumberController extends ErrorHandledController {
     try {
       // ตรวจสอบว่า request body มีข้อมูลหรือไม่
       if (!req.body || Object.keys(req.body).length === 0) {
-        res.status(400).json({ 
+        res.status(400).json({
           message: "กรุณาส่งข้อมูลที่จำเป็น",
           errors: [
             {
@@ -28,7 +28,7 @@ export class SetNumberController extends ErrorHandledController {
 
       // ตรวจสอบข้อมูลที่จำเป็น
       if (!name || name.trim() === '') {
-        res.status(400).json({ 
+        res.status(400).json({
           message: "ข้อมูลไม่ครบถ้วน",
           errors: [
             {
@@ -78,17 +78,42 @@ export class SetNumberController extends ErrorHandledController {
     }
   }
 
+  public async getSetNumbersQuestionByID(req: Request, res: Response): Promise<void> {
+    try {
+      const setNumberId = parseInt(req.params.id);
+
+      if (isNaN(setNumberId)) {
+        res.status(400).json({ message: "ID ชุดคำถามไม่ถูกต้อง" });
+        return;
+      }
+
+      const setNumber = await this.setNumberService.getSetNumbersQuestionByID(setNumberId)
+
+      if (!setNumber) {
+        res.status(404).json({ message: "ไม่พบชุดคำถามที่ต้องการ" });
+        return;
+      }
+
+      res.status(200).json({
+        message: "ดึงข้อมูลชุดคำถามสำเร็จ!",
+        data: setNumber,
+      });
+    } catch (error) {
+      this.handleError("SetNumberController.getById", error, res);
+    }
+  }
+
   public async getById(req: Request, res: Response): Promise<void> {
     try {
       const setNumberId = parseInt(req.params.id);
-      
+
       if (isNaN(setNumberId)) {
         res.status(400).json({ message: "ID ชุดคำถามไม่ถูกต้อง" });
         return;
       }
 
       const setNumber = await this.setNumberService.getSetNumberByID(setNumberId);
-      
+
       if (!setNumber) {
         res.status(404).json({ message: "ไม่พบชุดคำถามที่ต้องการ" });
         return;
@@ -106,7 +131,7 @@ export class SetNumberController extends ErrorHandledController {
   public async update(req: Request, res: Response): Promise<void> {
     try {
       const setNumberId = parseInt(req.params.id);
-      
+
       if (isNaN(setNumberId)) {
         res.status(400).json({ message: "ID ชุดคำถามไม่ถูกต้อง" });
         return;
@@ -137,7 +162,7 @@ export class SetNumberController extends ErrorHandledController {
   public async delete(req: Request, res: Response): Promise<void> {
     try {
       const setNumberId = parseInt(req.params.id);
-      
+
       if (isNaN(setNumberId)) {
         res.status(400).json({ message: "ID ชุดคำถามไม่ถูกต้อง" });
         return;
