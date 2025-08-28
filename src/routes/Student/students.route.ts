@@ -40,29 +40,13 @@ router.get(
   "/get-students",
   verifyToken,
   wrapAsync(async (req: Request, res: Response) => {
-    const user = req.user;
-
     const studentsData = await studentsService.getStudents();
     const countStudents = await studentsService.countStudents();
 
-    const [facultyData, departmentData, gradeData, eventCoopData] =
-      await Promise.all([
-        facultyService.getFaculty(1, 100),
-        departmentService.getDepartment(1, 100),
-        gradeService.getGrade(),
-        eventCoopService.getEventCoop(),
-      ]);
-
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json({
-      page: "นิสิต",
-      user,
       studentsData,
       countStudents,
-      facultyData,
-      departmentData,
-      gradeData,
-      eventCoopData,
       notification: "เชื่อมต่อข้อมูลนิสิตสำเร็จ",
     });
   })
@@ -73,6 +57,23 @@ router.get(
   "/success",
   verifyToken,
   wrapAsync(studentsController.getStudentsSuccess.bind(studentsController))
+);
+
+// ✅ GET student data only (ข้อมูลนิสิตเท่านั้น)
+router.get(
+  "/get-students-only",
+  verifyToken,
+  wrapAsync(async (req: Request, res: Response) => {
+    const studentsData = await studentsService.getStudents();
+    const countStudents = await studentsService.countStudents();
+
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({
+      studentsData,
+      countStudents,
+      notification: "เชื่อมต่อข้อมูลนิสิตสำเร็จ",
+    });
+  })
 );
 
 // ✅ POST: Create student

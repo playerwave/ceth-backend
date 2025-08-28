@@ -6,10 +6,20 @@ const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.en
 dotenv.config({ path: envFile });
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST,
+  host: process.env.REDIS_HOST || "redis",
   port: parseInt(process.env.REDIS_PORT || "6379"),
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
+  password: process.env.REDIS_PASSWORD || "",
+  maxRetriesPerRequest: 3,
+  lazyConnect: true,
+});
+
+// Add error handling
+redis.on('error', (error) => {
+  console.error('❌ Redis connection error:', error);
+});
+
+redis.on('connect', () => {
+  console.log('✅ Redis connected successfully');
 });
 
 export default redis;

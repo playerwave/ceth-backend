@@ -3,7 +3,7 @@ import { Activity } from "../../entity/activity.entity";
 import { Join } from "../../entity/join.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 export class ActivityDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;

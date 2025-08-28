@@ -103,4 +103,39 @@ export class RolesDao extends ErrorHandledDao {
       throw error;
     }
   }
+
+  public async resetAllRoles(): Promise<{ success: boolean; deletedCount: number }> {
+    this.checkConnection();
+    try {
+      // เริ่ม transaction
+      await this.dataSource!.query('BEGIN');
+      
+      // นับจำนวน records ก่อนลบ
+      const countResult = await this.dataSource!.query('SELECT COUNT(*) FROM roles');
+      const deletedCount = parseInt(countResult[0].count);
+      
+      // Disable foreign key constraints temporarily
+      await this.dataSource!.query('SET session_replication_role = replica');
+      
+      // ลบข้อมูลทั้งหมด
+      await this.dataSource!.query('DELETE FROM roles');
+      
+      // Reset sequence ให้เริ่มที่ 1
+      await this.dataSource!.query('ALTER SEQUENCE roles_roles_id_seq RESTART WITH 1');
+      
+      // Re-enable foreign key constraints
+      await this.dataSource!.query('SET session_replication_role = DEFAULT');
+      
+      // Commit transaction
+      await this.dataSource!.query('COMMIT');
+      
+      console.log("🔄 All roles reset successfully", { deletedCount });
+      return { success: true, deletedCount };
+    } catch (error) {
+      // Rollback transaction ถ้าเกิด error
+      await this.dataSource!.query('ROLLBACK');
+      this.logDbError("resetAllRoles", error);
+      throw error;
+    }
+  }
 }

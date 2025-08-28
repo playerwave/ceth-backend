@@ -90,6 +90,13 @@ class DatabaseManager {
 
       // ✅ สร้าง connection ใหม่
       console.log("🆕 Creating new database connection...");
+      console.log("🔍 DB Config:", {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        username: process.env.DB_USERNAME,
+        database: process.env.DB_DATABASE,
+        ssl: false
+      });
       this.connection = await createConnection({
         name: "default",
         type: "postgres",

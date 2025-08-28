@@ -30,7 +30,7 @@ export class StudentsDao extends ErrorHandledDao {
     this.checkConnection();
     try {
       const result = await this.dataSource!.query(
-        "SELECT COUNT(*) FROM students"
+        "SELECT COUNT(*) FROM users JOIN roles ON users.roles_id = roles.roles_id JOIN students ON users.users_id = students.users_id WHERE users.roles_id = 3"
       );
       return result[0].count;
     } catch (error) {
@@ -318,8 +318,7 @@ export class StudentsDao extends ErrorHandledDao {
     this.checkConnection();
 
     const relatedTables = [
-      { table: "answer", column: "students_id" },
-      { table: "join", column: "students_id" },
+      { table: '"join"', column: "students_id" },
       { table: "certificate", column: "students_id" },
     ];
 

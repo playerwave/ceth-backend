@@ -144,6 +144,14 @@ app.get("/", (_req, res) => {
   res.send("Hello, World!");
 });
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 app.use(httpLogger);
 app.use(requestLogger);
 

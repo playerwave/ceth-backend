@@ -5,6 +5,7 @@ import { StudentsDao } from "../../daos/Student/student.dao";
 import { UsersDao } from "../../daos/users.dao";
 import { Students } from "../../entity/students.entity";
 import { ErrorHandledService } from "../error.handdled.service";
+import bcrypt from "bcryptjs";
 
 export class StudentsService extends ErrorHandledService {
   constructor(
@@ -308,10 +309,13 @@ export class StudentsService extends ErrorHandledService {
         return null;
       }
 
+      // Hash password ก่อนสร้าง user
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      
       // สร้าง user ก่อน (roles_id = 3 สำหรับ Student)
       const createdUser = await this.usersDao.addUsers(
         data.username,
-        data.password,
+        hashedPassword,
         3 // roles_id = 3 สำหรับ Student
       );
 

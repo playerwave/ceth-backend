@@ -1400,12 +1400,32 @@ export class ActivityDao extends ErrorHandledDao {
       console.log(`✅ Updated registered_count to 0`);
       
       // 5. Reset sequence ของ activity_detail_id
-      const resetSequenceQuery = `
-        SELECT setval('activity_detail_activity_detail_id_seq', (SELECT COALESCE(MAX(activity_detail_id), 0) FROM activity_detail), true)
-      `;
-      
-      await this.dataSource!.query(resetSequenceQuery);
-      console.log(`✅ Reset activity_detail_id sequence`);
+      try {
+        // ตรวจสอบ sequence ปัจจุบัน
+        const currentSeqResult = await this.dataSource!.query(
+          `SELECT last_value FROM activity_detail_activity_detail_id_seq`
+        );
+        const currentSeq = currentSeqResult[0]?.last_value || 0;
+        console.log(`🔍 Current sequence value: ${currentSeq}`);
+        
+        // Reset sequence เป็น 1 เสมอ (ไม่ว่าจะมีข้อมูลหรือไม่)
+        const resetSequenceQuery = `
+          SELECT setval('activity_detail_activity_detail_id_seq', 1, false)
+        `;
+        await this.dataSource!.query(resetSequenceQuery);
+        console.log(`✅ Reset activity_detail_id sequence to 1`);
+        
+        // ตรวจสอบ sequence ใหม่
+        const newSeqResult = await this.dataSource!.query(
+          `SELECT last_value FROM activity_detail_activity_detail_id_seq`
+        );
+        const newSeq = newSeqResult[0]?.last_value || 0;
+        console.log(`🔍 New sequence value: ${newSeq}`);
+        
+      } catch (error) {
+        console.error("❌ Error resetting sequence:", error);
+        // ไม่ throw error เพราะ sequence reset ไม่ใช่ critical
+      }
       
       const result = {
         activityId,
@@ -1467,6 +1487,22 @@ export class ActivityDao extends ErrorHandledDao {
       return result;
     } catch (error) {
       console.error("❌ Error resetting student times:", error);
+      throw error;
+    }
+  }
+
+  public async checkStudentExists(studentId: number): Promise<boolean> {
+    try {
+      await this.checkConnection();
+      
+      const query = `SELECT COUNT(*) as count FROM students WHERE students_id = $1`;
+      const result = await this.dataSource!.query(query, [studentId]);
+      const count = result[0]?.count || 0;
+      
+      console.log(`🔍 Student ${studentId} exists: ${count > 0}`);
+      return count > 0;
+    } catch (error) {
+      console.error("❌ Error checking student exists:", error);
       throw error;
     }
   }

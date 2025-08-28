@@ -95,4 +95,17 @@ export class RolesService extends ErrorHandledService {
       throw error;
     }
   }
+
+  public async resetAllRoles(): Promise<{ success: boolean; deletedCount: number }> {
+    try {
+      const result = await this.rolesDao.resetAllRoles();
+      await redis.del(this.cacheKey);
+
+      this.logInfo("🔄 All roles reset", { deletedCount: result.deletedCount });
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in resetAllRoles", error);
+      throw error;
+    }
+  }
 }

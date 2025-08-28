@@ -6,8 +6,8 @@ import { AuthDao } from "../daos/auth.dao";
 import { verifyToken } from "../middleware/verifyToken";
 import { Admin } from "../middleware/CheckRole";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
-import { ParamsDictionary } from "express-serve-static-core";
-import { ParsedQs } from "qs";
+// import { ParamsDictionary } from "express-serve-static-core";
+// import { ParsedQs } from "qs";
 
 const router = Router();
 const authController = new AuthController(new AuthService(new AuthDao()));

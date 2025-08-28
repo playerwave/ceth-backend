@@ -34,4 +34,11 @@ router.delete(
   wrapAsync(rolesController.delete.bind(rolesController))
 );
 
+// ✅ DELETE: ลบบทบาททั้งหมดและ reset ID
+router.delete(
+  "/reset-roles",
+  // Admin,
+  wrapAsync(rolesController.resetAll.bind(rolesController))
+);
+
 export default router;

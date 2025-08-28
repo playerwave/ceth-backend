@@ -1,12 +1,32 @@
-import { ErrorHandledService } from "../error.handdled.service";
-import { GradeDao } from "../../daos/Student/grade.dao";
+import { GradeDao } from "../../daos/Student/grade.dao.newstructure";
 import { Grade } from "../../entity/grade.entity";
-import { CreateGradeDto, UpdateGradeDto } from "../../dtos/Student/grade.dto";
 import redis from "../../config/redis";
+import { ErrorHandledService } from "../error.handdled.service";
+import { CreateGradeDto, UpdateGradeDto } from "../../dtos/Student/grade.dto";
 
 export class GradeService extends ErrorHandledService {
-  constructor(private readonly gradeDao = new GradeDao()) {
-    super();
+  private readonly gradeDao = new GradeDao();
+
+  public async createGrade(data: CreateGradeDto): Promise<Grade | null> {
+    try {
+      // ตรวจสอบว่า level ซ้ำหรือไม่
+      const existingGrade = await this.gradeDao.getGradeByLevel(data.level);
+      if (existingGrade) {
+        this.logInfo("🚫 Duplicate grade level", { level: data.level });
+        return null;
+      }
+
+      const grade = await this.gradeDao.createGrade(data.level, data.description);
+      
+      // ลบ cache
+      await redis.del("grades:all");
+      this.logInfo("🆕 Grade created", { level: data.level });
+
+      return grade;
+    } catch (error) {
+      this.logError("❌ Error in createGrade", error);
+      throw error;
+    }
   }
 
   public async getGrades(): Promise<Grade[]> {
@@ -39,28 +59,6 @@ export class GradeService extends ErrorHandledService {
       return count;
     } catch (error) {
       this.logError("❌ Error in countGrades", error);
-      throw error;
-    }
-  }
-
-  public async createGrade(data: CreateGradeDto): Promise<Grade | null> {
-    try {
-      // ตรวจสอบว่า level ซ้ำหรือไม่
-      const existingGrade = await this.gradeDao.getGradeByLevel(data.level);
-      if (existingGrade) {
-        this.logInfo("🚫 Duplicate grade level", { level: data.level });
-        return null;
-      }
-
-      const grade = await this.gradeDao.createGrade(data.level, data.description);
-      
-      // ลบ cache
-      await redis.del("grades:all");
-      this.logInfo("🆕 Grade created", { level: data.level });
-
-      return grade;
-    } catch (error) {
-      this.logError("❌ Error in createGrade", error);
       throw error;
     }
   }

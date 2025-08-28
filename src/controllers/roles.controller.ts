@@ -79,6 +79,23 @@ export class RolesController extends ErrorHandledController {
     }
   }
 
+  public async resetAll(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.rolesService.resetAllRoles();
+      
+      if (result.success) {
+        res.status(200).json({ 
+          message: "ลบบทบาททั้งหมดและ reset ID สำเร็จ !",
+          deletedCount: result.deletedCount
+        });
+      } else {
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการ reset บทบาท !" });
+      }
+    } catch (error) {
+      this.handleError("RolesController.resetAll", error, res);
+    }
+  }
+
   private parseId(value: string): number {
     const id = parseInt(value, 10);
     if (isNaN(id)) throw new Error("Invalid ID format");
@@ -101,4 +118,5 @@ export const rolesController = {
   create: controller.create.bind(controller),
   update: controller.update.bind(controller),
   delete: controller.delete.bind(controller),
+  resetAll: controller.resetAll.bind(controller),
 };
