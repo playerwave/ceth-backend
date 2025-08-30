@@ -18,6 +18,12 @@ export class Grade {
   @Column({ type: 'enum', enum: [1, 2, 3, 4], nullable: true })
   level!: 1 | 2 | 3 | 4 | null;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  description?: string;
+
   @OneToMany(() => EventCoop, (eventCoop) => eventCoop.grade)
   eventCoop?: EventCoop[];
+
+  @OneToMany(() => Students, (students) => students.grade)
+  students?: Students[];
 }

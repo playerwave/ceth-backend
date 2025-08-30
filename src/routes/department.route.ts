@@ -25,25 +25,15 @@ interface JwtUser {
   roles_id: number;
 }
 
-// ✅ GET /get-departments → รวมข้อมูลสาขา + faculty + user
+// ✅ GET /get-departments → ข้อมูลสาขาเท่านั้น
 router.get(
   "/get-departments",
   verifyToken,
   wrapAsync(async (req, res) => {
-    const user = req.user as JwtUser;
     const departmentData = await departmentService.getDepartment(1, 100);
-    const countDepartment = await departmentService.countDepartment();
-    const facultyData = await facultyService.getFaculty(1, 100);
 
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({
-      page: "สาขา",
-      user,
-      departmentData,
-      countDepartment,
-      facultyData,
-      notification: "เชื่อมต่อข้อมูลสาขาสำเร็จ",
-    });
+    res.status(200).json(departmentData);
   })
 );
 

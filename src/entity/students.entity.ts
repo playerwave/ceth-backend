@@ -61,9 +61,9 @@ export class Students {
   @Column({ type: "int",nullable: true })
   department_id?: number;
 
-  @ManyToOne(() => Grade, (grade) => grade.students)
+  @ManyToOne(() => Grade, (grade) => grade.students, { nullable: true })
   @JoinColumn({ name: "grade_id" })
-  grade!: Grade;
+  grade!: Grade ;
 
   @Column({ type: "int", nullable: true })
   grade_id?: number;
