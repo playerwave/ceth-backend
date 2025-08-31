@@ -1,25 +1,54 @@
-import Redis from "ioredis";
+import Redis, { RedisOptions } from "ioredis";
 import dotenv from "dotenv";
 
-// Load environment variables based on NODE_ENV
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+const envFile =
+  process.env.NODE_ENV === "production" ? ".env.production" : ".env.development";
 dotenv.config({ path: envFile });
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || "redis",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  password: process.env.REDIS_PASSWORD || "",
-  maxRetriesPerRequest: 3,
+const host = process.env.REDIS_HOST ?? "redis";
+const port = Number(process.env.REDIS_PORT ?? 6379);
+const username = (process.env.REDIS_USERNAME ?? "default").trim();
+const password = process.env.REDIS_PASSWORD?.trim();
+const useTLS = (process.env.REDIS_TLS ?? "false").toLowerCase() === "true";
+
+const config: RedisOptions = {
+  host,
+  port,
+  username,                 
+  password,                 
   lazyConnect: true,
+  maxRetriesPerRequest: 3,
+  ...(useTLS ? { tls: { servername: host } } : {}), // เปิด TLS พร้อม SNI
+};
+
+const redis = new Redis(config);
+
+const mask = (s?: string) => (s ? s.replace(/.(?=.{4})/g, "•") : "none");
+console.log(
+  "[Redis] init",
+  JSON.stringify(
+    {
+      host,
+      port,
+      username,
+      password: password ? mask(password) : "none",
+      tls: useTLS,
+      envFile,
+      nodeEnv: process.env.NODE_ENV ?? "development",
+    },
+    null,
+    2
+  )
+);
+
+redis.on("connect", () => {
+  console.log("✅ Redis connected successfully");
 });
 
-// Add error handling
-redis.on('error', (error) => {
-  console.error('❌ Redis connection error:', error);
+redis.on("error", (error) => {
+  console.error("❌ Redis connection error:", error);
 });
 
-redis.on('connect', () => {
-  console.log('✅ Redis connected successfully');
-});
+void redis.connect();
 
 export default redis;

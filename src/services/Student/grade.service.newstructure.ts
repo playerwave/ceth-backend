@@ -86,7 +86,7 @@ export class GradeService extends ErrorHandledService {
       }
 
       // ตรวจสอบว่า level ซ้ำหรือไม่ (ถ้ามีการเปลี่ยน level)
-      if (data.level && data.level !== found.level) {
+      if (data.level && parseInt(data.level) !== found.level) {
         const existingGrade = await this.gradeDao.getGradeByLevel(data.level);
         if (existingGrade) {
           this.logInfo("🚫 Duplicate grade level", { level: data.level });
