@@ -80,4 +80,8 @@ router.delete("/reset-activity-details/:activityId", wrapAsync(activityControlle
 // เพิ่ม route สำหรับ reset time_in และ time_out ของนักเรียน
 router.patch("/reset-student-times/:activityId", wrapAsync(activityController.resetStudentTimes));
 
+// ✅ Routes สำหรับ Check-in/Check-out Students
+router.get("/students-checked-in/:activityId", wrapAsync(activityController.getStudentsCheckedIn));
+router.get("/students-checked-out/:activityId", wrapAsync(activityController.getStudentsCheckedOut));
+
 export default router;

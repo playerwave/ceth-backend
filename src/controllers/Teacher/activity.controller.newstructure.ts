@@ -358,6 +358,40 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  // ✅ Function 1: ดูนิสิตที่ลงชื่อเข้าร่วมกิจกรรม (มี time_in)
+  public async getStudentsCheckedIn(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const students = await this.activityService.getStudentsCheckedIn(activityId);
+      
+      res.status(200).json({
+        success: true,
+        message: `Found ${students.length} students who checked in`,
+        data: students,
+        count: students.length
+      });
+    } catch (error) {
+      this.handleError("ActivityController.getStudentsCheckedIn", error, res);
+    }
+  }
+
+  // ✅ Function 2: ดูนิสิตที่ลงชื่อออกกิจกรรม (มี time_out)
+  public async getStudentsCheckedOut(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const students = await this.activityService.getStudentsCheckedOut(activityId);
+      
+      res.status(200).json({
+        success: true,
+        message: `Found ${students.length} students who checked out`,
+        data: students,
+        count: students.length
+      });
+    } catch (error) {
+      this.handleError("ActivityController.getStudentsCheckedOut", error, res);
+    }
+  }
+
   private parseActivityDetailPayload(body: any): any {
     return {
       activity_id: this.parseOptionalInt(body.activity_id),
@@ -392,5 +426,8 @@ export const activityController = {
   updateActivityDetail: controller.updateActivityDetail.bind(controller),
   resetActivityDetailsAndJoins: controller.resetActivityDetailsAndJoins.bind(controller),
   resetStudentTimes: controller.resetStudentTimes.bind(controller),
+  // ✅ Check-in/Check-out methods
+  getStudentsCheckedIn: controller.getStudentsCheckedIn.bind(controller),
+  getStudentsCheckedOut: controller.getStudentsCheckedOut.bind(controller),
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
 };

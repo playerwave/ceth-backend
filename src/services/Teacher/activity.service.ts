@@ -439,4 +439,34 @@ export class ActivityService extends ErrorHandledService {
       throw error;
     }
   }
+
+  // ✅ Function 1: ดูนิสิตที่ลงชื่อเข้าร่วมกิจกรรม (มี time_in)
+  public async getStudentsCheckedIn(activityId: number): Promise<any[]> {
+    try {
+      const students = await this.activityDao.getStudentsCheckedIn(activityId);
+      this.logInfo("📥 Retrieved students who checked in", {
+        activityId,
+        count: students.length
+      });
+      return students;
+    } catch (error) {
+      this.logError("❌ Error getting students who checked in", error);
+      throw error;
+    }
+  }
+
+  // ✅ Function 2: ดูนิสิตที่ลงชื่อออกกิจกรรม (มี time_out)
+  public async getStudentsCheckedOut(activityId: number): Promise<any[]> {
+    try {
+      const students = await this.activityDao.getStudentsCheckedOut(activityId);
+      this.logInfo("📥 Retrieved students who checked out", {
+        activityId,
+        count: students.length
+      });
+      return students;
+    } catch (error) {
+      this.logError("❌ Error getting students who checked out", error);
+      throw error;
+    }
+  }
 }

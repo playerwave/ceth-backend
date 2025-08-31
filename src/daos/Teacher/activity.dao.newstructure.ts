@@ -1613,4 +1613,81 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  // ✅ Function 1: ดูนิสิตที่ลงชื่อเข้าร่วมกิจกรรม (มี time_in)
+  public async getStudentsCheckedIn(activityId: number): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        SELECT 
+          s.students_id,
+          s.first_name,
+          s.last_name,
+          u.username,
+          d.department_name,
+          ad.activity_detail_id,
+          ad.time_in,
+          ad.register_date,
+          j.join_date,
+          j.status as join_status
+        FROM students s
+        JOIN users u ON s.users_id = u.users_id
+        JOIN department d ON s.department_id = d.department_id
+        JOIN "join" j ON s.students_id = j.students_id
+        JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+        WHERE ad.activity_id = $1 
+          AND ad.status = 'Registered'
+          AND j.status = 'Pending'
+          AND ad.time_in IS NOT NULL
+        ORDER BY ad.time_in DESC, s.first_name, s.last_name
+      `;
+      
+      const result = await this.dataSource!.query(query, [activityId]);
+      console.log(`📊 Found ${result.length} students who checked in for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting students who checked in:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Function 2: ดูนิสิตที่ลงชื่อออกกิจกรรม (มี time_out)
+  public async getStudentsCheckedOut(activityId: number): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        SELECT 
+          s.students_id,
+          s.first_name,
+          s.last_name,
+          u.username,
+          d.department_name,
+          ad.activity_detail_id,
+          ad.time_in,
+          ad.time_out,
+          ad.register_date,
+          j.join_date,
+          j.status as join_status
+        FROM students s
+        JOIN users u ON s.users_id = u.users_id
+        JOIN department d ON s.department_id = d.department_id
+        JOIN "join" j ON s.students_id = j.students_id
+        JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+        WHERE ad.activity_id = $1 
+          AND ad.status = 'Registered'
+          AND j.status = 'Pending'
+          AND ad.time_out IS NOT NULL
+        ORDER BY ad.time_out DESC, s.first_name, s.last_name
+      `;
+      
+      const result = await this.dataSource!.query(query, [activityId]);
+      console.log(`📊 Found ${result.length} students who checked out for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting students who checked out:", error);
+      throw error;
+    }
+  }
+
 }
