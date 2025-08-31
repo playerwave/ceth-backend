@@ -23,6 +23,7 @@ import teacherAssessmentRoute from "./routes/Teacher/assessment.route";
 import teacherSetNumberRoute from "./routes/Teacher/setNumber.route";
 import teacherQuestionRoute from "./routes/Teacher/question.route";
 import teacherQRCodeRoute from "./routes/Teacher/qr-code.route";
+import teacherStudentRoute from "./routes/Teacher/teacherStudent.route";
 
 import studentActivityRoute from "./routes/Student/activity.route";
 import studentRoute from "./routes/Student/students.route";
@@ -167,6 +168,7 @@ app.use("/api/teacher/assessment", teacherAssessmentRoute);
 app.use("/api/teacher/setNumber", teacherSetNumberRoute);
 app.use("/api/teacher/question", teacherQuestionRoute);
 app.use("/api/teacher/qr-code", teacherQRCodeRoute);
+app.use("/api/teacher", teacherStudentRoute);
 
 // student
 app.use("/api/student/activity", studentActivityRoute);

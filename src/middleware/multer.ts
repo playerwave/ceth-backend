@@ -12,7 +12,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "your_folder_name",
-    allowed_formats: ["jpg", "png", "jpeg"],
+    allowed_formats: ["jpg", "png", "jpeg", "xlsx"],
     // ลบ public_id ออกเพื่อให้ Cloudinary สร้างชื่อไฟล์ให้อัตโนมัติ
   },
 });
