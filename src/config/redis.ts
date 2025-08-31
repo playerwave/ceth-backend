@@ -1,54 +1,28 @@
-import Redis, { RedisOptions } from "ioredis";
+import Redis from "ioredis";
 import dotenv from "dotenv";
 
-const envFile =
-  process.env.NODE_ENV === "production" ? ".env.production" : ".env.development";
+const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env.development";
 dotenv.config({ path: envFile });
 
-const host = process.env.REDIS_HOST ?? "redis";
-const port = Number(process.env.REDIS_PORT ?? 6379);
-const username = (process.env.REDIS_USERNAME ?? "default").trim();
-const password = process.env.REDIS_PASSWORD?.trim();
-const useTLS = (process.env.REDIS_TLS ?? "false").toLowerCase() === "true";
+const host = (process.env.REDIS_HOST || "").trim();
+const port = parseInt((process.env.REDIS_PORT || "6379").trim(), 10);
+const username = (process.env.REDIS_USERNAME || "").trim();
+const password = (process.env.REDIS_PASSWORD || "").trim();
 
-const config: RedisOptions = {
+console.log("[Redis Config]", { host, port, username, pwLen: password.length });
+
+const redis = new Redis({
   host,
   port,
-  username,                 
-  password,                 
-  lazyConnect: true,
-  maxRetriesPerRequest: 3,
-  ...(useTLS ? { tls: { servername: host } } : {}), // เปิด TLS พร้อม SNI
-};
-
-const redis = new Redis(config);
-
-const mask = (s?: string) => (s ? s.replace(/.(?=.{4})/g, "•") : "none");
-console.log(
-  "[Redis] init",
-  JSON.stringify(
-    {
-      host,
-      port,
-      username,
-      password: password ? mask(password) : "none",
-      tls: useTLS,
-      envFile,
-      nodeEnv: process.env.NODE_ENV ?? "development",
-    },
-    null,
-    2
-  )
-);
-
-redis.on("connect", () => {
-  console.log("✅ Redis connected successfully");
+  username,            // สำคัญ: บังคับใช้ AUTH <user> <pass>
+  password,
+  ...(process.env.REDIS_USE_TLS === "true" ? { tls: { servername: host } } : {}),
+  maxRetriesPerRequest: 1,
+  retryStrategy: t => Math.min(t * 200, 2000),
 });
 
-redis.on("error", (error) => {
-  console.error("❌ Redis connection error:", error);
-});
-
-void redis.connect();
+redis.on("connect", () => console.log("✅ Redis TCP connected"));
+redis.on("ready", () => console.log("✅ Redis ready (AUTH ok)"));
+redis.on("error", (e) => console.error("❌ Redis error:", e?.message || e));
 
 export default redis;
