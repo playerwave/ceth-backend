@@ -196,14 +196,14 @@ export class ActivityController extends ErrorHandledController {
       recieve_hours: this.parseOptionalInt(body.recieve_hours) ?? 0, // ✅ ใช้ 0 แทน null
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
-      // ✅ ลบ 7 ชั่วโมงออกจากทุก field ที่เกี่ยวข้องกับเวลา
-      special_start_register_date: subtract7Hours(body.special_start_register_date),
-      start_register_date: subtract7Hours(body.start_register_date),
-      end_register_date: subtract7Hours(body.end_register_date),
-      start_activity_date: subtract7Hours(body.start_activity_date),
-      end_activity_date: subtract7Hours(body.end_activity_date),
-      start_assessment: subtract7Hours(body.start_assessment),
-      end_assessment: subtract7Hours(body.end_assessment),
+      // ✅ เก็บเวลาไทยใน database โดยตรง ไม่ลบ 7 ชั่วโมง
+      special_start_register_date: body.special_start_register_date,
+      start_register_date: body.start_register_date,
+      end_register_date: body.end_register_date,
+      start_activity_date: body.start_activity_date,
+      end_activity_date: body.end_activity_date,
+      start_assessment: body.start_assessment,
+      end_assessment: body.end_assessment,
       image_url: body.image_url || "ไม่ระบุ",
       activity_status: body.activity_status || "Private", // ENUM
       activity_state: body.activity_state || "Not Start", // ENUM
