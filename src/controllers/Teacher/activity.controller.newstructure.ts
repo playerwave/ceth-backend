@@ -64,7 +64,7 @@ export class ActivityController extends ErrorHandledController {
   public async update(req: Request, res: Response): Promise<void> {
     try {
       const id = this.parseId(req.params.id);
-      const data = this.parseActivityPayload(req.body);
+      const data = this.parseUpdatePayload(req.body);
 
       // ✅ เพิ่ม foodIds เข้าไปใน data
       const foodIds: number[] =
@@ -187,6 +187,36 @@ export class ActivityController extends ErrorHandledController {
   }
 
   private parseActivityPayload(body: any): any {
+    return {
+      activity_name: body.activity_name || "ไม่ระบุ",
+      presenter_company_name: body.presenter_company_name || "ไม่ระบุ",
+      type: body.type || "Soft", // ENUM('Soft', 'Hard')
+      description: body.description || "ไม่ระบุ",
+      seat: this.parseOptionalInt(body.seat) ?? 0, // ✅ ใช้ 0 แทน null
+      recieve_hours: this.parseOptionalInt(body.recieve_hours) ?? 0, // ✅ ใช้ 0 แทน null
+      event_format: body.event_format || "Online", // ENUM
+      create_activity_date: body.create_activity_date || new Date(),
+      // ✅ เก็บเวลาไทยใน database โดยตรง ไม่ลบ 7 ชั่วโมง (เหมือน update)
+      special_start_register_date: body.special_start_register_date,
+      start_register_date: body.start_register_date,
+      end_register_date: body.end_register_date,
+      start_activity_date: body.start_activity_date,
+      end_activity_date: body.end_activity_date,
+      start_assessment: body.start_assessment,
+      end_assessment: body.end_assessment,
+      image_url: body.image_url || "ไม่ระบุ",
+      activity_status: body.activity_status || "Private", // ENUM
+      activity_state: body.activity_state || "Not Start", // ENUM
+      status: body.status || "Active", // ENUM default
+      last_update_activity_date: new Date(),
+      url: body.url || "ไม่ระบุ",
+      assessment_id: this.parseOptionalInt(body.assessment_id, null),
+      room_id: this.parseOptionalInt(body.room_id, null),
+    };
+  }
+
+  // ✅ เพิ่ม method สำหรับ update activity ที่ไม่มีการเรียก subtract7Hours
+  private parseUpdatePayload(body: any): any {
     return {
       activity_name: body.activity_name || "ไม่ระบุ",
       presenter_company_name: body.presenter_company_name || "ไม่ระบุ",

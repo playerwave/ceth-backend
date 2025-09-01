@@ -79,25 +79,13 @@ export class ActivityDao extends ErrorHandledDao {
     }
 
     if (input instanceof Date) {
-      // ✅ สำหรับ Date object ให้ใช้ local time components เพื่อไม่ให้ shift timezone ซ้ำ
+      // ✅ สำหรับ Date object ให้ใช้ local time components เพื่อไม่ให้ shift timezone
       const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
       return `${input.getFullYear()}-${pad(input.getMonth() + 1)}-${pad(input.getDate())} ${pad(input.getHours())}:${pad(input.getMinutes())}:${pad(input.getSeconds())}`;
     }
 
     if (typeof input === "string" && input.trim() !== "") {
       const trimmed = input.trim();
-
-      // ✅ ตรวจสอบว่าเป็น UTC format หรือไม่
-      if (trimmed.includes("T") && (trimmed.includes("Z") || trimmed.includes("+"))) {
-        // เป็น UTC format ให้แปลงเป็น Date object แล้วใช้ local time components
-        const date = new Date(trimmed);
-        if (isNaN(date.getTime())) {
-          console.error("❌ Invalid UTC date format:", trimmed);
-          return null;
-        }
-        const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-      }
 
       // ✅ เอา timezone ออก (Z หรือ +07:00 ฯลฯ) เพื่อไม่ให้ Postgres shift เวลา
       // ตัวอย่าง: 2025-08-24T09:00:00.000Z -> 2025-08-24 09:00:00

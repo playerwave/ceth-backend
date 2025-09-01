@@ -83,26 +83,49 @@ export const add7Hours = (date: Date | string | null | undefined): Date | null =
 };
 
 /**
- * ลบ 7 ชั่วโมงออกจากวันที่ (สำหรับแปลงจากเวลาไทยเป็น UTC ก่อนบันทึกลงฐานข้อมูล)
- * @param date - วันที่ที่ต้องการลบ 7 ชั่วโมง
- * @returns วันที่ที่ลบ 7 ชั่วโมงแล้ว
+ * แปลงเวลาตาม format ที่ส่งมา (เก็บเวลาเดิมไว้ ไม่มีการ shift timezone)
+ * @param date - วันที่ที่ต้องการแปลง
+ * @returns วันที่ที่แปลงแล้ว
  */
 export const subtract7Hours = (date: Date | string | null | undefined): Date | null => {
   if (!date) return null;
   
   try {
-    const dateObj = dayjs(date);
-    if (!dateObj.isValid()) {
-      console.error("❌ Invalid date:", date);
-      return null;
+    let dateObj: dayjs.Dayjs;
+    
+    // ✅ ตรวจสอบว่าเป็น UTC format หรือไม่
+    if (typeof date === "string" && date.includes("T") && (date.includes("Z") || date.includes("+"))) {
+      // เป็น UTC format ให้แปลงเป็นเวลากรุงเทพก่อน แล้วค่อยลบ 7 ชั่วโมง
+      dateObj = dayjs.utc(date).tz("Asia/Bangkok");
+      console.log(`🕐 [subtract7Hours] UTC format detected: ${date} → Converted to Bangkok time: ${dateObj.format('YYYY-MM-DD HH:mm:ss')}`);
+      
+      if (!dateObj.isValid()) {
+        console.error("❌ Invalid date:", date);
+        return null;
+      }
+      
+      const newDate = dateObj.subtract(7, 'hour').toDate();
+      console.log(`🕐 [subtract7Hours] Original (Thai time): ${dateObj.format('YYYY-MM-DD HH:mm:ss')} → Subtracted 7h (UTC): ${dayjs(newDate).format('YYYY-MM-DD HH:mm:ss')}`);
+      
+      return newDate;
+    } else {
+      // ✅ เป็น local format หรือ Date object ให้ใช้ตามเดิม (ไม่ลบ 7 ชั่วโมง)
+      dateObj = dayjs(date);
+      console.log(`🕐 [subtract7Hours] Local format detected: ${date} → Using as is (no timezone conversion)`);
+      
+      if (!dateObj.isValid()) {
+        console.error("❌ Invalid date:", date);
+        return null;
+      }
+      
+      // ✅ คืนค่าโดยไม่ลบ 7 ชั่วโมง - เก็บเวลาเดิมไว้
+      const result = dateObj.toDate();
+      console.log(`🕐 [subtract7Hours] Final result: ${dayjs(result).format('YYYY-MM-DD HH:mm:ss')} (no timezone shift)`);
+      
+      return result;
     }
-    
-    const newDate = dateObj.subtract(7, 'hour').toDate();
-    console.log(`🕐 [subtract7Hours] Original (Thai time): ${dateObj.format('YYYY-MM-DD HH:mm:ss')} → Subtracted 7h (UTC): ${dayjs(newDate).format('YYYY-MM-DD HH:mm:ss')}`);
-    
-    return newDate;
   } catch (error) {
-    console.error("❌ Error subtracting 7 hours from date:", date, error);
+    console.error("❌ Error processing date:", date, error);
     return null;
   }
 };
