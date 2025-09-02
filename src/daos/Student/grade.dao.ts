@@ -1,25 +1,14 @@
-import { DataSource } from "typeorm";
+import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { Grade } from "../../entity/grade.entity";
 
 export class GradeDao extends ErrorHandledDao {
-  private dataSource: DataSource | null = null;
-
-  public setDataSource(dataSource: DataSource): void {
-    this.dataSource = dataSource;
-  }
-
-  private checkConnection(): void {
-    if (!this.dataSource) {
-      throw new Error("❌ Database connection is not established");
-    }
-  }
 
   public async getGrades(): Promise<Grade[]> {
-    this.checkConnection();
     try {
-      const sql = `SELECT grade_id, level, description, created_at, updated_at FROM grade ORDER BY grade_id ASC`;
-      return await this.dataSource!.query(sql);
+      const connection = await connectDatabase();
+      const sql = `SELECT grade_id, level, description FROM grade ORDER BY grade_id ASC`;
+      return await connection.query(sql);
     } catch (error) {
       this.logDbError("getGrades", error);
       throw error;
@@ -27,9 +16,9 @@ export class GradeDao extends ErrorHandledDao {
   }
 
   public async countGrades(): Promise<number> {
-    this.checkConnection();
     try {
-      const result = await this.dataSource!.query("SELECT COUNT(*) FROM grade");
+      const connection = await connectDatabase();
+      const result = await connection.query("SELECT COUNT(*) FROM grade");
       return result[0].count;
     } catch (error) {
       this.logDbError("countGrades", error);
@@ -38,10 +27,10 @@ export class GradeDao extends ErrorHandledDao {
   }
 
   public async createGrade(level: string, description?: string): Promise<Grade> {
-    this.checkConnection();
     try {
-      const sql = `INSERT INTO grade (level, description, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING *`;
-      const result = await this.dataSource!.query(sql, [level, description]);
+      const connection = await connectDatabase();
+      const sql = `INSERT INTO grade (level, description) VALUES ($1, $2) RETURNING *`;
+      const result = await connection.query(sql, [level, description]);
       return result[0];
     } catch (error) {
       this.logDbError("createGrade", error);
@@ -50,10 +39,10 @@ export class GradeDao extends ErrorHandledDao {
   }
 
   public async getGradeById(grade_id: number): Promise<Grade | null> {
-    this.checkConnection();
     try {
-      const sql = `SELECT grade_id, level, description, created_at, updated_at FROM grade WHERE grade_id = $1`;
-      const result = await this.dataSource!.query(sql, [grade_id]);
+      const connection = await connectDatabase();
+      const sql = `SELECT grade_id, level, description FROM grade WHERE grade_id = $1`;
+      const result = await connection.query(sql, [grade_id]);
       return result[0] || null;
     } catch (error) {
       this.logDbError("getGradeById", error);
@@ -62,8 +51,8 @@ export class GradeDao extends ErrorHandledDao {
   }
 
   public async updateGrade(grade_id: number, level?: string, description?: string): Promise<Grade | null> {
-    this.checkConnection();
     try {
+      const connection = await connectDatabase();
       const updates: string[] = [];
       const values: any[] = [];
       let paramIndex = 1;
@@ -78,11 +67,14 @@ export class GradeDao extends ErrorHandledDao {
         values.push(description);
       }
 
-      updates.push(`updated_at = NOW()`);
+      if (updates.length === 0) {
+        throw new Error("No fields to update");
+      }
+
       values.push(grade_id);
 
       const sql = `UPDATE grade SET ${updates.join(", ")} WHERE grade_id = $${paramIndex} RETURNING *`;
-      const result = await this.dataSource!.query(sql, values);
+      const result = await connection.query(sql, values);
       return result[0] || null;
     } catch (error) {
       this.logDbError("updateGrade", error);
@@ -91,10 +83,10 @@ export class GradeDao extends ErrorHandledDao {
   }
 
   public async deleteGrade(grade_id: number): Promise<boolean> {
-    this.checkConnection();
     try {
+      const connection = await connectDatabase();
       const sql = `DELETE FROM grade WHERE grade_id = $1`;
-      const result = await this.dataSource!.query(sql, [grade_id]);
+      const result = await connection.query(sql, [grade_id]);
       return result.rowCount > 0;
     } catch (error) {
       this.logDbError("deleteGrade", error);
@@ -103,10 +95,10 @@ export class GradeDao extends ErrorHandledDao {
   }
 
   public async getGradeByLevel(level: string): Promise<Grade | null> {
-    this.checkConnection();
     try {
-      const sql = `SELECT grade_id, level, description, created_at, updated_at FROM grade WHERE level = $1`;
-      const result = await this.dataSource!.query(sql, [level]);
+      const connection = await connectDatabase();
+      const sql = `SELECT grade_id, level, description FROM grade WHERE level = $1`;
+      const result = await connection.query(sql, [level]);
       return result[0] || null;
     } catch (error) {
       this.logDbError("getGradeByLevel", error);

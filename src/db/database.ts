@@ -1,16 +1,4 @@
-import {
-  Connection,
-  createConnection,
-  getConnection,
-  getConnectionManager,
-} from "typeorm";
-import dotenv from "dotenv";
-
-// Load environment variables based on NODE_ENV
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-dotenv.config({ path: envFile });
-
-//import entity
+import { createConnection, Connection } from "typeorm";
 import { Roles } from "../entity/roles.entity";
 import { Users } from "../entity/users.entity";
 import { Department } from "../entity/department.entity";
@@ -25,14 +13,14 @@ import { Food } from "../entity/food.entity";
 import { ActivityFood } from "../entity/activity.food.entity";
 import { Question } from "../entity/question.entity";
 import { Choice } from "../entity/choice.entity";
-import { SetNumber } from "../entity/setNumbers.entity";
-import { Assessment } from "../entity/assessment.entity";
 import { Answer } from "../entity/answer.entity";
-import { Activity } from "../entity/activity.entity";
-import { Join } from "../entity/join.entity";
-import { ActivityDetail } from "../entity/activitydetail.entity";
+import { Assessment } from "../entity/assessment.entity";
 import { Certificate } from "../entity/certificate.entity";
+import { Activity } from "../entity/activity.entity";
+import { ActivityDetail } from "../entity/activitydetail.entity";
+import { Join } from "../entity/join.entity";
 import { QRCode } from "../entity/qr-code.entity";
+import { SetNumber } from "../entity/setNumbers.entity";
 
 // ✅ Singleton Database Manager
 class DatabaseManager {
@@ -53,50 +41,47 @@ class DatabaseManager {
   public async getConnection(): Promise<Connection> {
     // ✅ ถ้ามี connection อยู่แล้วและเชื่อมต่ออยู่
     if (this.connection && this.connection.isConnected) {
+      console.log("🔗 Using existing database connection");
       return this.connection;
     }
 
     // ✅ ถ้ากำลัง initialize อยู่ ให้รอ
     if (this.isInitializing) {
+      console.log("⏳ Waiting for database initialization...");
       while (this.isInitializing) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      if (this.connection && this.connection.isConnected) {
-        return this.connection;
-      }
     }
 
-    // ✅ เริ่ม initialize
-    this.isInitializing = true;
-
-    try {
-      const connectionManager = getConnectionManager();
-
-      // ✅ ตรวจสอบว่ามี connection เดิมอยู่หรือไม่
-      if (connectionManager.has("default")) {
-        this.connection = connectionManager.get("default");
+    // ✅ ถ้ามี connection อยู่แล้วแต่ไม่ได้เชื่อมต่อ
+    if (this.connection) {
+      try {
         if (this.connection.isConnected) {
           console.log("🔁 Reusing existing database connection");
           this.isInitializing = false;
           return this.connection;
         } else {
-          // ✅ ถ้า connection หลุด ให้ reconnect
-          console.log("🔄 Reconnecting to database...");
+          console.log("🔄 Reconnecting to existing database...");
           await this.connection.connect();
           this.isInitializing = false;
           return this.connection;
         }
+      } catch (error) {
+        console.log("❌ Failed to reuse connection, creating new one...");
+        this.connection = null;
+      }
+    }
+
+    // ✅ สร้าง connection ใหม่
+    this.isInitializing = true;
+    try {
+      console.log("🚀 Creating new database connection...");
+      
+      // ✅ ตรวจสอบ environment variables
+      if (!process.env.DB_HOST || !process.env.DB_USERNAME || !process.env.DB_PASSWORD || !process.env.DB_DATABASE) {
+        throw new Error("Missing database environment variables");
       }
 
-      // ✅ สร้าง connection ใหม่
-      console.log("🆕 Creating new database connection...");
-      console.log("🔍 DB Config:", {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        username: process.env.DB_USERNAME,
-        database: process.env.DB_DATABASE,
-        ssl: false
-      });
       this.connection = await createConnection({
         name: "default",
         type: "postgres",
@@ -123,27 +108,29 @@ class DatabaseManager {
           ActivityFood,
           Question,
           Choice,
-          SetNumber,
-          Assessment,
           Answer,
-          Activity,
-          Join,
-          ActivityDetail,
+          Assessment,
           Certificate,
+          Activity,
+          ActivityDetail,
+          Join,
           QRCode,
+          SetNumber
         ],
-        synchronize: true,
-        logging: false, // ✅ ปิด logging เพื่อลด overhead
-        // ✅ ลด connection pooling settings
+        synchronize: true,  // ⚠️ เปลี่ยนเป็น false เพื่อป้องกันข้อมูลหาย
+        // ✅ เพิ่ม connection pooling settings
         extra: {
-          max: 3, // ✅ ลดจำนวน connection สูงสุด
-          min: 1, // ✅ จำนวน connection ขั้นต่ำ
-          idle: 60000, // ✅ เพิ่มเวลาที่ connection จะ idle ก่อนปิด (60 วินาที)
-          acquire: 60000, // ✅ เวลาสูงสุดในการรอ connection (60 วินาที)
-          evict: 60000, // ✅ เวลาที่จะตรวจสอบ connection ที่ idle (60 วินาที)
+          max: 20,        // ✅ เพิ่มจาก 3 เป็น 20
+          min: 5,         // ✅ เพิ่มจาก 1 เป็น 5
+          idle: 600000,   // ✅ เพิ่มจาก 60 วินาที เป็น 10 นาที
+          acquire: 60000, // ✅ เพิ่มจาก 60 วินาที เป็น 1 นาที
+          evict: 300000,  // ✅ เพิ่มจาก 60 วินาที เป็น 5 นาที
         },
-        // ✅ เพิ่ม connection timeout
-        connectTimeoutMS: 30000,
+        // ✅ เพิ่ม timeout settings
+        connectTimeoutMS: 60000,    // 1 นาที
+        // ✅ เพิ่ม logging
+        logging: ["error", "warn"],
+        logger: "advanced-console",
       });
 
       console.log("✅ Database connected successfully");
@@ -154,16 +141,13 @@ class DatabaseManager {
       console.error("เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล: ", error);
 
       // ✅ ลองปิด connection เก่าถ้ามี (เฉพาะเมื่อยังไม่ปิด)
-      if (this.connection && this.connection.isConnected && !this.isClosing) {
+      if (this.connection && !this.isClosing) {
         try {
-          this.isClosing = true;
           await this.connection.close();
-          console.log("🔒 Closed existing connection");
         } catch (closeError) {
           console.error("❌ Error closing connection:", closeError);
-        } finally {
-          this.isClosing = false;
         }
+        this.connection = null;
       }
 
       throw new Error("การเชื่อมต่อฐานข้อมูลล้มเหลว");
@@ -172,23 +156,43 @@ class DatabaseManager {
 
   // ✅ ฟังก์ชันปิด connection
   public async closeConnection(): Promise<void> {
+    if (this.isClosing) {
+      return;
+    }
+
+    this.isClosing = true;
     try {
-      if (this.connection && this.connection.isConnected && !this.isClosing) {
-        this.isClosing = true;
+      if (this.connection && this.connection.isConnected) {
         await this.connection.close();
-        this.connection = null;
-        console.log("🔒 Database connection closed");
+        console.log("✅ Database connection closed");
       }
     } catch (error) {
       console.error("❌ Error closing database connection:", error);
     } finally {
+      this.connection = null;
       this.isClosing = false;
     }
   }
 
-  // ✅ ฟังก์ชันตรวจสอบ connection status
+  // ✅ ฟังก์ชันตรวจสอบสถานะ connection
   public isConnected(): boolean {
     return this.connection !== null && this.connection.isConnected;
+  }
+
+  // ✅ ฟังก์ชันตรวจสอบ connection health
+  public async checkConnectionHealth(): Promise<boolean> {
+    try {
+      if (!this.connection || !this.connection.isConnected) {
+        return false;
+      }
+      
+      // ทดสอบ query ง่ายๆ
+      await this.connection.query('SELECT 1');
+      return true;
+    } catch (error) {
+      console.error("❌ Connection health check failed:", error);
+      return false;
+    }
   }
 }
 

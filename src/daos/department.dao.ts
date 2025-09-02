@@ -74,9 +74,10 @@ export class DepartmentDao extends ErrorHandledDao {
   ): Promise<Department> {
     this.checkConnection();
     try {
-      const sql = `INSERT INTO department (department_name, faculty_id) VALUES ($1, $2) RETURNING *`;
+      const sql = `INSERT INTO department (department_name, department_short_name, faculty_id) VALUES ($1, $2, $3) RETURNING *`;
       const result = await this.dataSource!.query(sql, [
         data.department_name?.trim(),
+        data.department_short_name?.trim(),
         data.faculty_id,
       ]);
       return result[0];
@@ -92,9 +93,10 @@ export class DepartmentDao extends ErrorHandledDao {
   ): Promise<Department> {
     this.checkConnection();
     try {
-      const sql = `UPDATE department SET department_name = $1, faculty_id = $2 WHERE department_id = $3 RETURNING *`;
+      const sql = `UPDATE department SET department_name = $1, department_short_name = $2, faculty_id = $3 WHERE department_id = $4 RETURNING *`;
       const result = await this.dataSource!.query(sql, [
         data.department_name?.trim(),
+        data.department_short_name?.trim(),
         data.faculty_id,
         department_id,
       ]);

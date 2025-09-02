@@ -58,11 +58,7 @@ export class GradeController extends ErrorHandledController {
         message: "สร้างระดับชั้นสำเร็จ",
       });
     } catch (error) {
-      console.error("❌ Error in GradeController.create:", error);
-      res.status(500).json({ 
-        error: "Internal Server Error",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
+      this.handleError("GradeController.create", error, res);
     }
   }
 

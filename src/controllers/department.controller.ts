@@ -126,6 +126,7 @@ export class DepartmentController extends ErrorHandledController {
   private parseDepartmentPayload(body: any): any {
     return {
       department_name: body.department_name || "ไม่ระบุ",
+      department_short_name: body.department_short_name || null,
       faculty_id: this.parseOptionalInt(body.faculty_id, 0),
     };
   }
