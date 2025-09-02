@@ -1,4 +1,4 @@
-import { ActivityDao } from "../../daos/Teacher/activity.dao.newstructure";
+import { ActivityDao } from "../../daos/Teacher/activity.dao";
 import { AssessmentDao } from "../../daos/Teacher/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
 import { Assessment } from "../../entity/assessment.entity";

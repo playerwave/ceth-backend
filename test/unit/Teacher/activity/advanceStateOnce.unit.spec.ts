@@ -1,4 +1,4 @@
-import { ActivityDao } from "../../../../src/daos/Teacher/activity.dao.newstructure";
+import { ActivityDao } from "../../../../src/daos/Teacher/activity.dao";
 
 describe("ActivityDao - advanceStatesOnce", () => {
   let dao: ActivityDao;
@@ -55,6 +55,7 @@ describe("ActivityDao - advanceStatesOnce", () => {
       expect(result).toEqual({
         notStartToSpecial: 0,
         notStartToOpen: 0,
+        notStartToStartActivity: 0,
         specialToOpen: 0,
         openToClose: 0,
         closeToStart: 0,
@@ -64,6 +65,7 @@ describe("ActivityDao - advanceStatesOnce", () => {
         updatedIds: {
           notStartToSpecial: [],
           notStartToOpen: [],
+          notStartToStartActivity: [],
           specialToOpen: [],
           openToClose: [],
           closeToStart: [],

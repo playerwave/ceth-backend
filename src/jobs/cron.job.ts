@@ -1,6 +1,6 @@
 console.log("✅ cron.job.ts loaded");
 import cron from "node-cron";
-import { ActivityDao } from "../daos/Teacher/activity.dao.newstructure";
+import { ActivityDao } from "../daos/Teacher/activity.dao";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -25,7 +25,7 @@ let isRunning = false;
 // cron.schedule("*/10 * * * * *", async () => { สำหรับทำสอบรันทุกๆ 10 วิ
 // cron.schedule("0 0 * * *", async () => { ทุกวันเวลา 00:00
 // cron.schedule("*/1 * * * *", async () => { 1 นาที
-cron.schedule("*/15 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   // 🔒 ป้องกันการรันซ้ำ
   if (isRunning) {
     console.log(`⚠️ [Cron] Previous job still running, skipping this execution`);
