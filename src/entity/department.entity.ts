@@ -19,6 +19,9 @@ export class Department {
   @Column({ type: "varchar", length: 255, unique: true })
   department_name?: string;
 
+  @Column({ type: "varchar", length: 10, unique: true, nullable: true })
+  department_short_name?: string;
+
   @OneToMany(() => EventCoop, (eventCoop) => eventCoop.department)
   eventCoop?: EventCoop[];
 

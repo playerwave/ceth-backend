@@ -14,4 +14,7 @@ router.post(
 // Get All Users
 router.get("/users", controller.getAllUsers.bind(controller));
 
+// Reset All Students
+router.delete("/reset", controller.resetAllStudents.bind(controller));
+
 export default router;
