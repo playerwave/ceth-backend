@@ -84,7 +84,7 @@ export class ActivityDao extends ErrorHandledDao {
     let params: any[];
 
     if (riskStatus === "Risk") {
-      // ✅ สำหรับ Risk: เห็นกิจกรรมที่ถึง special_start_register_date แล้ว และยังไม่เกิน end_register_date
+      // ✅ สำหรับ Risk: เห็นกิจกรรมที่มี activity_state ที่เหมาะสม
       query = `
         SELECT a.*, COALESCE(a.registered_count, 0) as registered_count
         FROM activity a
@@ -92,8 +92,6 @@ export class ActivityDao extends ErrorHandledDao {
           AND a.status = 'Active'
           AND (
             (a.activity_state IN ('Special Open Register', 'Open Register')
-             AND a.special_start_register_date <= NOW() + INTERVAL '7 hours'
-             AND a.end_register_date > NOW() + INTERVAL '7 hours'
              AND COALESCE(a.registered_count, 0) < a.seat)
             OR
             (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
@@ -109,7 +107,7 @@ export class ActivityDao extends ErrorHandledDao {
         ORDER BY a.create_activity_date DESC
       `;
     } else {
-      // ✅ สำหรับ Normal: เห็นกิจกรรมที่ถึง start_register_date แล้ว และยังไม่เกิน end_register_date
+      // ✅ สำหรับ Normal: เห็นกิจกรรมที่มี activity_state ที่เหมาะสม
       query = `
         SELECT a.*, COALESCE(a.registered_count, 0) as registered_count
         FROM activity a
@@ -117,8 +115,6 @@ export class ActivityDao extends ErrorHandledDao {
           AND a.status = 'Active'
           AND (
             (a.activity_state = 'Open Register'
-             AND a.start_register_date <= NOW() + INTERVAL '7 hours'
-             AND a.end_register_date > NOW() + INTERVAL '7 hours'
              AND COALESCE(a.registered_count, 0) < a.seat)
             OR
             (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
@@ -941,3 +937,5 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 }
+
+
