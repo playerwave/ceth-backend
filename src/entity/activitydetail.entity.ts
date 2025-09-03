@@ -35,7 +35,7 @@ export class ActivityDetail {
   @JoinColumn({ name: "activity_food_id" })
   activityFood?: ActivityFood;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", nullable: true })
   activity_food_id?: number;
 
   @Column({ type: "timestamp" })

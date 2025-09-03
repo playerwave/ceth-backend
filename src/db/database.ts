@@ -117,7 +117,7 @@ class DatabaseManager {
           QRCode,
           SetNumber
         ],
-        synchronize: true,  // ⚠️ เปลี่ยนเป็น false เพื่อป้องกันข้อมูลหาย
+        synchronize: true,  // ⚠️ ปิด synchronize เพื่อป้องกันข้อมูลหาย
         // ✅ เพิ่ม connection pooling settings
         extra: {
           max: 20,        // ✅ เพิ่มจาก 3 เป็น 20
@@ -129,9 +129,9 @@ class DatabaseManager {
         // ✅ เพิ่ม timeout settings
         connectTimeoutMS: 60000,    // 1 นาที
         // ✅ เพิ่ม logging
-        logging: ['schema', 'error', 'warn', 'migration'],
+        logging: ['error', 'warn'],  // ลบ schema และ migration ออก
         dropSchema: false,
-        migrationsRun: true,
+        migrationsRun: false,  // ปิด migrationsRun
         logger: "advanced-console",
       });
 

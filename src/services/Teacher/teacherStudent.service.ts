@@ -27,6 +27,15 @@ interface StudentExcelData {
   hardSkill: number;
 }
 
+// Type definition for bulk enrollment data from Excel
+interface BulkEnrollmentData {
+  timestamp: string;  // ประทับเวลา
+  studentId: string;  // รหัสนิสิต
+  name: string;       // ชื่อ-สกุล
+  department: string; // สาขาวิชา
+  email: string;      // E-mail
+}
+
 export class TeacherStudentService extends ErrorHandledService {
   private readonly studentDao = new TeacherStudentDao();
 
@@ -259,6 +268,109 @@ export class TeacherStudentService extends ErrorHandledService {
       return users;
     } catch (error) {
       this.logError("❌ Error in getAllUsers", error);
+      throw error;
+    }
+  }
+
+  // ================= BULK ENROLL ACTIVITY =================
+  public async bulkEnrollActivity(file: MulterFile, activityId: number): Promise<{ 
+    message: string; 
+    enrolledCount: number; 
+    totalRows: number; 
+    errors?: string[] 
+  }> {
+    const errors: string[] = [];
+    
+    try {
+      console.log(`📁 Processing bulk enrollment file: ${file.originalname} for activity: ${activityId}`);
+      
+      // ✅ ตรวจสอบ file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error("File size exceeds 10MB limit");
+      }
+
+      // ✅ อ่านข้อมูลจาก Excel
+      const workbook = XLSX.readFile(file.path);
+      const sheetName = workbook.SheetNames[0];
+      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      
+      // ✅ แปลง column names เป็นภาษาอังกฤษ + Data Cleaning
+      const data = rawData
+        .map((row: any) => ({
+          timestamp: row['ประทับเวลา'],
+          studentId: row['รหัสนิสิต'],
+          name: row['ชื่อ-สกุล'] || '',
+          department: row['สาขาวิชา'] || '',
+          email: row['E-mail'] || ''
+        }))
+        .filter((row: any) => {
+          // ✅ กรองเอาเฉพาะแถวที่มีรหัสนิสิต
+          if (!row.studentId) return false;
+          
+          // ✅ ทำความสะอาดรหัสนิสิต (เอาเฉพาะตัวเลข)
+          const cleanStudentId = String(row.studentId).replace(/[^0-9]/g, '');
+          
+          // ✅ ตรวจสอบว่ารหัสนิสิตมีความยาวที่ถูกต้อง (8 หลัก)
+          if (cleanStudentId.length !== 8) return false;
+          
+          // ✅ อัพเดท studentId เป็นค่าที่ทำความสะอาดแล้ว
+          row.studentId = cleanStudentId;
+          
+          return true;
+        });
+      
+      console.log(`🧹 Data cleaning completed. Filtered from ${rawData.length} to ${data.length} valid rows`);
+      
+      // ✅ แสดงตัวอย่างข้อมูลที่ทำความสะอาดแล้ว
+      if (data.length > 0) {
+        console.log("📋 Sample cleaned data:");
+        data.slice(0, 3).forEach((row, index) => {
+          console.log(`  Row ${index + 1}: Student ID: ${row.studentId}, Name: ${row.name}`);
+        });
+      }
+
+      console.log(`📊 Found ${data.length} rows in Excel file`);
+
+      if (data.length === 0) {
+        throw new Error("No data found in Excel file");
+      }
+
+      // ✅ ตรวจสอบว่ากิจกรรมมีอยู่จริง
+      const activityExists = await this.studentDao.checkActivityExists(activityId);
+      if (!activityExists) {
+        throw new Error(`Activity with ID ${activityId} not found`);
+      }
+
+      // ✅ ประมวลผลการลงทะเบียน
+      console.log("🔄 Processing bulk enrollment...");
+      const result = await this.studentDao.bulkEnrollStudents(activityId, data);
+
+      // ✅ ลบไฟล์หลังประมวลผลเสร็จ
+      try {
+        const fs = require('fs');
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+          console.log(`🗑️ Deleted temporary file: ${file.path}`);
+        }
+      } catch (deleteError) {
+        console.error(`⚠️ Failed to delete temporary file: ${file.path}`, deleteError);
+      }
+
+      this.logInfo("✅ Bulk enrollment completed successfully", { 
+        activityId,
+        enrolledCount: result.enrolledCount,
+        totalRows: data.length 
+      });
+
+      return { 
+        message: `Successfully enrolled ${result.enrolledCount} students in activity ${activityId}`,
+        enrolledCount: result.enrolledCount,
+        totalRows: data.length,
+        errors: errors.length > 0 ? errors : undefined
+      };
+
+    } catch (error) {
+      this.logError("❌ Error in bulkEnrollActivity", error);
       throw error;
     }
   }

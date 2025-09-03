@@ -62,4 +62,40 @@ export class TeacherStudentController {
       });
     }
   }
+
+  // ================= Bulk Enroll Activity =================
+  public async bulkEnrollActivity(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: "File is required" });
+        return;
+      }
+
+      const { activity_id } = req.params;
+      if (!activity_id || isNaN(Number(activity_id))) {
+        res.status(400).json({ error: "Valid activity_id is required" });
+        return;
+      }
+
+      console.log(`📤 Starting bulk enrollment for activity: ${activity_id}`);
+      const result = await studentService.bulkEnrollActivity(req.file, Number(activity_id));
+      
+      res.json({
+        success: true,
+        message: result.message,
+        enrolledCount: result.enrolledCount,
+        totalRows: result.totalRows,
+        errors: result.errors,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("❌ Controller error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to bulk enroll students",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 }

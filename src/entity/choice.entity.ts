@@ -14,8 +14,8 @@ export class Choice {
     @JoinColumn({ name: 'question_id' })
     question!: Question;
 
-    @Column({ name: 'choice_number', type: 'int', nullable: false })
-    choice_number!: number;
+    @Column({ name: 'choice_number', type: 'int', nullable: true })
+    choice_number?: number | null;
 
     @OneToMany(() => Answer, (answer) => answer.choice)
     answer?: Answer[];

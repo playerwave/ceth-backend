@@ -592,17 +592,20 @@ export class ActivityDao extends ErrorHandledDao {
   public async resetAllRegisteredCounts(): Promise<void> {
     await this.checkConnection();
 
-    const resetQuery = `
-      UPDATE activity 
-      SET registered_count = (
-        SELECT COUNT(*)
-        FROM activity_detail ad
-        WHERE ad.activity_id = activity.activity_id 
-          AND ad.status = 'Registered'
-      )
-    `;
+    // 1. ลบข้อมูลในตาราง join ทั้งหมด
+    const deleteJoinQuery = `DELETE FROM "join"`;
+    await this.dataSource!.query(deleteJoinQuery);
+    console.log("🗑️ Deleted all records from join table");
 
+    // 2. ลบข้อมูลในตาราง activity_detail ทั้งหมด
+    const deleteActivityDetailQuery = `DELETE FROM activity_detail`;
+    await this.dataSource!.query(deleteActivityDetailQuery);
+    console.log("🗑️ Deleted all records from activity_detail table");
+
+    // 3. รีเซ็ต registered_count เป็น 0 ทั้งหมด
+    const resetQuery = `UPDATE activity SET registered_count = 0`;
     await this.dataSource!.query(resetQuery);
+    console.log("🔄 Reset all registered_counts to 0");
 
     // Log สรุป
     const summaryQuery = `
@@ -612,7 +615,7 @@ export class ActivityDao extends ErrorHandledDao {
       FROM activity
     `;
     const summaryResult = await this.dataSource!.query(summaryQuery);
-    console.log(`🔄 Reset all registered_counts: ${summaryResult[0]?.total_activities || 0} activities, ${summaryResult[0]?.total_registrations || 0} total registrations`);
+    console.log(`🔄 Reset completed: ${summaryResult[0]?.total_activities || 0} activities, ${summaryResult[0]?.total_registrations || 0} total registrations`);
   }
 
   // เพิ่มเมธอด public สำหรับ query ข้อมูล activity

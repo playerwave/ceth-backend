@@ -17,4 +17,11 @@ router.get("/users", controller.getAllUsers.bind(controller));
 // Reset All Students
 router.delete("/reset", controller.resetAllStudents.bind(controller));
 
+// Bulk Enroll Activity
+router.post(
+  "/bulk-enroll/:activity_id",
+  upload.single("file"),
+  controller.bulkEnrollActivity.bind(controller)
+);
+
 export default router;
