@@ -152,4 +152,17 @@ export class ChoiceDao extends ErrorHandledDao {
         }
     }
 
+    public async deleteChoiceByQuestionID(question_id: number): Promise<Choice[]> {
+        this.checkConnection();
+        try {
+            return await this.choiceDao!.query(
+                `DELETE FROM choice WHERE question_id = $1`,
+                [question_id]
+            );
+        } catch (error) {
+            this.logDbError("deleteChoice", error);
+            throw error;
+        }
+    }
+
 }

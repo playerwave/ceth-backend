@@ -1,11 +1,12 @@
 import redis from "../../config/redis";
+import { ChoiceDao } from "../../daos/Teacher/choice.dao";
 import { QuestionDao } from "../../daos/Teacher/question.dao";
 import { Question } from "../../entity/question.entity";
 
 import { ErrorHandledService } from "../error.handdled.service";
 
 export class QuestionService extends ErrorHandledService {
-    constructor(private readonly questionDao = new QuestionDao) {
+    constructor(private readonly questionDao = new QuestionDao, private readonly choiceDao = new ChoiceDao) {
         super();
     }
 
@@ -110,11 +111,18 @@ export class QuestionService extends ErrorHandledService {
 
     public async deleteQuestion(question_id: number): Promise<Question[]> {
         const Find_Question = await this.questionDao.getQuestionByID(question_id);
+        const Choice_IN_Question = await this.choiceDao.getChoiceByQuestionID(question_id)
         try {
             if (Find_Question.length > 0) {
                 const ID = Find_Question[0].question_id
-                const result = await this.questionDao.deleteQuestion(ID)
-                return result;
+                if (Choice_IN_Question.length > 0) {
+                    await this.choiceDao.deleteChoiceByQuestionID(ID)
+                    const result = await this.questionDao.deleteQuestion(ID)
+                    return result;
+                } else {
+                    const result = await this.questionDao.deleteQuestion(ID)
+                    return result;
+                }
             } else {
                 console.log(`ไม่พบคำถาม ID ${question_id} อยู่ในระบบ`)
                 return [];

@@ -80,6 +80,20 @@ export class QuestionDao extends ErrorHandledDao {
         }
     }
 
+    public async getQuestionBySetNumberID(set_number_id: number): Promise<Question[]> {
+        this.checkConnection();
+        try {
+            return await this.questionDao!.query(
+                `SELECT * FROM question WHERE set_number_id = $1`,
+                [set_number_id]
+            );
+        } catch (error) {
+            this.logDbError("getQuestionBySetNumberID", error);
+            throw error;
+        }
+    }
+
+
     async addQuestion(
         question_text: string,
         set_number_id: number,
@@ -242,6 +256,19 @@ export class QuestionDao extends ErrorHandledDao {
             );
         } catch (error) {
             this.logDbError("deleteQuestion", error);
+            throw error;
+        }
+    }
+
+    public async deleteQuestionBySetNumberID(set_number_id: number): Promise<Question[]> {
+        this.checkConnection();
+        try {
+            return await this.questionDao!.query(
+                `DELETE FROM question WHERE set_number_id = $1`,
+                [set_number_id]
+            );
+        } catch (error) {
+            this.logDbError("deleteQuestionBySetNumberID", error);
             throw error;
         }
     }

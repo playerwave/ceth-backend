@@ -1,9 +1,10 @@
 import { SetNumber } from "../../entity/setNumbers.entity";
 import { ErrorHandledService } from "../error.handdled.service";
 import { SetNumberDao } from "../../daos/Teacher/setNumber.dao";
+import { QuestionDao } from "../../daos/Teacher/question.dao";
 
 export class SetNumberService extends ErrorHandledService {
-  constructor(private readonly setNumberDao = new SetNumberDao()) {
+  constructor(private readonly setNumberDao = new SetNumberDao(), private readonly questionDao = new QuestionDao()) {
     super();
   }
 
@@ -91,12 +92,31 @@ export class SetNumberService extends ErrorHandledService {
   }
 
   public async deleteSetNumber(set_number_id: number): Promise<SetNumber | null> {
+    const Find_SetNumber = await this.setNumberDao.getSetNumberByID(set_number_id)
+    const Question_IN_SetNumber = await this.questionDao.getQuestionBySetNumberID(set_number_id)
     try {
-      const deleted = await this.setNumberDao.deleteSetNumber(set_number_id);
-      if (deleted) {
-        this.logInfo("🗑️ SetNumber deleted", { set_number_id });
+
+      if (Find_SetNumber.length > 0) {
+        const ID = Find_SetNumber[0].set_number_id
+        if (Question_IN_SetNumber.length > 0) {
+          await this.questionDao.deleteQuestionBySetNumberID(ID)
+          const deleted = await this.setNumberDao.deleteSetNumber(ID);
+          if (deleted) {
+            this.logInfo("🗑️ SetNumber deleted", { ID });
+          }
+          return deleted;
+        } else {
+          const deleted = await this.setNumberDao.deleteSetNumber(ID);
+          if (deleted) {
+            this.logInfo("🗑️ SetNumber deleted", { ID });
+          }
+          return deleted;
+        }
+      } else {
+        console.log(`ไม่พบชุดแบบสอบถาม ID ${set_number_id} อยู่ในระบบ`)
+        return null;
       }
-      return deleted;
+
     } catch (error) {
       this.logError("❌ Error in deleteSetNumber", error);
       throw error;
