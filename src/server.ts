@@ -24,6 +24,7 @@ import teacherSetNumberRoute from "./routes/Teacher/setNumber.route";
 import teacherQuestionRoute from "./routes/Teacher/question.route";
 import teacherQRCodeRoute from "./routes/Teacher/qr-code.route";
 import teacherStudentRoute from "./routes/Teacher/teacherStudent.route";
+import teacherChoiceRoute from "./routes/Teacher/choice.route"
 
 import studentActivityRoute from "./routes/Student/activity.route";
 import studentRoute from "./routes/Student/students.route";
@@ -63,7 +64,7 @@ const envAllowed = (process.env.CORS_ALLOWED_ORIGINS || "")
   .filter(Boolean);
 
 const shouldEnableCors =
-  envAllowed.length > 0 || 
+  envAllowed.length > 0 ||
   process.env.NODE_ENV !== "production" ||
   true; // เปิด CORS เสมอเพื่อรองรับ Cloudflare Pages
 
@@ -90,15 +91,15 @@ if (shouldEnableCors) {
     credentials: true, // ✅ สำคัญมากสำหรับ cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
-      "Content-Type", 
-      "Authorization", 
+      "Content-Type",
+      "Authorization",
       "Cookie",
       "X-Requested-With",
       "Accept",
       "Origin"
     ],
     exposedHeaders: [
-      "Access-Control-Allow-Origin", 
+      "Access-Control-Allow-Origin",
       "Access-Control-Allow-Credentials",
       "Set-Cookie"
     ],
@@ -169,6 +170,7 @@ app.use("/api/teacher/setNumber", teacherSetNumberRoute);
 app.use("/api/teacher/question", teacherQuestionRoute);
 app.use("/api/teacher/qr-code", teacherQRCodeRoute);
 app.use("/api/teacher", teacherStudentRoute);
+app.use("/api/teacher/choice", teacherChoiceRoute);
 
 // student
 app.use("/api/student/activity", studentActivityRoute);
@@ -229,12 +231,12 @@ const startServer = async () => {
     console.log("✅ Database connected successfully");
 
     // ให้ default เป็น 5090 ให้ตรงกับ docker (8069:5090)
-const PORT = Number(process.env.PORT) || 5090;
+    const PORT = Number(process.env.PORT) || 5090;
 
-// listen ทุก interface ในคอนเทนเนอร์
-server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
-});
+    // listen ทุก interface ในคอนเทนเนอร์
+    server = app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
+    });
 
 
     process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

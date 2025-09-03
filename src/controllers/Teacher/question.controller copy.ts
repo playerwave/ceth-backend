@@ -149,9 +149,16 @@ export class QuestionController extends ErrorHandledController {
         if (!question_text) throw new Error("question_text ห้ามว่าง");
         if (!Number.isInteger(set_number_id) || set_number_id <= 0)
             throw new Error("set_number_id ไม่ถูกต้อง");
-        const allowed = ["Single answer", "Multi answer", "Text"];
-        if (!allowed.includes(question_type))
+        const allowed = [
+            // ค่าที่อยู่ใน enum จริงในตาราง
+            "Fix Single answer",
+            "Single answer",
+            "Multiple answer",
+            "Text answer",
+        ];
+        if (!allowed.includes(question_type)) {
             throw new Error("question_type ไม่ถูกต้อง");
+        }
 
         return { question_text, set_number_id, question_type };
     }

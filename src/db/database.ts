@@ -29,7 +29,7 @@ class DatabaseManager {
   private isClosing = false;
   private isInitializing = false;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): DatabaseManager {
     if (!DatabaseManager.instance) {
@@ -76,7 +76,7 @@ class DatabaseManager {
     this.isInitializing = true;
     try {
       console.log("🚀 Creating new database connection...");
-      
+
       // ✅ ตรวจสอบ environment variables
       if (!process.env.DB_HOST || !process.env.DB_USERNAME || !process.env.DB_PASSWORD || !process.env.DB_DATABASE) {
         throw new Error("Missing database environment variables");
@@ -129,7 +129,9 @@ class DatabaseManager {
         // ✅ เพิ่ม timeout settings
         connectTimeoutMS: 60000,    // 1 นาที
         // ✅ เพิ่ม logging
-        logging: ["error", "warn"],
+        logging: ['schema', 'error', 'warn', 'migration'],
+        dropSchema: false,
+        migrationsRun: true,
         logger: "advanced-console",
       });
 
@@ -185,7 +187,7 @@ class DatabaseManager {
       if (!this.connection || !this.connection.isConnected) {
         return false;
       }
-      
+
       // ทดสอบ query ง่ายๆ
       await this.connection.query('SELECT 1');
       return true;

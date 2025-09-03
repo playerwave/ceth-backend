@@ -20,6 +20,16 @@ export class QuestionService extends ErrorHandledService {
         }
     }
 
+    private normalizeQuestionType(raw: string): Question["question_type"] {
+        const s = (raw ?? "").trim().toLowerCase();
+        if (s === "single answer" || s === "single") return "Single answer";
+        if (s === "fix single answer" || s === "fix single") return "Fix Single answer";
+        if (s === "multiple answer" || s === "multi answer" || s === "multiple")
+            return "Multiple answer";
+        if (s === "text answer" || s === "text") return "Text answer";
+        throw new Error("question_type ไม่ถูกต้อง");
+    }
+
     public async getQuestion(page: number, limit: number): Promise<Question[]> {
         const cacheKey = `question:all:${page}:${limit}`;
 
@@ -52,23 +62,18 @@ export class QuestionService extends ErrorHandledService {
         set_number_id: number,
         question_type: string
     ): Promise<Question> {
-        const text = (question_text ?? '').trim();
-        const type = (question_type ?? '').trim();
+        const text = (question_text ?? "").trim();
+        const type = this.normalizeQuestionType(question_type); // <-- ใช้ตัว normalize ที่ตรง enum
 
         if (!Number.isInteger(set_number_id) || set_number_id <= 0) {
-            throw new Error('set_number_id ไม่ถูกต้อง');
+            throw new Error("set_number_id ไม่ถูกต้อง");
         }
         if (!text) {
-            throw new Error('question_text ห้ามว่าง');
+            throw new Error("question_text ห้ามว่าง");
         }
-        const allowed = ['Single answer', 'Multi answer', 'Text'];
-        if (!allowed.includes(type)) {
-            throw new Error('question_type ไม่ถูกต้อง');
-        }
+
         const created = await this.questionDao.addQuestion(text, set_number_id, type);
-
         await redis.del(`question:list:set:${set_number_id}`);
-
         return created;
     }
 

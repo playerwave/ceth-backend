@@ -26,6 +26,7 @@ export class QuestionDao extends ErrorHandledDao {
         }
     }
 
+
     public async countQuestion(): Promise<number> {
         this.checkConnection();
         try {
@@ -89,30 +90,107 @@ export class QuestionDao extends ErrorHandledDao {
         const q = question_text.trim();
         const t = question_type.trim();
 
-        try {
-            await this.questionDao!.query("BEGIN");
-            // 🔒 ล็อกกันแข่งในชุดนี้
-            await this.questionDao!.query("SELECT pg_advisory_xact_lock($1)", [set_number_id]);
+        // ✅ กัน sequence หลุดซิงก์เสมอก่อนเริ่ม
+        await this.questionDao!.query(`
+      SELECT setval(
+        pg_get_serial_sequence('question','question_id'),
+        COALESCE((SELECT MAX(question_id) FROM question), 0)
+      )
+    `);
 
-            // หาหมายเลขข้อถัดไป
-            const nextRows = await this.questionDao!.query(
-                `SELECT COALESCE(MAX(question_number), 0) + 1 AS n FROM question WHERE set_number_id = $1`,
-                [set_number_id]
-            );
-            const nextNumber = Number(nextRows?.[0]?.n ?? 1);
+        let retried = false;
 
-            // แทรกคำถามใหม่
-            const rows = await this.questionDao!.query(
-                `INSERT INTO question (question_text, question_number, set_number_id, question_type) VALUES ($1, $2, $3, $4)RETURNING *`,
-                [q, nextNumber, set_number_id, t]
-            );
+        while (true) {
+            try {
+                await this.questionDao!.query("BEGIN");
 
-            await this.questionDao!.query("COMMIT");
-            return rows[0];
-        } catch (err) {
-            await this.questionDao!.query("ROLLBACK");
-            this.logDbError("addQuestion", err);
-            throw err;
+                // 🔒 ล็อกกันแข่งในชุดเดียวกัน
+                await this.questionDao!.query("SELECT pg_advisory_xact_lock($1)", [set_number_id]);
+
+                // หา question_number ถัดไป
+                const nextRows = await this.questionDao!.query(
+                    `SELECT COALESCE(MAX(question_number), 0) + 1 AS n
+           FROM question WHERE set_number_id = $1`,
+                    [set_number_id]
+                );
+                const nextNumber = Number(nextRows?.[0]?.n ?? 1);
+
+                // ✅ INSERT โดย "แมป" ค่าคำเก่า/ใหม่ ให้เข้ากับ ENUM ที่มีจริงใน DB
+                const rows = await this.questionDao!.query(
+                    `
+          INSERT INTO question (question_text, question_number, set_number_id, question_type)
+          VALUES (
+            $1,
+            $2,
+            $3,
+            (
+              CASE
+                /* กลุ่ม Multiple */
+                WHEN $4 IN ('Multiple answer','Multi answer') THEN (
+                  /* เลือก label ที่ DB มีอยู่จริง ก่อนค่อย cast เป็น enum */
+                  SELECT CASE
+                           WHEN EXISTS (
+                             SELECT 1 FROM pg_type t
+                             JOIN pg_enum e ON e.enumtypid = t.oid
+                             WHERE t.typname = 'question_question_type_enum'
+                               AND e.enumlabel = 'Multiple answer'
+                           ) THEN 'Multiple answer'
+                           ELSE 'Multi answer'
+                         END
+                )
+                /* กลุ่ม Text */
+                WHEN $4 IN ('Text answer','Text') THEN (
+                  SELECT CASE
+                           WHEN EXISTS (
+                             SELECT 1 FROM pg_type t
+                             JOIN pg_enum e ON e.enumtypid = t.oid
+                             WHERE t.typname = 'question_question_type_enum'
+                               AND e.enumlabel = 'Text answer'
+                           ) THEN 'Text answer'
+                           ELSE 'Text'
+                         END
+                )
+                /* กลุ่ม Single (มีทั้งแบบ Fix และปกติ ถ้า DB ไม่มี Fix ก็ยังใช้แบบปกติได้) */
+                WHEN $4 IN ('Fix Single answer','Single answer','Single') THEN (
+                  SELECT CASE
+                           WHEN $4 = 'Fix Single answer' AND EXISTS (
+                             SELECT 1 FROM pg_type t
+                             JOIN pg_enum e ON e.enumtypid = t.oid
+                             WHERE t.typname = 'question_question_type_enum'
+                               AND e.enumlabel = 'Fix Single answer'
+                           ) THEN 'Fix Single answer'
+                           ELSE 'Single answer'
+                         END
+                )
+                ELSE $4
+              END
+            )::question_question_type_enum
+          )
+          RETURNING *
+          `,
+                    [q, nextNumber, set_number_id, t]
+                );
+
+                await this.questionDao!.query("COMMIT");
+                return rows[0];
+            } catch (err: any) {
+                await this.questionDao!.query("ROLLBACK");
+
+                // ถ้าเจอชน PK จาก sequence หลุด ให้ซ่อมแล้วลองใหม่ 1 ครั้ง
+                if (!retried && err?.code === "23505" && /question_id/i.test(err?.detail ?? "")) {
+                    retried = true;
+                    await this.questionDao!.query(`
+            SELECT setval(
+              pg_get_serial_sequence('question','question_id'),
+              COALESCE((SELECT MAX(question_id) FROM question), 0)
+            )
+          `);
+                    continue;
+                }
+
+                this.logDbError("addQuestion", err);
+                throw err;
+            }
         }
     }
 
