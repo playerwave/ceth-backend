@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Question } from './question.entity';
 import { Assessment } from './assessment.entity';
 import { Answer } from './answer.entity';
@@ -20,8 +20,15 @@ export class SetNumber {
     @OneToMany(() => Question, (question) => question.setNumber)
     question?: Question[];
 
-    @OneToMany(() => Assessment, (assessment) => assessment.setNumber)
+    // @OneToMany(() => Assessment, (assessment) => assessment.setNumber)
+    // assessment?: Assessment[];
+
+    @ManyToOne(() => Assessment, (assessment) => assessment.setNumber)
+    @JoinColumn({ name: "assessment_id" })
     assessment?: Assessment[];
+
+    @Column({ type: "int" })
+    assessment_id?: number;
 
     @OneToMany(() => Answer, (answer) => answer.setNumber)
     answer?: Answer[];

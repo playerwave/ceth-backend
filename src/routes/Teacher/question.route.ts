@@ -24,6 +24,10 @@ router.get(
     "/get-questions", (questionController.getAll.bind(questionController))
 );
 
+router.get(
+    "/get-questions-by-setNumber/:set_number_id", (questionController.getQuestionBySetNumberID.bind(questionController))
+);
+
 router.post(
     "/add", (questionController.create.bind(questionController))
 );

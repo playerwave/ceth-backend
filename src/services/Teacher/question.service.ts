@@ -21,6 +21,16 @@ export class QuestionService extends ErrorHandledService {
         }
     }
 
+    public async getQuestionBySetNumberID(set_number_id: number): Promise<Question[]> {
+        try {
+            const result = await this.questionDao.getQuestionBySetNumberID(set_number_id)
+            return result
+        } catch (error) {
+            this.logError("❌ Error in countQuestion", error);
+            throw error;
+        }
+    }
+
     private normalizeQuestionType(raw: string): Question["question_type"] {
         const s = (raw ?? "").trim().toLowerCase();
         if (s === "single answer" || s === "single") return "Single answer";

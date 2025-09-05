@@ -51,13 +51,33 @@ export class QuestionController extends ErrorHandledController {
         }
     }
 
+    public async getQuestionBySetNumberID(req: Request, res: Response): Promise<void> {
+        const { set_number_id } = req.params
+        const SetNumberID = parseInt(set_number_id)
+        try {
+            const result = await this.questionService.getQuestionBySetNumberID(SetNumberID)
+            if (result) {
+                res.status(200).json({
+                    data: result,
+                    message: "ดึงข้อมูลสำเร็จ"
+                })
+            } else {
+                res.status(404).json({ message: "ไม่พบข้อมูลในระบบ" })
+            }
+        } catch (error) {
+            this.handleError("QuestionController.getAll", error, res);
+        }
+    }
+
 
     public async update(req: Request, res: Response): Promise<void> {
         try {
-            const question_id = this.parseId(req.params.question_id);
+            const { question_id } = req.params
+            const QuestionID = parseInt(question_id)
+            console.log(question_id)
             const data = this.parseQuestionPayloadUpdate(req.body);
 
-            const updated = await this.questionService.updateQuestion(question_id, data.question_text, data.question_type)
+            const updated = await this.questionService.updateQuestion(QuestionID, data.question_text, data.question_type)
             if (updated.length > 0) {
                 res.status(200).json({
                     message: "แก้ไขคำถามสำเร็จ!",

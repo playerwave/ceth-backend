@@ -84,7 +84,7 @@ export class QuestionDao extends ErrorHandledDao {
         this.checkConnection();
         try {
             return await this.questionDao!.query(
-                `SELECT * FROM question WHERE set_number_id = $1`,
+                `SELECT sn.name, q.question_id, q.question_text, q.question_number, q.question_type FROM question as q INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id WHERE q.set_number_id = $1 ORDER BY sn.set_number_id ASC, q.question_number ASC`,
                 [set_number_id]
             );
         } catch (error) {
@@ -92,7 +92,6 @@ export class QuestionDao extends ErrorHandledDao {
             throw error;
         }
     }
-
 
     async addQuestion(
         question_text: string,

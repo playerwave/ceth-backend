@@ -70,7 +70,6 @@ import { format } from "date-fns-tz";
 @Index("IDX_CREATE_DATE_ASSESSMENT", ["create_date"])
 @Index("IDX_LAST_UPDATE_ASSESSMENT", ["last_update"])
 @Index("IDX_ASSESSMENT_STATUS", ["assessment_status"])
-@Index("IDX_SET_NUMBER_ID_ASSESSMENT", ["set_number_id"])
 @Index("IDX_STATUS_ASSESSMENT", ["status"])
 export class Assessment {
   @PrimaryGeneratedColumn()
@@ -86,8 +85,8 @@ export class Assessment {
   @Transform(({ value }) =>
     value
       ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
-          timeZone: "Asia/Bangkok",
-        })
+        timeZone: "Asia/Bangkok",
+      })
       : null
   )
   create_date?: Date;
@@ -96,8 +95,8 @@ export class Assessment {
   @Transform(({ value }) =>
     value
       ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
-          timeZone: "Asia/Bangkok",
-        })
+        timeZone: "Asia/Bangkok",
+      })
       : null
   )
   last_update?: Date;
@@ -109,12 +108,12 @@ export class Assessment {
   })
   assessment_status?: "Not finished" | "Finished" | "Unsuccessful";
 
-  @ManyToOne(() => SetNumber, (setNumber) => setNumber.assessment)
-  @JoinColumn({ name: "set_number_id" })
-  setNumber?: SetNumber;
+  // @ManyToOne(() => SetNumber, (setNumber) => setNumber.assessment)
+  // @JoinColumn({ name: "set_number_id" })
+  // setNumber?: SetNumber;
 
-  @Column({ type: "int" })
-  set_number_id?: number;
+  // @Column({ type: "int" })
+  // set_number_id?: number;
 
   @Column({
     type: "enum",
@@ -128,4 +127,7 @@ export class Assessment {
 
   @OneToMany(() => Activity, (activity) => activity.assessment)
   activity?: Activity[];
+
+  @OneToMany(() => SetNumber, (setNumber) => setNumber.assessment)
+  setNumber?: SetNumber[];
 }

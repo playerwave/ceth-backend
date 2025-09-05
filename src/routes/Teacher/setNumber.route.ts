@@ -19,38 +19,24 @@ router.get(
   ((req, res) => setNumberController.getAll(req, res))
 );
 
-// ✅ GET /get-set-number/:id → ดึงข้อมูลชุดคำถามตาม ID
 router.get(
-  "/get-set-number/:id",
-  verifyToken,
-  wrapAsync((req, res) => setNumberController.getById(req, res))
+  "/get-set-numbers-by-assessment/:assessment_id",
+  ((req, res) => setNumberController.getSetNumbersByAssessmentID(req, res))
 );
 
-router.get(
-  "/get-set-number-qyestion/:id", ((req, res) => setNumberController.getSetNumbersQuestionByID(req, res))
-);
-
-// ✅ POST /create-set-number → เพิ่มชุดคำถาม
+// // ✅ POST /create-set-number → เพิ่มชุดคำถาม
 router.post(
-  "/create-set-number",
-  verifyToken,
-  validateDTO(CreateSetNumberDto),
-  wrapAsync((req, res) => setNumberController.create(req, res))
+  "/create-set-number", ((req, res) => setNumberController.create(req, res))
 );
 
 // ✅ PUT /update-set-number/:id → แก้ไขชุดคำถาม
 router.put(
-  "/update-set-number/:id",
-  verifyToken,
-  validateDTO(UpdateSetNumberDto),
-  wrapAsync((req, res) => setNumberController.update(req, res))
+  "/update-set-number/:set_number_id", ((req, res) => setNumberController.update(req, res))
 );
 
 // ✅ DELETE /delete-set-number/:id → ลบชุดคำถาม
 router.delete(
-  "/delete-set-number/:id",
-  verifyToken,
-  wrapAsync((req, res) => setNumberController.delete(req, res))
+  "/delete-set-number/:set_number_id",((req, res) => setNumberController.delete(req, res))
 );
 
 export default router;
