@@ -200,9 +200,7 @@ export class AssessmentDao extends ErrorHandledDao {
 
   private async checkConnection(): Promise<void> {
     if (!this.dataSource?.isConnected) {
-      console.log(
-        "🔄 Database connection not established, attempting to initialize..."
-      );
+      console.log("🔄 Database connection not established, attempting to initialize...");
       try {
         await this.initialize();
       } catch (error) {
@@ -214,9 +212,7 @@ export class AssessmentDao extends ErrorHandledDao {
   async countAssessments(): Promise<number> {
     await this.checkConnection();
     try {
-      const result = await this.dataSource!.query(
-        "SELECT COUNT(*) FROM assessment"
-      );
+      const result = await this.dataSource!.query("SELECT COUNT(*) FROM assessment");
       return Number(result[0].count);
     } catch (error) {
       this.logDbError("countAssessments", error);
@@ -273,7 +269,6 @@ export class AssessmentDao extends ErrorHandledDao {
     description: string,
     status: string,
     assessment_status: string,
-    set_number_id: number,
     create_date: Date,
     last_update: Date
   ): Promise<Assessment> {
@@ -284,37 +279,23 @@ export class AssessmentDao extends ErrorHandledDao {
     const trimmedStatus = status.trim();
     const trimmedAssessmentStatus = assessment_status.trim();
     const allowedStatuses = ["Active", "Inactive"];
-    const allowedAssessmentStatuses = [
-      "Not finished",
-      "Finished",
-      "Unsuccessful",
-    ];
+    const allowedAssessmentStatuses = ["Not finished", "Finished", "Unsuccessful"];
 
     if (!allowedStatuses.includes(trimmedStatus)) {
       throw new Error(`❌ Invalid status value: ${trimmedStatus}`);
     }
 
     if (!allowedAssessmentStatuses.includes(trimmedAssessmentStatus)) {
-      throw new Error(
-        `❌ Invalid assessment_status value: ${trimmedAssessmentStatus}`
-      );
+      throw new Error(`❌ Invalid assessment_status value: ${trimmedAssessmentStatus}`);
     }
 
     try {
       const result = await this.dataSource!.query(
         `INSERT INTO assessment (
-          assessment_name, description, status, assessment_status, set_number_id, create_date, last_update
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          assessment_name, description, status, assessment_status, create_date, last_update
+        ) VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *`,
-        [
-          trimmedName,
-          trimmedDescription,
-          trimmedStatus,
-          trimmedAssessmentStatus,
-          set_number_id,
-          create_date,
-          last_update,
-        ]
+        [trimmedName, trimmedDescription, trimmedStatus, trimmedAssessmentStatus, create_date, last_update]
       );
 
       return result[0];
@@ -330,7 +311,6 @@ export class AssessmentDao extends ErrorHandledDao {
     description: string,
     status: string,
     assessment_status: string,
-    set_number_id: number,
     last_update: Date
   ): Promise<void> {
     await this.checkConnection();
@@ -342,18 +322,9 @@ export class AssessmentDao extends ErrorHandledDao {
           description = $2,
           status = $3,
           assessment_status = $4,
-          set_number_id = $5,
-          last_update = $6
-        WHERE assessment_id = $7`,
-        [
-          assessment_name.trim(),
-          description.trim(),
-          status.trim(),
-          assessment_status.trim(),
-          set_number_id,
-          last_update,
-          assessment_id,
-        ]
+          last_update = $5
+        WHERE assessment_id = $6`,
+        [assessment_name.trim(), description.trim(), status.trim(), assessment_status.trim(), last_update, assessment_id]
       );
     } catch (error) {
       this.logDbError("updateAssessmentWithName", error);
@@ -366,7 +337,6 @@ export class AssessmentDao extends ErrorHandledDao {
     description: string,
     status: string,
     assessment_status: string,
-    set_number_id: number,
     last_update: Date
   ): Promise<void> {
     await this.checkConnection();
@@ -377,17 +347,9 @@ export class AssessmentDao extends ErrorHandledDao {
           description = $1,
           status = $2,
           assessment_status = $3,
-          set_number_id = $4,
-          last_update = $5
-        WHERE assessment_id = $6`,
-        [
-          description.trim(),
-          status.trim(),
-          assessment_status.trim(),
-          set_number_id,
-          last_update,
-          assessment_id,
-        ]
+          last_update = $4
+        WHERE assessment_id = $5`,
+        [description.trim(), status.trim(), assessment_status.trim(), last_update, assessment_id]
       );
     } catch (error) {
       this.logDbError("updateAssessmentWithoutName", error);

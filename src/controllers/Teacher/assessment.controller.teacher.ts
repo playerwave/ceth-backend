@@ -156,6 +156,24 @@ export class AssessmentController extends ErrorHandledController {
     }
   }
 
+
+public async getById(req: Request, res: Response): Promise<void> {
+  try {
+    const assessment_id = this.parseId(req.params.assessment_id);
+
+    const assessment = await this.assessmentService.getAssessmentById(assessment_id);
+
+    if (assessment) {
+      res.status(200).json(assessment);
+    } else {
+      res.status(404).json({ message: "ไม่พบแบบประเมิน!" });
+    }
+  } catch (error) {
+    this.handleError("AssessmentController.getById", error, res);
+  }
+}
+
+
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseAssessmentPayload(req.body);
@@ -164,7 +182,7 @@ export class AssessmentController extends ErrorHandledController {
         data.description,
         data.status,
         data.assessment_status,
-        data.set_number_id,
+      
         data.create_date,
         data.last_update
       );
@@ -193,7 +211,7 @@ export class AssessmentController extends ErrorHandledController {
         data.description,
         data.status,
         data.assessment_status,
-        data.set_number_id,
+     
         data.last_update
       );
 
@@ -245,7 +263,7 @@ export class AssessmentController extends ErrorHandledController {
     description: string;
     status: "Active" | "Inactive";
     assessment_status: "Not finished" | "Finished" | "Unsuccessful";
-    set_number_id: number;
+
     create_date: Date;
     last_update: Date;
   } {
@@ -257,9 +275,11 @@ export class AssessmentController extends ErrorHandledController {
         | "Not finished"
         | "Finished"
         | "Unsuccessful",
-      set_number_id: this.parseId(body.set_number_id),
+   
       create_date: body.create_date ? new Date(body.create_date) : new Date(),
       last_update: body.last_update ? new Date(body.last_update) : new Date(),
     };
   }
 }
+
+

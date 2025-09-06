@@ -204,12 +204,15 @@ export class AssessmentService extends ErrorHandledService {
     }
   }
 
+
+
+  
   public async addAssessment(
     assessment_name: string,
     description: string,
     status: "Active" | "Inactive",
     assessment_status: "Not finished" | "Finished" | "Unsuccessful",
-    set_number_id: number,
+   
     create_date: Date,
     last_update: Date
   ): Promise<Assessment | null> {
@@ -229,7 +232,7 @@ export class AssessmentService extends ErrorHandledService {
         description,
         status,
         assessment_status,
-        set_number_id,
+       
         create_date,
         last_update
       );
@@ -252,7 +255,7 @@ export class AssessmentService extends ErrorHandledService {
     description: string,
     status: "Active" | "Inactive",
     assessment_status: "Not finished" | "Finished" | "Unsuccessful",
-    set_number_id: number,
+ 
     last_update: Date
   ): Promise<Assessment | null> {
     const cacheKey = "assessment:all";
@@ -273,7 +276,7 @@ export class AssessmentService extends ErrorHandledService {
           description,
           status,
           assessment_status,
-          set_number_id,
+          
           last_update
         );
       } else {
@@ -291,7 +294,7 @@ export class AssessmentService extends ErrorHandledService {
           description,
           status,
           assessment_status,
-          set_number_id,
+          
           last_update
         );
       }
@@ -307,6 +310,38 @@ export class AssessmentService extends ErrorHandledService {
       throw error;
     }
   }
+
+  public async getAssessmentById(assessment_id: number): Promise<Assessment | null> {
+  const cacheKey = `assessment:${assessment_id}`;
+
+  try {
+    // 1. ลองดึงจาก cache ก่อน
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as Assessment;
+    }
+
+    // 2. ดึงจาก DB ผ่าน DAO
+    const result = await this.assessmentDao.getAssessmentByID(assessment_id);
+
+    if (!result || result.length === 0) {
+      this.logInfo("❌ Assessment not found", { assessment_id });
+      return null;
+    }
+
+    const assessment = result[0];
+
+    // 3. เก็บลง cache
+    await redis.set(cacheKey, JSON.stringify(assessment), "EX", 60);
+
+    this.logInfo("📤 Assessment fetched by id", { assessment_id });
+    return assessment;
+  } catch (error) {
+    this.logError("❌ Error in getAssessmentById", error);
+    throw error;
+  }
+}
+
 
   public async deleteAssessment(
     assessment_id: number

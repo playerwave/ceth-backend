@@ -21,14 +21,18 @@ router.get(
 );
 
 // ✅ GET /count → จำนวนแบบประเมินทั้งหมด
-router.get("/count", verifyToken, wrapAsync(assessmentController.count));
+router.get(
+  "/count",
+  verifyToken,
+  wrapAsync(assessmentController.count.bind(assessmentController))
+);
 
 // ✅ POST /create-assessment → สร้างแบบประเมิน
 router.post(
   "/create-assessment",
   verifyToken,
   // validateDTO(CreateAssessmentDto),
-  wrapAsync((req, res) => assessmentController.create(req, res))
+  wrapAsync(assessmentController.create.bind(assessmentController))
 );
 
 // ✅ PUT /update-assessment/:assessment_id → แก้ไขแบบประเมิน
@@ -36,14 +40,21 @@ router.put(
   "/update-assessment/:assessment_id",
   verifyToken,
   // validateDTO(UpdateAssessmentDto),
-  wrapAsync(assessmentController.update)
+  wrapAsync(assessmentController.update.bind(assessmentController))
 );
 
 // ✅ DELETE /delete-assessment/:assessment_id → ลบแบบประเมิน
 router.delete(
   "/delete-assessment/:assessment_id",
   verifyToken,
-  wrapAsync(assessmentController.delete)
+  wrapAsync(assessmentController.delete.bind(assessmentController))
+);
+
+// ✅ GET /get-assessment/:assessment_id → ดึงแบบประเมินตาม ID
+router.get(
+  "/get-assessment/:assessment_id",
+  verifyToken,
+  wrapAsync(assessmentController.getById.bind(assessmentController))
 );
 
 export default router;
