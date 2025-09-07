@@ -1,12 +1,13 @@
 import redis from "../../config/redis";
 import { ChoiceDao } from "../../daos/Teacher/choice.dao";
 import { QuestionDao } from "../../daos/Teacher/question.dao";
+import { SetNumberDao } from "../../daos/Teacher/setNumber.dao";
 import { Question } from "../../entity/question.entity";
 
 import { ErrorHandledService } from "../error.handdled.service";
 
 export class QuestionService extends ErrorHandledService {
-    constructor(private readonly questionDao = new QuestionDao, private readonly choiceDao = new ChoiceDao) {
+    constructor(private readonly questionDao = new QuestionDao, private readonly choiceDao = new ChoiceDao, private readonly setNumberDao = new SetNumberDao()) {
         super();
     }
 
@@ -68,19 +69,46 @@ export class QuestionService extends ErrorHandledService {
         }
     }
 
+    // public async addQuestion(
+    //     question_text: string,
+    //     set_number_id: number,
+    //     question_type: string
+    // ): Promise<Question> {
+    //     const text = (question_text ?? "").trim();
+    //     const type = this.normalizeQuestionType(question_type); // <-- ใช้ตัว normalize ที่ตรง enum
+
+    //     if (!Number.isInteger(set_number_id) || set_number_id <= 0) {
+    //         throw new Error("set_number_id ไม่ถูกต้อง");
+    //     }
+    //     if (!text) {
+    //         throw new Error("question_text ห้ามว่าง");
+    //     }
+
+    //     const created = await this.questionDao.addQuestion(text, set_number_id, type);
+    //     await redis.del(`question:list:set:${set_number_id}`);
+    //     return created;
+    // }
+
     public async addQuestion(
         question_text: string,
         set_number_id: number,
         question_type: string
-    ): Promise<Question> {
+    ): Promise<Question | null> {
         const text = (question_text ?? "").trim();
-        const type = this.normalizeQuestionType(question_type); // <-- ใช้ตัว normalize ที่ตรง enum
+        const type = this.normalizeQuestionType(question_type);
 
         if (!Number.isInteger(set_number_id) || set_number_id <= 0) {
             throw new Error("set_number_id ไม่ถูกต้อง");
         }
         if (!text) {
             throw new Error("question_text ห้ามว่าง");
+        }
+
+        // ✅ ตรวจสอบก่อนว่า set_number มีจริง
+        const Find_SetNumber = await this.setNumberDao.getSetNumberByID(set_number_id);
+        if (Find_SetNumber.length === 0) {
+            console.log(`ไม่พบ SetNumber ID: ${set_number_id} ในระบบ`);
+            return null;
         }
 
         const created = await this.questionDao.addQuestion(text, set_number_id, type);

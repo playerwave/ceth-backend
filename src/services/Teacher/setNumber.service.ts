@@ -54,35 +54,73 @@ export class SetNumberService extends ErrorHandledService {
     }
   }
 
-  public async createSetNumber(name: string, status: string | undefined, assessment_id: number): Promise<SetNumber> {
-    const Find_Assessment = await this.getSetNumbersByAssessmentID(assessment_id)
-    const trimmedName = name.trim();
-    const trimmedStatus = status?.trim() || 'Active';
-    try {
-      // ตรวจสอบว่าชื่อไม่ว่างเปล่า
-      if (!trimmedName) {
-        throw new Error("ชื่อชุดคำถามไม่สามารถเป็นค่าว่างได้");
-      }
+  // public async createSetNumber(name: string, status: string | undefined, assessment_id: number): Promise<SetNumber> {
+  //   const Find_Assessment = await this.getSetNumbersByAssessmentID(assessment_id)
+  //   const trimmedName = name.trim();
+  //   const trimmedStatus = status?.trim() || 'Active';
+  //   try {
+  //     // ตรวจสอบว่าชื่อไม่ว่างเปล่า
+  //     if (!trimmedName) {
+  //       throw new Error("ชื่อชุดคำถามไม่สามารถเป็นค่าว่างได้");
+  //     }
 
-      // ตรวจสอบ status ที่อนุญาต
-      const allowedStatuses = ["Active", "Inactive"];
-      if (!allowedStatuses.includes(trimmedStatus)) {
-        throw new Error(`สถานะต้องเป็น 'Active' หรือ 'Inactive' เท่านั้น`);
-      }
+  //     // ตรวจสอบ status ที่อนุญาต
+  //     const allowedStatuses = ["Active", "Inactive"];
+  //     if (!allowedStatuses.includes(trimmedStatus)) {
+  //       throw new Error(`สถานะต้องเป็น 'Active' หรือ 'Inactive' เท่านั้น`);
+  //     }
 
-      if (Find_Assessment.length > 0) {
-        const AssessmentID = Find_Assessment[0].assessment_id
-        const result = await this.setNumberDao.addSetNumber(trimmedName, trimmedStatus, AssessmentID)
-        return result
-      } else {
-        console.log(`ไม่พบ Assessment ID : ${assessment_id} อยู่ในระบบ`)
-        return null;
-      }
-    } catch (error) {
-      this.logError("❌ Error in createSetNumber", error);
-      throw error;
+  //     if (Find_Assessment.length > 0) {
+  //       const AssessmentID = Find_Assessment[0].assessment_id
+  //       const result = await this.setNumberDao.addSetNumber(trimmedName, trimmedStatus, AssessmentID)
+  //       return result
+  //     } else {
+  //       console.log(`ไม่พบ Assessment ID : ${assessment_id} อยู่ในระบบ`)
+  //       return null;
+  //     }
+  //   } catch (error) {
+  //     this.logError("❌ Error in createSetNumber", error);
+  //     throw error;
+  //   }
+  // }
+
+
+  public async createSetNumber(
+  name: string,
+  status: string | undefined,
+  assessment_id: number
+): Promise<SetNumber | null> {
+  const Find_Assessment = await this.assessmentDao.getAssessmentByID(assessment_id); // ✅ ใช้ assessmentDao
+  const trimmedName = name.trim();
+  const trimmedStatus = status?.trim() || "Active";
+
+  try {
+    if (!trimmedName) {
+      throw new Error("ชื่อชุดคำถามไม่สามารถเป็นค่าว่างได้");
     }
+
+    const allowedStatuses = ["Active", "Inactive"];
+    if (!allowedStatuses.includes(trimmedStatus)) {
+      throw new Error(`สถานะต้องเป็น 'Active' หรือ 'Inactive' เท่านั้น`);
+    }
+
+    if (Find_Assessment.length > 0) {
+      const AssessmentID = Find_Assessment[0].assessment_id; // ✅ เอามาจาก assessment table
+      const result = await this.setNumberDao.addSetNumber(
+        trimmedName,
+        trimmedStatus,
+        AssessmentID
+      );
+      return result;
+    } else {
+      console.log(`ไม่พบ Assessment ID : ${assessment_id} อยู่ในระบบ`);
+      return null;
+    }
+  } catch (error) {
+    this.logError("❌ Error in createSetNumber", error);
+    throw error;
   }
+}
 
   public async updateSetNumber(
     set_number_id: number,
