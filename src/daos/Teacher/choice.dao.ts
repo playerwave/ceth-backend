@@ -24,6 +24,19 @@ export type ChoiceJoinAssessment = {
     assessment_id: number
 }
 
+export type ChoiceJoinSetNumber = {
+    choice_id: number;
+    choice_text: string;
+    question_id: number;
+    choice_number: number;
+    question_text: string;
+    question_number: number;
+    set_number_id: number;
+    question_type: string;
+    name: string;
+    status: string
+}
+
 export class ChoiceDao extends ErrorHandledDao {
     private choiceDao: DataSource | null = null;
 
@@ -116,11 +129,24 @@ export class ChoiceDao extends ErrorHandledDao {
         this.checkConnection();
         try {
             return await this.choiceDao!.query(
-                `SELECT q.question_id, q.question_text, q.question_number, q.set_number_id, q.question_type, sn.name, sn.status, sn.assessment_id FROM question as q INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id WHERE sn.assessment_id = $1`,
+                `SELECT c.choice_id, c.choice_text, c.question_id, c.choice_number, q.question_text, q.question_number, q.set_number_id, q.question_type, sn.name, sn.status, sn.assessment_id FROM choice as c INNER JOIN question as q ON c.question_id = q.question_id INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id WHERE sn.assessment_id = $1`,
                 [assessment_id]
             );
         } catch (error) {
             this.logDbError("getChoiceByAssessmentID", error);
+            throw error;
+        }
+    }
+
+    public async getChoiceBySetNumberID(set_number_id: number): Promise<ChoiceJoinSetNumber[]> {
+        this.checkConnection();
+        try {
+            return await this.choiceDao!.query(
+                `SELECT c.choice_id, c.choice_text, c.question_id, c.choice_number, q.question_text, q.question_number, q.set_number_id, q.question_type, sn.name, sn.status FROM choice as c INNER JOIN question as q ON q.question_id = c.question_id INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id WHERE sn.set_number_id = $1`,
+                [set_number_id]
+            );
+        } catch (error) {
+            this.logDbError("getChoiceBySetNumberID", error);
             throw error;
         }
     }
@@ -204,4 +230,16 @@ export class ChoiceDao extends ErrorHandledDao {
         }
     }
 
+    public async deleteChoiceBySetnumberID(set_number_id: number): Promise<ChoiceJoinSetNumber[]> {
+        this.checkConnection();
+        try {
+            return await this.choiceDao!.query(
+                `DELETE FROM choice c USING question q JOIN set_number sn ON sn.set_number_id = q.set_number_id WHERE c.question_id = q.question_id AND sn.set_number_id = $1`,
+                [set_number_id]
+            );
+        } catch (error) {
+            this.logDbError("deleteChoiceBySetnumberID", error);
+            throw error;
+        }
+    }
 }

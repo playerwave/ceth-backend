@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import e, { Request, Response } from "express";
 import { SetNumberService } from "../../services/Teacher/setNumber.service";
 import { ErrorHandledController } from "../error.handled.controller";
 
@@ -107,15 +107,16 @@ export class SetNumberController extends ErrorHandledController {
 
       const deleted = await this.setNumberService.deleteSetNumber(SetNumberID);
 
-      if (!deleted) {
-        res.status(404).json({ message: "ไม่พบชุดคำถามที่ต้องการลบ" });
-        return;
+      if (deleted) {
+        res.status(200).json({
+          message: "ลบชุดคำถามสำเร็จ!",
+          data: deleted,
+        });
+      } else {
+        res.status(404).json({
+          message: "ลบชุดคำถามไม่สำเร็จ!",
+        })
       }
-
-      res.status(200).json({
-        message: "ลบชุดคำถามสำเร็จ!",
-        data: deleted,
-      });
     } catch (error) {
       res.status(500).json({
         message: "Server not found"

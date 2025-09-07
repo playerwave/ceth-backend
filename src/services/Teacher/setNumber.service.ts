@@ -3,9 +3,10 @@ import { ErrorHandledService } from "../error.handdled.service";
 import { SetNumberDao } from "../../daos/Teacher/setNumber.dao";
 import { QuestionDao } from "../../daos/Teacher/question.dao";
 import { AssessmentDao } from "../../daos/Teacher/assessment.dao";
+import { ChoiceDao } from "../../daos/Teacher/choice.dao";
 
 export class SetNumberService extends ErrorHandledService {
-  constructor(private readonly setNumberDao = new SetNumberDao(), private readonly questionDao = new QuestionDao(), private readonly assessmentDao = new AssessmentDao()) {
+  constructor(private readonly setNumberDao = new SetNumberDao(), private readonly questionDao = new QuestionDao(), private readonly assessmentDao = new AssessmentDao(), private readonly choiceDao = new ChoiceDao()) {
     super();
   }
 
@@ -86,41 +87,41 @@ export class SetNumberService extends ErrorHandledService {
 
 
   public async createSetNumber(
-  name: string,
-  status: string | undefined,
-  assessment_id: number
-): Promise<SetNumber | null> {
-  const Find_Assessment = await this.assessmentDao.getAssessmentByID(assessment_id); // ✅ ใช้ assessmentDao
-  const trimmedName = name.trim();
-  const trimmedStatus = status?.trim() || "Active";
+    name: string,
+    status: string | undefined,
+    assessment_id: number
+  ): Promise<SetNumber | null> {
+    const Find_Assessment = await this.assessmentDao.getAssessmentByID(assessment_id); // ✅ ใช้ assessmentDao
+    const trimmedName = name.trim();
+    const trimmedStatus = status?.trim() || "Active";
 
-  try {
-    if (!trimmedName) {
-      throw new Error("ชื่อชุดคำถามไม่สามารถเป็นค่าว่างได้");
-    }
+    try {
+      if (!trimmedName) {
+        throw new Error("ชื่อชุดคำถามไม่สามารถเป็นค่าว่างได้");
+      }
 
-    const allowedStatuses = ["Active", "Inactive"];
-    if (!allowedStatuses.includes(trimmedStatus)) {
-      throw new Error(`สถานะต้องเป็น 'Active' หรือ 'Inactive' เท่านั้น`);
-    }
+      const allowedStatuses = ["Active", "Inactive"];
+      if (!allowedStatuses.includes(trimmedStatus)) {
+        throw new Error(`สถานะต้องเป็น 'Active' หรือ 'Inactive' เท่านั้น`);
+      }
 
-    if (Find_Assessment.length > 0) {
-      const AssessmentID = Find_Assessment[0].assessment_id; // ✅ เอามาจาก assessment table
-      const result = await this.setNumberDao.addSetNumber(
-        trimmedName,
-        trimmedStatus,
-        AssessmentID
-      );
-      return result;
-    } else {
-      console.log(`ไม่พบ Assessment ID : ${assessment_id} อยู่ในระบบ`);
-      return null;
+      if (Find_Assessment.length > 0) {
+        const AssessmentID = Find_Assessment[0].assessment_id; // ✅ เอามาจาก assessment table
+        const result = await this.setNumberDao.addSetNumber(
+          trimmedName,
+          trimmedStatus,
+          AssessmentID
+        );
+        return result;
+      } else {
+        console.log(`ไม่พบ Assessment ID : ${assessment_id} อยู่ในระบบ`);
+        return null;
+      }
+    } catch (error) {
+      this.logError("❌ Error in createSetNumber", error);
+      throw error;
     }
-  } catch (error) {
-    this.logError("❌ Error in createSetNumber", error);
-    throw error;
   }
-}
 
   public async updateSetNumber(
     set_number_id: number,
@@ -151,30 +152,32 @@ export class SetNumberService extends ErrorHandledService {
     }
   }
 
-  public async deleteSetNumber(set_number_id: number): Promise<SetNumber | null> {
+  public async deleteSetNumber(set_number_id: number): Promise<boolean> {
     const Find_SetNumber = await this.setNumberDao.getSetNumberByID(set_number_id)
-    const Question_IN_SetNumber = await this.questionDao.getQuestionBySetNumberID(set_number_id)
+    const SetNumberID = Find_SetNumber[0].set_number_id
+    const Find_Question = await this.questionDao.getQuestionBySetNumberID(SetNumberID)
+    const Find_Choice = await this.choiceDao.getChoiceBySetNumberID(SetNumberID)
     try {
 
       if (Find_SetNumber.length > 0) {
-        const ID = Find_SetNumber[0].set_number_id
-        if (Question_IN_SetNumber.length > 0) {
-          await this.questionDao.deleteQuestionBySetNumberID(ID)
-          const deleted = await this.setNumberDao.deleteSetNumber(ID);
-          if (deleted) {
-            this.logInfo("🗑️ SetNumber deleted", { ID });
+        if (Find_Question.length > 0) {
+          if (Find_Choice.length > 0) {
+            await this.choiceDao.deleteChoiceBySetnumberID(SetNumberID)
+            await this.questionDao.deleteQuestionBySetNumberID(SetNumberID)
+            await this.setNumberDao.deleteSetNumber(SetNumberID)
+            return true
+          } else {
+            await this.questionDao.deleteQuestionBySetNumberID(SetNumberID)
+            await this.setNumberDao.deleteSetNumber(SetNumberID)
+            return true
           }
-          return deleted;
         } else {
-          const deleted = await this.setNumberDao.deleteSetNumber(ID);
-          if (deleted) {
-            this.logInfo("🗑️ SetNumber deleted", { ID });
-          }
-          return deleted;
+          await this.setNumberDao.deleteSetNumber(SetNumberID)
+          return true
         }
       } else {
         console.log(`ไม่พบชุดแบบสอบถาม ID ${set_number_id} อยู่ในระบบ`)
-        return null;
+        return false;
       }
 
     } catch (error) {
