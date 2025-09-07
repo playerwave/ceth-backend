@@ -157,6 +157,24 @@ export class AssessmentController extends ErrorHandledController {
   }
 
 
+
+public async getAssessmentFullById(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const data = await this.assessmentService.getAssessmentFullById(id);
+
+    if (!data) {
+      return res.status(404).json({ message: "Assessment not found" });
+    }
+
+    res.status(200).json(data);
+  } catch (error) {
+    this.handleError("AssessmentController.getAssessmentFullById", error, res);
+  }
+}
+
+
+
 public async getById(req: Request, res: Response): Promise<void> {
   try {
     const assessment_id = this.parseId(req.params.assessment_id);
@@ -199,6 +217,16 @@ public async getById(req: Request, res: Response): Promise<void> {
       this.handleError("AssessmentController.create", error, res);
     }
   }
+
+  public async createAssessmentFull(req: Request, res: Response): Promise<void> {
+  try {
+    const result = await this.assessmentService.createAssessmentFull(req.body);
+    res.status(201).json(result);
+  } catch (error) {
+    this.handleError("AssessmentController.createAssessmentFull", error, res);
+  }
+}
+
 
   public async update(req: Request, res: Response): Promise<void> {
     try {

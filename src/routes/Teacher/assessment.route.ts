@@ -57,4 +57,17 @@ router.get(
   wrapAsync(assessmentController.getById.bind(assessmentController))
 );
 
+
+
+
+router.get("/get-assessment-full/:id", (req, res) =>
+  assessmentController.getAssessmentFullById(req, res)
+);
+
+
+
+router.post(
+  "/create-assessment-full",
+  (req, res) => assessmentController.createAssessmentFull(req, res)
+);
 export default router;

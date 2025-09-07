@@ -332,6 +332,97 @@ export class AssessmentDao extends ErrorHandledDao {
     }
   }
 
+
+  async addAssessmentFull(data: any): Promise<Assessment> {
+    await this.checkConnection();
+
+    return await this.dataSource!.transaction(async (manager) => {
+      // 1. Insert assessment
+      const [assessment] = await manager.query(
+        `INSERT INTO assessment (assessment_name, description, status, assessment_status, create_date, last_update)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+        [
+          data.assessment_name,
+          data.description,
+          data.status,
+          data.assessment_status,
+          data.create_date,
+          data.last_update,
+        ]
+      );
+
+      // 2. Insert setNumbers
+      for (const section of data.sections) {
+        const [setNumber] = await manager.query(
+          `INSERT INTO set_number (name, status, assessment_id)
+         VALUES ($1, $2, $3) RETURNING *`,
+          [section.title, "Active", assessment.assessment_id]
+        );
+
+        // 3. Insert questions
+        for (const question of section.questions) {
+          const [q] = await manager.query(
+            `INSERT INTO question (question_text, question_number, set_number_id, question_type)
+           VALUES ($1, $2, $3, $4) RETURNING *`,
+            [question.question, 1, setNumber.set_number_id, question.type]
+          );
+
+          // 4. Insert choices
+          for (const opt of question.options || []) {
+            await manager.query(
+              `INSERT INTO choice (choice_text, question_id)
+             VALUES ($1, $2)`,
+              [opt, q.question_id]
+            );
+          }
+        }
+      }
+
+      return assessment;
+    });
+  }
+
+
+
+  async getAssessmentFullById(assessment_id: number): Promise<any> {
+  await this.checkConnection();
+
+  const assessment = await this.dataSource!.query(
+    `SELECT * FROM assessment WHERE assessment_id = $1`,
+    [assessment_id]
+  );
+
+  if (!assessment.length) return null;
+
+  const setNumbers = await this.dataSource!.query(
+    `SELECT * FROM set_number WHERE assessment_id = $1`,
+    [assessment_id]
+  );
+
+  for (const section of setNumbers) {
+    const questions = await this.dataSource!.query(
+      `SELECT * FROM question WHERE set_number_id = $1`,
+      [section.set_number_id]
+    );
+
+    for (const q of questions) {
+      const choices = await this.dataSource!.query(
+        `SELECT * FROM choice WHERE question_id = $1`,
+        [q.question_id]
+      );
+      q.choices = choices;
+    }
+
+    section.questions = questions;
+  }
+
+  return {
+    ...assessment[0],
+    sections: setNumbers,
+  };
+}
+
   async updateAssessmentWithoutName(
     assessment_id: number,
     description: string,
