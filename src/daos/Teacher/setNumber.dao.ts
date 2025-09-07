@@ -140,6 +140,20 @@ export class SetNumberDao extends ErrorHandledDao {
       throw error;
     }
   }
+
+  async deleteSetNumberByAssessmentID(assessment_id: number): Promise<SetNumber | null> {
+    this.checkConnection();
+    try {
+      const result = await this.dataSource!.query(
+        "DELETE FROM set_number WHERE assessment_id = $1 RETURNING *",
+        [assessment_id]
+      );
+      return result[0] || null;
+    } catch (error) {
+      this.logDbError("deleteSetNumberByAssessmentID", error);
+      throw error;
+    }
+  }
 }
 
 

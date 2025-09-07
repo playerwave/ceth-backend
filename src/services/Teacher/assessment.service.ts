@@ -163,9 +163,13 @@ import { SetNumber } from "../../entity/setNumbers.entity";
 import { Question } from "../../entity/question.entity";
 import { Choice } from "../../entity/choice.entity";
 import { connectDatabase } from "../../db/database";
+import { SetNumberDao } from "../../daos/Teacher/setNumber.dao";
+import { QRCodeDao } from "../../daos/Teacher/qr-code.dao";
+import { QuestionDao } from "../../daos/Teacher/question.dao";
+import { ChoiceDao } from "../../daos/Teacher/choice.dao";
 
 export class AssessmentService extends ErrorHandledService {
-  constructor(private readonly assessmentDao = new AssessmentDao()) {
+  constructor(private readonly assessmentDao = new AssessmentDao(), private readonly setNumberDao = new SetNumberDao(), private readonly questionDao = new QuestionDao(), private readonly choiceDao = new ChoiceDao()) {
     super();
   }
 
@@ -284,20 +288,6 @@ export class AssessmentService extends ErrorHandledService {
       throw error;
     }
   }
-
-  public async deleteAssessment(assessment_id: number): Promise<Assessment | null> {
-    try {
-      const deleted = await this.assessmentDao.deleteAssessment(assessment_id);
-      await redis.del("assessment:all");
-      return deleted;
-    } catch (error) {
-      this.logError("❌ Error in deleteAssessment", error);
-      throw error;
-    }
-  }
-
-
-
   // ------------------- ใหม่: create ทั้งก้อน -------------------
 
 
@@ -395,5 +385,46 @@ export class AssessmentService extends ErrorHandledService {
       await redis.del("assessment:all");
       return { assessment_id, message: "✅ Assessment created successfully" };
     });
+  }
+
+  public async deleteAssessment(assessment_id: number): Promise<boolean> {
+    const Find_Assessment = await this.assessmentDao.getAssessmentByID(assessment_id)
+    const AssessmentID = Find_Assessment[0].assessment_id
+    const Find_SetNumber = await this.setNumberDao.getSetNumbersByAssessmentID(AssessmentID)
+    const Find_Question = await this.questionDao.getQuestionByAssessmentID(AssessmentID)
+    const Find_Choice = await this.choiceDao.getChoiceByAssessmentID(AssessmentID)
+    try {
+      if (Find_Assessment.length > 0) {
+        if (Find_SetNumber.length > 0) {
+          if (Find_Question.length > 0) {
+            if (Find_Choice.length > 0) {
+              await this.choiceDao.deleteChoiceByAssesmentID(AssessmentID)
+              await this.questionDao.deleteChoiceByAssesmentID(AssessmentID)
+              await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
+              await this.assessmentDao.deleteAssessment(AssessmentID)
+              return true;
+            } else {
+              await this.questionDao.deleteChoiceByAssesmentID(AssessmentID)
+              await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
+              await this.assessmentDao.deleteAssessment(AssessmentID)
+              return true;
+            }
+          } else {
+            await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
+            await this.assessmentDao.deleteAssessment(AssessmentID)
+            return true;
+          }
+        } else {
+          await this.assessmentDao.deleteAssessment(AssessmentID);
+          return true;
+        }
+      } else {
+        console.log(`ไม่พบ Assessment ID ${assessment_id} อยู่ในระบบ`)
+        return false;
+      }
+    } catch (error) {
+      this.logError("❌ Error in getAssessmentFullById", error);
+      throw error;
+    }
   }
 }

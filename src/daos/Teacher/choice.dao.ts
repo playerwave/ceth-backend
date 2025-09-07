@@ -10,6 +10,19 @@ type ChoiceRow = {
     choice_number: number;
 };
 
+export type ChoiceJoinAssessment = {
+    choice_id: number;
+    choice_text: string;
+    question_id: number;
+    choice_number: number;
+    question_text: string;
+    question_number: number;
+    set_number_id: number;
+    question_type: string;
+    name: string;
+    status: string
+    assessment_id: number
+}
 
 export class ChoiceDao extends ErrorHandledDao {
     private choiceDao: DataSource | null = null;
@@ -99,6 +112,19 @@ export class ChoiceDao extends ErrorHandledDao {
         }
     }
 
+    public async getChoiceByAssessmentID(assessment_id: number): Promise<ChoiceJoinAssessment[]> {
+        this.checkConnection();
+        try {
+            return await this.choiceDao!.query(
+                `SELECT q.question_id, q.question_text, q.question_number, q.set_number_id, q.question_type, sn.name, sn.status, sn.assessment_id FROM question as q INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id WHERE sn.assessment_id = $1`,
+                [assessment_id]
+            );
+        } catch (error) {
+            this.logDbError("getChoiceByAssessmentID", error);
+            throw error;
+        }
+    }
+
     public async getChoiceNumberByQuestionID(question_id: number): Promise<number> {
         this.checkConnection();
         try {
@@ -161,6 +187,19 @@ export class ChoiceDao extends ErrorHandledDao {
             );
         } catch (error) {
             this.logDbError("deleteChoice", error);
+            throw error;
+        }
+    }
+
+    public async deleteChoiceByAssesmentID(assessment_id: number): Promise<ChoiceJoinAssessment[]> {
+        this.checkConnection();
+        try {
+            return await this.choiceDao!.query(
+                `DELETE FROM choice c USING question q JOIN set_number sn ON q.set_number_id = sn.set_number_id WHERE c.question_id = q.question_id AND sn.assessment_id = $1`,
+                [assessment_id]
+            );
+        } catch (error) {
+            this.logDbError("deleteChoiceByAssesmentID", error);
             throw error;
         }
     }

@@ -45,9 +45,7 @@ router.put(
 
 // ✅ DELETE /delete-assessment/:assessment_id → ลบแบบประเมิน
 router.delete(
-  "/delete-assessment/:assessment_id",
-  verifyToken,
-  wrapAsync(assessmentController.delete.bind(assessmentController))
+  "/delete-assessment/:assessment_id", (assessmentController.delete.bind(assessmentController))
 );
 
 // ✅ GET /get-assessment/:assessment_id → ดึงแบบประเมินตาม ID

@@ -51,7 +51,7 @@
     "reflect-metadata": "^0.2.2",
     "streamifier": "^0.1.1",
     "typeorm": "^0.3.25",
-    "uuid": "9.0.1",
+    "uuid": "^9.0.1",
     "winston": "^3.17.0",
     "xlsx": "^0.18.5",
     "xss": "^1.0.15"
