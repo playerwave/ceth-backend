@@ -32,6 +32,11 @@ export class QuestionService extends ErrorHandledService {
         }
     }
 
+    public async addChoice(question_id: number, choice_text: string) {
+        return await this.choiceDao.addChoice(choice_text, question_id);
+    }
+
+
     private normalizeQuestionType(raw: string): Question["question_type"] {
         const s = (raw ?? "").trim().toLowerCase();
         if (s === "single answer" || s === "single") return "Single answer";

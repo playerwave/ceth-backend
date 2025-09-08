@@ -32,6 +32,12 @@ router.post(
     "/add", (questionController.create.bind(questionController))
 );
 
+
+router.post(
+    "/add-with-choices",
+    (questionController.createWithChoices.bind(questionController))
+);
+
 router.put(
     "/edit/:question_id", (questionController.update.bind(questionController))
 );

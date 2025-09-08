@@ -51,6 +51,48 @@ export class QuestionController extends ErrorHandledController {
         }
     }
 
+    //สำหรับduplicate
+    // QuestionController.ts
+    public async createWithChoices(req: Request, res: Response): Promise<void> {
+        try {
+            const data = this.parseQuestionPayload(req.body);
+
+            // 1) สร้าง question
+            const createdQ = await this.questionService.addQuestion(
+                data.question_text,
+                data.set_number_id,
+                data.question_type
+            );
+
+            if (!createdQ) {
+                res.status(400).json({ message: "ไม่สามารถสร้างคำถามได้" });
+                return;
+            }
+
+            // 2) loop insert choices
+            const options = req.body.options || [];  // ✅ แก้ตรงนี้
+            const createdChoices = [];
+            for (const o of options) {
+                const newChoice = await this.questionService.addChoice(
+                    createdQ.question_id,
+                    o.choice_text
+                );
+                createdChoices.push(newChoice);
+            }
+
+            res.status(201).json({
+                message: "เพิ่มคำถามพร้อมตัวเลือกสำเร็จ!",
+                question: createdQ,
+                choices: createdChoices,
+            });
+        } catch (err: any) {
+            this.handleError("QuestionController.createWithChoices", err, res);
+        }
+    }
+
+
+
+
     public async getQuestionBySetNumberID(req: Request, res: Response): Promise<void> {
         const { set_number_id } = req.params
         const SetNumberID = parseInt(set_number_id)
