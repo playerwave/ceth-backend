@@ -8,9 +8,7 @@
     "build": "npx esbuild src/server.ts --bundle --platform=node --target=node22 --external:uuid --outfile=dist/server.js && cp .env.production dist/.env",
     "deploy": "npm run build && ./deploy.sh"
   },
-  "overrides": {
-    "uuid": "9.0.1"
-  },
+ 
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -387,44 +387,75 @@ export class AssessmentService extends ErrorHandledService {
     });
   }
 
-  public async deleteAssessment(assessment_id: number): Promise<boolean> {
-    const Find_Assessment = await this.assessmentDao.getAssessmentByID(assessment_id)
-    const AssessmentID = Find_Assessment[0].assessment_id
-    const Find_SetNumber = await this.setNumberDao.getSetNumbersByAssessmentID(AssessmentID)
-    const Find_Question = await this.questionDao.getQuestionByAssessmentID(AssessmentID)
-    const Find_Choice = await this.choiceDao.getChoiceByAssessmentID(AssessmentID)
-    try {
-      if (Find_Assessment.length > 0) {
-        if (Find_SetNumber.length > 0) {
-          if (Find_Question.length > 0) {
-            if (Find_Choice.length > 0) {
-              await this.choiceDao.deleteChoiceByAssesmentID(AssessmentID)
-              await this.questionDao.deleteChoiceByAssesmentID(AssessmentID)
-              await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
-              await this.assessmentDao.deleteAssessment(AssessmentID)
-              return true;
-            } else {
-              await this.questionDao.deleteChoiceByAssesmentID(AssessmentID)
-              await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
-              await this.assessmentDao.deleteAssessment(AssessmentID)
-              return true;
-            }
-          } else {
-            await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
-            await this.assessmentDao.deleteAssessment(AssessmentID)
-            return true;
-          }
-        } else {
-          await this.assessmentDao.deleteAssessment(AssessmentID);
-          return true;
-        }
-      } else {
-        console.log(`ไม่พบ Assessment ID ${assessment_id} อยู่ในระบบ`)
-        return false;
-      }
-    } catch (error) {
-      this.logError("❌ Error in getAssessmentFullById", error);
-      throw error;
-    }
+//   public async deleteAssessment(assessment_id: number): Promise<boolean> {
+//     const Find_Assessment = await this.assessmentDao.getAssessmentByID(assessment_id)
+//     const AssessmentID = Find_Assessment[0].assessment_id
+//     const Find_SetNumber = await this.setNumberDao.getSetNumbersByAssessmentID(AssessmentID)
+//     const Find_Question = await this.questionDao.getQuestionByAssessmentID(AssessmentID)
+//     const Find_Choice = await this.choiceDao.getChoiceByAssessmentID(AssessmentID)
+//     try {
+//       if (Find_Assessment.length > 0) {
+//         if (Find_SetNumber.length > 0) {
+//           if (Find_Question.length > 0) {
+//             if (Find_Choice.length > 0) {
+//               await this.choiceDao.deleteChoiceByAssesmentID(AssessmentID)
+//               await this.questionDao.deleteChoiceByAssesmentID(AssessmentID)
+//               await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
+//               await this.assessmentDao.deleteAssessment(AssessmentID)
+//               return true;
+//             } else {
+//               await this.questionDao.deleteChoiceByAssesmentID(AssessmentID)
+//               await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
+//               await this.assessmentDao.deleteAssessment(AssessmentID)
+//               return true;
+//             }
+//           } else {
+//             await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID)
+//             await this.assessmentDao.deleteAssessment(AssessmentID)
+//             return true;
+//           }
+//         } else {
+//           await this.assessmentDao.deleteAssessment(AssessmentID);
+//           return true;
+//         }
+//       } else {
+//         console.log(`ไม่พบ Assessment ID ${assessment_id} อยู่ในระบบ`)
+//         return false;
+//       }
+//     } catch (error) {
+//       this.logError("❌ Error in getAssessmentFullById", error);
+//       throw error;
+//     }
+//   }
+
+public async deleteAssessment(assessment_id: number): Promise<boolean> {
+  const Find_Assessment = await this.assessmentDao.getAssessmentByID(assessment_id);
+
+  if (Find_Assessment.length === 0) {
+    console.log(`ไม่พบ Assessment ID ${assessment_id} อยู่ในระบบ`);
+    return false;
   }
+
+  const AssessmentID = Find_Assessment[0].assessment_id;
+  const Find_SetNumber = await this.setNumberDao.getSetNumbersByAssessmentID(AssessmentID);
+  const Find_Question = await this.questionDao.getQuestionByAssessmentID(AssessmentID);
+  const Find_Choice = await this.choiceDao.getChoiceByAssessmentID(AssessmentID);
+
+  try {
+    if (Find_SetNumber.length > 0) {
+      if (Find_Question.length > 0) {
+        if (Find_Choice.length > 0) {
+          await this.choiceDao.deleteChoiceByAssesmentID(AssessmentID);
+        }
+        await this.questionDao.deleteChoiceByAssesmentID(AssessmentID);
+      }
+      await this.setNumberDao.deleteSetNumberByAssessmentID(AssessmentID);
+    }
+    await this.assessmentDao.deleteAssessment(AssessmentID);
+    return true;
+  } catch (error) {
+    this.logError("❌ Error in deleteAssessment", error);
+    throw error;
+  }
+}
 }

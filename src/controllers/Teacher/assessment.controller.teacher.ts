@@ -258,22 +258,38 @@ public async getById(req: Request, res: Response): Promise<void> {
     }
   }
 
-  public async delete(req: Request, res: Response): Promise<void> {
-    try {
-      const assessment_id = this.parseId(req.params.assessment_id);
-      const deleted = await this.assessmentService.deleteAssessment(
-        assessment_id
-      );
+  // public async delete(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const assessment_id = this.parseId(req.params.assessment_id);
+  //     const deleted = await this.assessmentService.deleteAssessment(
+  //       assessment_id
+  //     );
 
-      if (deleted) {
-        res.status(200).json({ message: "ลบแบบประเมินสำเร็จ!" });
-      } else {
-        res.status(404).json({ message: "ไม่พบแบบประเมินที่ต้องการลบ!" });
-      }
-    } catch (error) {
-      this.handleError("AssessmentController.delete", error, res);
+  //     if (deleted) {
+  //       res.status(200).json({ message: "ลบแบบประเมินสำเร็จ!" });
+  //     } else {
+  //       res.status(404).json({ message: "ไม่พบแบบประเมินที่ต้องการลบ!" });
+  //     }
+  //   } catch (error) {
+  //     this.handleError("AssessmentController.delete", error, res);
+  //   }
+  // }
+
+
+  public async delete(req: Request, res: Response): Promise<void> {
+  try {
+    const id = parseInt(req.params.id, 10); // ✅ อ่านจาก params.id
+    const deleted = await this.assessmentService.deleteAssessment(id);
+
+    if (deleted) {
+      res.status(200).json({ message: "ลบแบบประเมินสำเร็จ!" });
+    } else {
+      res.status(404).json({ message: "ไม่พบแบบประเมินที่ต้องการลบ!" });
     }
+  } catch (error) {
+    this.handleError("AssessmentController.delete", error, res);
   }
+}
 
   // 🔧 Utils
   private parseId(value: string): number {
