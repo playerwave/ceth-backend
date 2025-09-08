@@ -123,6 +123,46 @@ export class SetNumberService extends ErrorHandledService {
     }
   }
 
+
+  //duplicate 
+  public async duplicateSetNumber(set_number_id: number): Promise<SetNumber | null> {
+    // 1) หา set_number เดิม
+    const oldSet = await this.setNumberDao.getSetNumberByID(set_number_id);
+    if (!oldSet.length) return null;
+
+    const original = oldSet[0];
+
+    // 2) สร้าง set_number ใหม่
+    const newSet = await this.setNumberDao.addSetNumber(
+      original.name + " (Copy)",
+      original.status,
+      original.assessment_id
+    );
+
+    // 3) ดึงคำถามทั้งหมดของหัวข้อเก่า
+    const oldQuestions = await this.questionDao.getQuestionBySetNumberID(original.set_number_id);
+
+    for (const q of oldQuestions) {
+      // 4) สร้างคำถามใหม่ผูกกับ set_number ใหม่
+      const newQuestion = await this.questionDao.addQuestion(
+        q.question_text,
+        newSet.set_number_id,
+        q.question_type
+      );
+
+      // 5) ดึง choices ของคำถามเก่า
+      const oldChoices = await this.choiceDao.getChoiceByQuestionID(q.question_id);
+
+      for (const c of oldChoices) {
+        // 6) คัดลอก choice ใหม่ไปยัง question ใหม่
+        await this.choiceDao.addChoice(c.choice_text, newQuestion.question_id);
+      }
+    }
+
+    return newSet;
+  }
+
+
   public async updateSetNumber(
     set_number_id: number,
     name: string,

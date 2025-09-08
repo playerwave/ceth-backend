@@ -68,6 +68,30 @@ export class SetNumberController extends ErrorHandledController {
     }
   }
 
+
+  public async duplicate(req: Request, res: Response): Promise<void> {
+    const { set_number_id } = req.params;
+    const SetNumberID = parseInt(set_number_id);
+
+    try {
+      const duplicated = await this.setNumberService.duplicateSetNumber(SetNumberID);
+      if (duplicated) {
+        res.status(200).json({
+          message: "คัดลอกหัวข้อสำเร็จ!",
+          data: duplicated,
+        });
+      } else {
+        res.status(404).json({
+          message: "ไม่พบหัวข้อที่ต้องการคัดลอก",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Server not found" });
+      this.handleError("SetNumberController.duplicate", error, res);
+    }
+  }
+
+
   public async update(req: Request, res: Response): Promise<void> {
     const { set_number_id } = req.params
     const { name, status, assessment_id } = req.body

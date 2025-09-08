@@ -29,6 +29,14 @@ router.post(
   "/create-set-number", ((req, res) => setNumberController.create(req, res))
 );
 
+//duplicate
+router.post(
+  "/duplicate-set-number/:set_number_id",
+  (req, res) => setNumberController.duplicate(req, res)
+);
+
+
+
 // ✅ PUT /update-set-number/:id → แก้ไขชุดคำถาม
 router.put(
   "/update-set-number/:set_number_id", ((req, res) => setNumberController.update(req, res))
