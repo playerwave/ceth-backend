@@ -104,18 +104,39 @@ export class QuestionDao extends ErrorHandledDao {
         }
     }
 
+    // public async getQuestionBySetNumberID(set_number_id: number): Promise<Question[]> {
+    //     this.checkConnection();
+    //     try {
+    //         return await this.questionDao!.query(
+    //             `SELECT sn.name, q.question_id, q.question_text, q.question_number, q.question_type FROM question as q INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id WHERE q.set_number_id = $1 ORDER BY sn.set_number_id ASC, q.question_number ASC`,
+    //             [set_number_id]
+    //         );
+    //     } catch (error) {
+    //         this.logDbError("getQuestionBySetNumberID", error);
+    //         throw error;
+    //     }
+    // }
+
+
+    //ต้องใช้ตัวนี้เผื่อให้สลับคำถามได้
     public async getQuestionBySetNumberID(set_number_id: number): Promise<Question[]> {
         this.checkConnection();
         try {
             return await this.questionDao!.query(
-                `SELECT sn.name, q.question_id, q.question_text, q.question_number, q.question_type FROM question as q INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id WHERE q.set_number_id = $1 ORDER BY sn.set_number_id ASC, q.question_number ASC`,
-                [set_number_id]
+                `SELECT sn.name, q.question_id, q.question_text, q.question_number, q.question_type
+             FROM question as q
+             INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id
+             WHERE q.set_number_id = $1
+            `, 
+            [set_number_id]
             );
         } catch (error) {
             this.logDbError("getQuestionBySetNumberID", error);
             throw error;
         }
     }
+
+
 
     async addQuestion(
         question_text: string,
@@ -396,10 +417,10 @@ export class QuestionDao extends ErrorHandledDao {
 //         this.checkConnection();
 //         try {
 //             return await this.questionDao!.query(
-//                 `SELECT sn.name, q.question_id, q.question_text, q.question_number, q.question_type 
-//                  FROM question as q 
-//                  INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id 
-//                  WHERE q.set_number_id = $1 
+//                 `SELECT sn.name, q.question_id, q.question_text, q.question_number, q.question_type
+//                  FROM question as q
+//                  INNER JOIN set_number as sn ON q.set_number_id = sn.set_number_id
+//                  WHERE q.set_number_id = $1
 //                  ORDER BY sn.set_number_id ASC, q.question_number ASC`,
 //                 [set_number_id]
 //             );
