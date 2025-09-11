@@ -785,7 +785,7 @@ export class ActivityDao extends ErrorHandledDao {
       
       // 1. หา user และ student โดย username พร้อมข้อมูลเพิ่มเติม
       const query = `
-        SELECT s.students_id, u.username, u.password, s.first_name, s.last_name, d.department_name
+        SELECT s.students_id, u.username, u.password, s.first_name_tha, s.last_name_tha, d.department_short_name
         FROM students s
         INNER JOIN users u ON s.users_id = u.users_id
         LEFT JOIN department d ON s.department_id = d.department_id
@@ -809,9 +809,9 @@ export class ActivityDao extends ErrorHandledDao {
           return {
             students_id: user.students_id,
             username: user.username,
-            first_name: user.first_name || '',
-            last_name: user.last_name || '',
-            department: user.department_name || 'ไม่ระบุ'
+            first_name: user.first_name_tha || '',
+            last_name: user.last_name_tha || '',
+            department: user.department_short_name || 'ไม่ระบุ'
           };
         } else {
           console.log(`❌ [DAO] Password incorrect`);

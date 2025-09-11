@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import { TeacherStudentDao } from "../../daos/Teacher/teacherStudent.dao";
 import { Students } from "../../entity/students.entity";
 import { Users } from "../../entity/users.entity";
@@ -6,57 +5,20 @@ import { ErrorHandledService } from "../error.handdled.service";
 import { connectDatabase } from "../../db/database";
 import bcrypt from "bcryptjs";
 import { Grade } from "../../entity/grade.entity";
-
-// Type definition for multer file
-interface MulterFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  path: string;
-  size: number;
-}
-
-// Type definition for student data from Excel
-interface StudentExcelData {
-  name: string;
-  engName: string;
-  code: string;
-  major: string;
-  softSkill: number;
-  hardSkill: number;
-}
-
-// Type definition for bulk enrollment data from Excel
-interface BulkEnrollmentData {
-  timestamp: string;  // ประทับเวลา
-  studentId: string;  // รหัสนิสิต
-  name: string;       // ชื่อ-สกุล
-  department: string; // สาขาวิชา
-  email: string;      // E-mail
-}
+import redis from "../../config/redis";
+import { 
+  FileProcessingUtils, 
+  MulterFile, 
+  StudentExcelData, 
+  BulkEnrollmentData 
+} from "../../utils/fileProcessingUtils";
 
 export class TeacherStudentService extends ErrorHandledService {
   private readonly studentDao = new TeacherStudentDao();
 
-  // ✅ แยกชื่อและนามสกุล
+  // ✅ Helper method ที่ delegate ไปยัง FileProcessingUtils
   private splitName(fullName: string): { firstName: string; lastName: string } {
-    if (!fullName || typeof fullName !== 'string') {
-      return { firstName: '', lastName: '' };
-    }
-    
-    const trimmedName = fullName.trim();
-    const lastSpaceIndex = trimmedName.lastIndexOf(' ');
-    
-    if (lastSpaceIndex === -1) {
-      // ถ้าไม่มี space ให้ถือว่าเป็นชื่อทั้งหมด
-      return { firstName: trimmedName, lastName: '' };
-    }
-    
-    const firstName = trimmedName.substring(0, lastSpaceIndex).trim();
-    const lastName = trimmedName.substring(lastSpaceIndex + 1).trim();
-    
-    return { firstName, lastName };
+    return FileProcessingUtils.splitName(fullName);
   }
 
   // ✅ กำหนด level ตาม username และหา grade_id ที่ตรงกัน
@@ -190,9 +152,7 @@ export class TeacherStudentService extends ErrorHandledService {
       }
 
       // ✅ อ่านข้อมูลจาก Excel
-      const workbook = XLSX.readFile(file.path);
-      const sheetName = workbook.SheetNames[0];
-      const data = XLSX.utils.sheet_to_json<StudentExcelData>(workbook.Sheets[sheetName]);
+      const data = FileProcessingUtils.readExcelFile<StudentExcelData>(file.path);
 
       console.log(`📊 Found ${data.length} rows in Excel file`);
 
@@ -211,6 +171,9 @@ export class TeacherStudentService extends ErrorHandledService {
       // ✅ Insert students
       console.log(`📝 Inserting ${students.length} students...`);
       await this.studentDao.insertStudents(students);
+
+      // ✅ Clear cache หลังจาก insert students
+      await redis.del("teacher:students:all");
 
       // ✅ ลบไฟล์หลังประมวลผลเสร็จ
       try {
@@ -247,6 +210,9 @@ export class TeacherStudentService extends ErrorHandledService {
       
       const result = await this.studentDao.resetAllStudents();
       
+      // ✅ Clear cache หลังจาก reset students
+      await redis.del("teacher:students:all");
+      
       this.logInfo("✅ Reset all students successfully", { deletedCount: result.deletedCount });
       
       return {
@@ -260,14 +226,106 @@ export class TeacherStudentService extends ErrorHandledService {
     }
   }
 
+  public async resetStudentTimes(activityId: number): Promise<any> {
+    try {
+      const result = await this.studentDao.resetStudentTimes(activityId);
+      this.logInfo("✅ Reset student times completed", { activityId, result });
+      return result;
+    } catch (error) {
+      this.logError("❌ Error resetting student times", error);
+      throw error;
+    }
+  }
+
   // ================= GET ALL USERS =================
   public async getAllUsers(): Promise<Partial<Students>[]> {
+    const cacheKey = "teacher:students:all";
+
     try {
+      // ✅ ลองดึงจาก cache ก่อน
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        this.logInfo("📦 Returning cached students data");
+        return JSON.parse(cached);
+      }
+
+      // ✅ ดึงจาก DAO
       const users = await this.studentDao.getAllUsers();
-      this.logInfo("✅ Fetched all users", { count: users.length });
+      
+      // ✅ เก็บลง cache (60 วินาที)
+      await redis.set(cacheKey, JSON.stringify(users), "EX", 60);
+      
+      this.logInfo("📤 Students data retrieved and cached", { count: users.length });
       return users;
     } catch (error) {
       this.logError("❌ Error in getAllUsers", error);
+      throw error;
+    }
+  }
+
+  // ================= BULK CHECK-IN/CHECK-OUT ACTIVITY =================
+  public async bulkCheckInOut(
+    file: MulterFile, 
+    activityId: number, 
+    action: 'checkin' | 'checkout'
+  ): Promise<{ 
+    message: string; 
+    processedCount: number; 
+    totalRows: number; 
+    errors?: string[] 
+  }> {
+    const errors: string[] = [];
+    
+    try {
+      console.log(`📁 Processing bulk ${action} file: ${file.originalname} for activity: ${activityId}`);
+      
+      // ✅ ตรวจสอบ file size และอ่านข้อมูลจาก Excel
+      FileProcessingUtils.validateFileSize(file);
+      const rawData = FileProcessingUtils.readExcelFile(file.path);
+      const data = FileProcessingUtils.mapBulkEnrollmentData(rawData);
+      
+      console.log(`🧹 Data cleaning completed. Filtered from ${rawData.length} to ${data.length} valid rows`);
+      
+      // ✅ แสดงตัวอย่างข้อมูลที่ทำความสะอาดแล้ว
+      FileProcessingUtils.logSampleData(data, action);
+
+      console.log(`📊 Found ${data.length} rows in Excel file`);
+
+      if (data.length === 0) {
+        throw new Error("No data found in Excel file");
+      }
+
+      // ✅ ตรวจสอบว่ากิจกรรมมีอยู่จริง
+      const activityExists = await this.studentDao.checkActivityExists(activityId);
+      if (!activityExists) {
+        throw new Error(`Activity with ID ${activityId} not found`);
+      }
+
+      // ✅ ประมวลผลการ check-in/check-out
+      console.log(`🔄 Processing bulk ${action}...`);
+      const result = await this.studentDao.bulkCheckInOut(activityId, action, data);
+
+      // ✅ ลบไฟล์หลังประมวลผลเสร็จ
+      FileProcessingUtils.cleanupTempFile(file.path);
+
+      this.logInfo(`✅ Bulk ${action} completed successfully`, { 
+        activityId,
+        action,
+        processedCount: result.processedCount,
+        totalRows: data.length 
+      });
+
+      const actionText = action === 'checkin' ? 'ลงชื่อเข้าร่วม' : 'ลงชื่อออก';
+
+      return { 
+        message: `Successfully ${actionText} ${result.processedCount} students in activity ${activityId}`,
+        processedCount: result.processedCount,
+        totalRows: data.length,
+        errors: result.errors.length > 0 ? result.errors : undefined
+      };
+
+    } catch (error) {
+      this.logError(`❌ Error in bulk${action.charAt(0).toUpperCase() + action.slice(1)}`, error);
       throw error;
     }
   }
@@ -284,50 +342,15 @@ export class TeacherStudentService extends ErrorHandledService {
     try {
       console.log(`📁 Processing bulk enrollment file: ${file.originalname} for activity: ${activityId}`);
       
-      // ✅ ตรวจสอบ file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error("File size exceeds 10MB limit");
-      }
-
-      // ✅ อ่านข้อมูลจาก Excel
-      const workbook = XLSX.readFile(file.path);
-      const sheetName = workbook.SheetNames[0];
-      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-      
-      // ✅ แปลง column names เป็นภาษาอังกฤษ + Data Cleaning
-      const data = rawData
-        .map((row: any) => ({
-          timestamp: row['ประทับเวลา'],
-          studentId: row['รหัสนิสิต'],
-          name: row['ชื่อ-สกุล'] || '',
-          department: row['สาขาวิชา'] || '',
-          email: row['E-mail'] || ''
-        }))
-        .filter((row: any) => {
-          // ✅ กรองเอาเฉพาะแถวที่มีรหัสนิสิต
-          if (!row.studentId) return false;
-          
-          // ✅ ทำความสะอาดรหัสนิสิต (เอาเฉพาะตัวเลข)
-          const cleanStudentId = String(row.studentId).replace(/[^0-9]/g, '');
-          
-          // ✅ ตรวจสอบว่ารหัสนิสิตมีความยาวที่ถูกต้อง (8 หลัก)
-          if (cleanStudentId.length !== 8) return false;
-          
-          // ✅ อัพเดท studentId เป็นค่าที่ทำความสะอาดแล้ว
-          row.studentId = cleanStudentId;
-          
-          return true;
-        });
+      // ✅ ตรวจสอบ file size และอ่านข้อมูลจาก Excel
+      FileProcessingUtils.validateFileSize(file);
+      const rawData = FileProcessingUtils.readExcelFile(file.path);
+      const data = FileProcessingUtils.mapBulkEnrollmentData(rawData);
       
       console.log(`🧹 Data cleaning completed. Filtered from ${rawData.length} to ${data.length} valid rows`);
       
       // ✅ แสดงตัวอย่างข้อมูลที่ทำความสะอาดแล้ว
-      if (data.length > 0) {
-        console.log("📋 Sample cleaned data:");
-        data.slice(0, 3).forEach((row, index) => {
-          console.log(`  Row ${index + 1}: Student ID: ${row.studentId}, Name: ${row.name}`);
-        });
-      }
+      FileProcessingUtils.logSampleData(data, "enrollment");
 
       console.log(`📊 Found ${data.length} rows in Excel file`);
 
@@ -346,15 +369,7 @@ export class TeacherStudentService extends ErrorHandledService {
       const result = await this.studentDao.bulkEnrollStudents(activityId, data);
 
       // ✅ ลบไฟล์หลังประมวลผลเสร็จ
-      try {
-        const fs = require('fs');
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-          console.log(`🗑️ Deleted temporary file: ${file.path}`);
-        }
-      } catch (deleteError) {
-        console.error(`⚠️ Failed to delete temporary file: ${file.path}`, deleteError);
-      }
+      FileProcessingUtils.cleanupTempFile(file.path);
 
       this.logInfo("✅ Bulk enrollment completed successfully", { 
         activityId,

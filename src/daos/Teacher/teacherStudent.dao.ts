@@ -1,13 +1,44 @@
+import { DataSource } from "typeorm";
 import { connectDatabase } from "../../db/database";
 import { Students } from "../../entity/students.entity";
 import { Department } from "../../entity/department.entity";
-import { getRepository } from "typeorm";
+import { ErrorHandledDao } from "../error.handled.dao";
 
-export class TeacherStudentDao {
-  // ✅ แปลงชื่อย่อ department เป็น department_id
-  private async convertDepartmentShortNameToId(connection: any, shortName: string): Promise<number | null> {
+export class TeacherStudentDao extends ErrorHandledDao {
+  private dataSource: DataSource | null = null;
+
+  constructor() {
+    super();
+    // ไม่เรียก initialize() ทันที เพื่อให้ test สามารถ mock ได้
+  }
+
+  private async initialize(): Promise<void> {
     try {
-      const departmentRepo = connection.getRepository(Department);
+      console.log("🔄 Initializing TeacherStudentDao...");
+      this.dataSource = await connectDatabase();
+      console.log("✅ TeacherStudentDao initialized successfully");
+    } catch (error) {
+      console.error("❌ Failed to initialize TeacherStudentDao:", error);
+      this.logDbError("initialize", error);
+      throw error;
+    }
+  }
+
+  private async checkConnection(): Promise<void> {
+    if (!this.dataSource?.isConnected) {
+      console.log("🔄 Database connection not established, attempting to initialize...");
+      try {
+        await this.initialize();
+      } catch (error) {
+        throw new Error(`❌ Database connection is not established: ${error}`);
+      }
+    }
+  }
+  // ✅ แปลงชื่อย่อ department เป็น department_id
+  private async convertDepartmentShortNameToId(shortName: string): Promise<number | null> {
+    try {
+      await this.checkConnection();
+      const departmentRepo = this.dataSource!.getRepository(Department);
       const department = await departmentRepo.findOne({
         where: { department_short_name: shortName }
       });
@@ -21,19 +52,21 @@ export class TeacherStudentDao {
       }
     } catch (error) {
       console.error(`❌ Error converting department short name ${shortName}:`, error);
+      this.logDbError("convertDepartmentShortNameToId", error);
       return null;
     }
   }
 
   // ✅ แปลงข้อมูลนักเรียนทั้งหมดให้มี department_id ที่ถูกต้อง
-  private async convertStudentData(connection: any, students: Partial<Students>[]): Promise<Partial<Students>[]> {
+  private async convertStudentData(students: Partial<Students>[]): Promise<Partial<Students>[]> {
+    await this.checkConnection();
     const convertedStudents: Partial<Students>[] = [];
     
     for (const student of students) {
       try {
         // ✅ ถ้ามี department_id เป็น string (ชื่อย่อ) ให้แปลงเป็น ID
         if (student.department_id && typeof student.department_id === 'string') {
-          const departmentId = await this.convertDepartmentShortNameToId(connection, student.department_id);
+          const departmentId = await this.convertDepartmentShortNameToId(student.department_id);
           
           if (departmentId !== null) {
             // ✅ แปลงข้อมูลใหม่
@@ -53,6 +86,7 @@ export class TeacherStudentDao {
         }
       } catch (error) {
         console.error(`❌ Error converting student data for ${student.first_name_tha}:`, error);
+        this.logDbError("convertStudentData", error);
       }
     }
     
@@ -62,282 +96,172 @@ export class TeacherStudentDao {
 
   // ✅ insertStudents แบบ loop ป้องกัน error + connection health check
   public async insertStudents(students: Partial<Students>[]): Promise<void> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
+    try {
+      // ✅ แปลงข้อมูลนักเรียนก่อน insert
+      console.log("🔄 Converting student data...");
+      const convertedStudents = await this.convertStudentData(students);
         
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
-        
-        // ✅ แปลงข้อมูลนักเรียนก่อน insert
-        console.log("🔄 Converting student data...");
-        const convertedStudents = await this.convertStudentData(connection, students);
-        
-        if (convertedStudents.length === 0) {
-          console.warn("⚠️ No valid students to insert after conversion");
-          return;
-        }
-        
-        const studentRepo = connection.getRepository(Students);
-        console.log(`📊 Starting to insert ${convertedStudents.length} students...`);
+      if (convertedStudents.length === 0) {
+        console.warn("⚠️ No valid students to insert after conversion");
+        return;
+      }
+      
+      const studentRepo = this.dataSource!.getRepository(Students);
+      console.log(`📊 Starting to insert ${convertedStudents.length} students...`);
 
-        // ✅ ใช้ batch insert แทน loop เพื่อประสิทธิภาพ
-        const batchSize = 50; // ลดจาก 100 เป็น 50 เพื่อความเสถียร
-        for (let i = 0; i < convertedStudents.length; i += batchSize) {
-          const batch = convertedStudents.slice(i, i + batchSize);
+      // ✅ ใช้ batch insert แทน loop เพื่อประสิทธิภาพ
+      const batchSize = 50; // ลดจาก 100 เป็น 50 เพื่อความเสถียร
+      for (let i = 0; i < convertedStudents.length; i += batchSize) {
+        const batch = convertedStudents.slice(i, i + batchSize);
+        
+        try {
+          // ✅ ตรวจสอบ connection health ก่อนแต่ละ batch
+          if (!this.dataSource!.isConnected) {
+            console.log("🔄 Connection lost during batch processing, reconnecting...");
+            await this.initialize();
+          }
           
-          try {
-            // ✅ ตรวจสอบ connection health ก่อนแต่ละ batch
-            if (!connection.isConnected) {
-              console.log("🔄 Connection lost during batch processing, reconnecting...");
-              await connection.connect();
-            }
-            
-            await studentRepo.save(batch);
-            console.log(`✅ Inserted batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(convertedStudents.length/batchSize)} (${batch.length} students)`);
-            
-            // ✅ รอเล็กน้อยระหว่าง batch เพื่อให้ database พัก
-            if (i + batchSize < convertedStudents.length) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
-          } catch (batchError) {
-            console.error(`❌ Batch insert error for batch ${Math.floor(i/batchSize) + 1}:`, batchError);
-            
-            // ✅ ถ้า batch insert ไม่สำเร็จ ให้ insert ทีละตัว
-            console.log("🔄 Falling back to individual inserts...");
-            for (const student of batch) {
-              try {
-                // ✅ ตรวจสอบ connection health ก่อนแต่ละ insert
-                if (!connection.isConnected) {
-                  console.log("🔄 Connection lost during individual insert, reconnecting...");
-                  await connection.connect();
-                }
-                
-                await studentRepo.save(student);
-              } catch (individualError) {
-                console.error("❌ Individual insert student error:", individualError);
-                console.error("❌ Student data:", student);
+          await studentRepo.save(batch);
+          console.log(`✅ Inserted batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(convertedStudents.length/batchSize)} (${batch.length} students)`);
+          
+          // ✅ รอเล็กน้อยระหว่าง batch เพื่อให้ database พัก
+          if (i + batchSize < convertedStudents.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+        } catch (batchError) {
+          console.error(`❌ Batch insert error for batch ${Math.floor(i/batchSize) + 1}:`, batchError);
+          this.logDbError("insertStudents", batchError);
+          
+          // ✅ ถ้า batch insert ไม่สำเร็จ ให้ insert ทีละตัว
+          console.log("🔄 Falling back to individual inserts...");
+          for (const student of batch) {
+            try {
+              // ✅ ตรวจสอบ connection health ก่อนแต่ละ insert
+              if (!this.dataSource!.isConnected) {
+                console.log("🔄 Connection lost during individual insert, reconnecting...");
+                await this.initialize();
               }
+              
+              await studentRepo.save(student);
+            } catch (individualError) {
+              console.error("❌ Individual insert student error:", individualError);
+              console.error("❌ Student data:", student);
+              this.logDbError("insertStudents", individualError);
             }
           }
         }
-
-        console.log("✅ All students processed successfully");
-        break; // ออกจาก retry loop
-        
-      } catch (error) {
-        retries--;
-        console.error(`❌ Database operation failed, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to insert students after 3 attempts: ${error}`);
-        }
-        
-        // รอ 2 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 2000));
       }
+
+      console.log("✅ All students processed successfully");
+        
+    } catch (error) {
+      this.logDbError("insertStudents", error);
+      throw new Error(`Failed to insert students: ${error}`);
     }
   }
 
   // ✅ ดึง Users ทั้งหมด
   public async getAllUsers(): Promise<Students[]> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
-        
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
-        
-        const studentRepo = connection.getRepository(Students);
-        const users = await studentRepo.find();
-        console.log(`✅ Fetched ${users.length} users successfully`);
-        return users;
-        
-      } catch (error) {
-        retries--;
-        console.error(`❌ Failed to fetch users, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to fetch users after 3 attempts: ${error}`);
-        }
-        
-        // รอ 1 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+    try {
+      const studentRepo = this.dataSource!.getRepository(Students);
+      const users = await studentRepo.find();
+      console.log(`✅ Fetched ${users.length} users successfully`);
+      return users;
+    } catch (error) {
+      this.logDbError("getAllUsers", error);
+      throw new Error(`Failed to fetch users: ${error}`);
     }
-    
-    throw new Error("Failed to fetch users");
   }
 
   // ✅ ดึง User โดย ID
   public async getUserById(id: number): Promise<Students | null> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
-        
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
-        
-        const studentRepo = connection.getRepository(Students);
-        const user = await studentRepo.findOne({ where: { students_id: id } });
-        
-        if (user) {
-          console.log(`✅ Found user with ID: ${id}`);
-        } else {
-          console.log(`⚠️ No user found with ID: ${id}`);
-        }
-        
-        return user;
-        
-      } catch (error) {
-        retries--;
-        console.error(`❌ Failed to fetch user by ID ${id}, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to fetch user by ID ${id} after 3 attempts: ${error}`);
-        }
-        
-        // รอ 1 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const studentRepo = this.dataSource!.getRepository(Students);
+      const user = await studentRepo.findOne({ where: { students_id: id } });
+      
+      if (user) {
+        console.log(`✅ Found user with ID: ${id}`);
+      } else {
+        console.log(`⚠️ No user found with ID: ${id}`);
       }
+      
+      return user;
+    } catch (error) {
+      this.logDbError("getUserById", error);
+      throw new Error(`Failed to fetch user by ID ${id}: ${error}`);
     }
-    
-    throw new Error(`Failed to fetch user by ID ${id}`);
   }
 
   // ✅ อัพเดท User
   public async updateUser(id: number, updateData: Partial<Students>): Promise<Students | null> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
-        
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
-        
-        const studentRepo = connection.getRepository(Students);
-        
-        // ✅ ตรวจสอบว่ามี user อยู่หรือไม่
-        const existingUser = await studentRepo.findOne({ where: { students_id: id } });
-        if (!existingUser) {
-          console.warn(`⚠️ User with ID ${id} not found for update`);
-          return null;
-        }
-        
-        // ✅ อัพเดทข้อมูล
-        const updatedUser = await studentRepo.save({
-          ...existingUser,
-          ...updateData
-        });
-        
-        console.log(`✅ Updated user with ID: ${id}`);
-        return updatedUser;
-        
-      } catch (error) {
-        retries--;
-        console.error(`❌ Failed to update user ${id}, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to update user ${id} after 3 attempts: ${error}`);
-        }
-        
-        // รอ 1 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const studentRepo = this.dataSource!.getRepository(Students);
+      
+      // ✅ ตรวจสอบว่ามี user อยู่หรือไม่
+      const existingUser = await studentRepo.findOne({ where: { students_id: id } });
+      if (!existingUser) {
+        console.warn(`⚠️ User with ID ${id} not found for update`);
+        return null;
       }
+      
+      // ✅ อัพเดทข้อมูล
+      const updatedUser = await studentRepo.save({
+        ...existingUser,
+        ...updateData
+      });
+      
+      console.log(`✅ Updated user with ID: ${id}`);
+      return updatedUser;
+    } catch (error) {
+      this.logDbError("updateUser", error);
+      throw new Error(`Failed to update user ${id}: ${error}`);
     }
-    
-    throw new Error(`Failed to update user ${id}`);
   }
 
   // ✅ ลบ User
   public async deleteUser(id: number): Promise<boolean> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
-        
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
-        
-        const studentRepo = connection.getRepository(Students);
-        
-        // ✅ ตรวจสอบว่ามี user อยู่หรือไม่
-        const existingUser = await studentRepo.findOne({ where: { students_id: id } });
-        if (!existingUser) {
-          console.warn(`⚠️ User with ID ${id} not found for deletion`);
-          return false;
-        }
-        
-        // ✅ ลบ user
-        await studentRepo.remove(existingUser);
-        
-        console.log(`✅ Deleted user with ID: ${id}`);
-        return true;
-        
-      } catch (error) {
-        retries--;
-        console.error(`❌ Failed to delete user ${id}, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to delete user ${id} after 3 attempts: ${error}`);
-        }
-        
-        // รอ 1 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const studentRepo = this.dataSource!.getRepository(Students);
+      
+      // ✅ ตรวจสอบว่ามี user อยู่หรือไม่
+      const existingUser = await studentRepo.findOne({ where: { students_id: id } });
+      if (!existingUser) {
+        console.warn(`⚠️ User with ID ${id} not found for deletion`);
+        return false;
       }
+      
+      // ✅ ลบ user
+      await studentRepo.remove(existingUser);
+      
+      console.log(`✅ Deleted user with ID: ${id}`);
+      return true;
+    } catch (error) {
+      this.logDbError("deleteUser", error);
+      throw new Error(`Failed to delete user ${id}: ${error}`);
     }
-    
-    throw new Error(`Failed to delete user ${id}`);
   }
 
   // ✅ Reset ข้อมูลนิสิตทั้งหมดและ reset sequence
   public async resetAllStudents(): Promise<{ deletedCount: number }> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
+    try {
         
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
-        
-        console.log("🔄 Starting reset of all students...");
-        
-        // ✅ นับจำนวนนักเรียนก่อนลบ
-        const studentRepo = connection.getRepository(Students);
+      console.log("🔄 Starting reset of all students...");
+      
+      // ✅ นับจำนวนนักเรียนก่อนลบ
+      const studentRepo = this.dataSource!.getRepository(Students);
         const totalStudents = await studentRepo.count();
         console.log(`📊 Found ${totalStudents} students to delete`);
         
@@ -346,32 +270,32 @@ export class TeacherStudentDao {
           return { deletedCount: 0 };
         }
         
-        // ✅ ลบข้อมูลที่เกี่ยวข้องก่อน (ตามลำดับ Foreign Key)
-        console.log("🔄 Deleting related data first...");
+      // ✅ ลบข้อมูลที่เกี่ยวข้องก่อน (ตามลำดับ Foreign Key)
+      console.log("🔄 Deleting related data first...");
+      
+      // ลบข้อมูลในตาราง join ที่อ้างอิง students
+      try {
+        const joinResult = await this.dataSource!.query('DELETE FROM "join" WHERE students_id IS NOT NULL');
+        console.log(`✅ Deleted ${joinResult.length || 0} related join records`);
+      } catch (error) {
+        console.warn("⚠️ Could not delete join data:", error.message);
+      }
         
-        // ลบข้อมูลในตาราง join ที่อ้างอิง students
-        try {
-          const joinResult = await connection.query('DELETE FROM "join" WHERE students_id IS NOT NULL');
-          console.log(`✅ Deleted ${joinResult.length || 0} related join records`);
-        } catch (error) {
-          console.warn("⚠️ Could not delete join data:", error.message);
-        }
+      // ลบข้อมูลในตาราง certificate ที่อ้างอิง students
+      try {
+        const certResult = await this.dataSource!.query('DELETE FROM certificate WHERE students_id IS NOT NULL');
+        console.log(`✅ Deleted ${certResult.length || 0} related certificate records`);
+      } catch (error) {
+        console.warn("⚠️ Could not delete certificate data:", error.message);
+      }
         
-        // ลบข้อมูลในตาราง certificate ที่อ้างอิง students
-        try {
-          const certResult = await connection.query('DELETE FROM certificate WHERE students_id IS NOT NULL');
-          console.log(`✅ Deleted ${certResult.length || 0} related certificate records`);
-        } catch (error) {
-          console.warn("⚠️ Could not delete certificate data:", error.message);
-        }
-        
-        // ลบข้อมูลในตาราง answer ที่อ้างอิง join (ถ้ามี)
-        try {
-          const answerResult = await connection.query('DELETE FROM answer WHERE join_id IN (SELECT join_id FROM "join" WHERE students_id IS NOT NULL)');
-          console.log(`✅ Deleted ${answerResult.length || 0} related answer records`);
-        } catch (error) {
-          console.warn("⚠️ Could not delete answer data:", error.message);
-        }
+      // ลบข้อมูลในตาราง answer ที่อ้างอิง join (ถ้ามี)
+      try {
+        const answerResult = await this.dataSource!.query('DELETE FROM answer WHERE join_id IN (SELECT join_id FROM "join" WHERE students_id IS NOT NULL)');
+        console.log(`✅ Deleted ${answerResult.length || 0} related answer records`);
+      } catch (error) {
+        console.warn("⚠️ Could not delete answer data:", error.message);
+      }
         
         // ✅ ลบนักเรียนทั้งหมดทีละคน (ไม่ใช้ clear() เพราะมี FK constraints)
         console.log("🔄 Deleting all students one by one...");
@@ -392,89 +316,272 @@ export class TeacherStudentDao {
         
         console.log(`✅ Successfully deleted ${deletedCount} students`);
         
-        // ✅ Reset sequence ให้เริ่มที่ 1 ใหม่
-        try {
-          await connection.query('ALTER SEQUENCE IF EXISTS students_students_id_seq RESTART WITH 1');
-          console.log("✅ Reset student_id sequence to start from 1");
-        } catch (seqError) {
-          console.warn("⚠️ Could not reset sequence, but students were deleted successfully");
-        }
-        
-        return { deletedCount };
-        
-      } catch (error) {
-        retries--;
-        console.error(`❌ Database operation failed, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to reset students after 3 attempts: ${error}`);
-        }
-        
-        // รอ 2 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      // ✅ Reset sequence ให้เริ่มที่ 1 ใหม่
+      try {
+        await this.dataSource!.query('ALTER SEQUENCE IF EXISTS students_students_id_seq RESTART WITH 1');
+        console.log("✅ Reset student_id sequence to start from 1");
+      } catch (seqError) {
+        console.warn("⚠️ Could not reset sequence, but students were deleted successfully");
       }
+        
+      return { deletedCount };
+        
+    } catch (error) {
+      this.logDbError("resetAllStudents", error);
+      throw new Error(`Failed to reset students: ${error}`);
     }
+  }
+
+  public async resetStudentTimes(activityId: number): Promise<any> {
+    await this.checkConnection();
     
-    throw new Error("Failed to reset students");
+    try {
+      console.log(`🔄 Starting reset student times for activity ${activityId}...`);
+      
+      // 1. หาจำนวน records ที่จะ reset
+      const countQuery = `
+        SELECT COUNT(*) as activity_detail_count
+        FROM activity_detail
+        WHERE activity_id = $1
+      `;
+      
+      const countResult = await this.dataSource!.query(countQuery, [activityId]);
+      const count = countResult[0].activity_detail_count;
+      
+      console.log(`📊 Found ${count} activity detail records to reset times`);
+      
+      // 2. Reset time_in และ time_out เป็น NULL
+      const resetTimesQuery = `
+        UPDATE activity_detail
+        SET 
+          time_in = NULL,
+          time_out = NULL
+        WHERE activity_id = $1
+        RETURNING activity_detail_id, time_in, time_out
+      `;
+      
+      const resetResult = await this.dataSource!.query(resetTimesQuery, [activityId]);
+      console.log(`✅ Reset ${resetResult.length} activity detail records`);
+      
+      const result = {
+        activityId,
+        activityDetailsReset: resetResult.length,
+        message: `Reset time_in and time_out to NULL for activity ${activityId}`,
+        details: {
+          resetRecords: resetResult
+        }
+      };
+      
+      console.log(`✅ Reset student times completed for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      this.logDbError("resetStudentTimes", error);
+      throw new Error(`Failed to reset student times: ${error}`);
+    }
   }
 
   // ✅ ตรวจสอบว่ากิจกรรมมีอยู่จริง
   public async checkActivityExists(activityId: number): Promise<boolean> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
-        
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
-        
-        const result = await connection.query(
-          'SELECT activity_id FROM activity WHERE activity_id = $1 AND status = \'Active\'',
-          [activityId]
-        );
-        
-        const exists = result.length > 0;
-        console.log(`✅ Activity ${activityId} exists: ${exists}`);
-        return exists;
-        
-      } catch (error) {
-        retries--;
-        console.error(`❌ Failed to check activity ${activityId}, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to check activity ${activityId} after 3 attempts: ${error}`);
-        }
-        
-        // รอ 1 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+    try {
+      const result = await this.dataSource!.query(
+        'SELECT activity_id FROM activity WHERE activity_id = $1 AND status = \'Active\'',
+        [activityId]
+      );
+      
+      const exists = result.length > 0;
+      console.log(`✅ Activity ${activityId} exists: ${exists}`);
+      return exists;
+    } catch (error) {
+      this.logDbError("checkActivityExists", error);
+      throw new Error(`Failed to check activity ${activityId}: ${error}`);
     }
-    
-    throw new Error(`Failed to check activity ${activityId}`);
   }
+
+  // ✅ Bulk Check-in/Check-out นักเรียนหลายคนในกิจกรรม
+  public async bulkCheckInOut(
+    activityId: number,
+    action: 'checkin' | 'checkout',
+    checkInOutData: Array<{ timestamp: string; studentId: string; name: string; department: string; email: string }>
+  ): Promise<{ processedCount: number; errors: string[] }> {
+    await this.checkConnection();
+    
+    try {
+        
+        console.log(`🔄 Starting bulk ${action} for activity ${activityId} with ${checkInOutData.length} students`);
+        
+        let processedCount = 0;
+        const errors: string[] = [];
+        
+      // ✅ ตรวจสอบว่ากิจกรรมมีอยู่และดึง activity_state
+      const activityResult = await this.dataSource!.query(
+        'SELECT activity_id, activity_state FROM activity WHERE activity_id = $1 AND status = \'Active\'',
+        [activityId]
+      );
+        
+        if (activityResult.length === 0) {
+          throw new Error(`Activity with ID ${activityId} not found or inactive`);
+        }
+        
+        const activityData = activityResult[0];
+        console.log(`🔍 Activity state: ${activityData.activity_state}`);
+        
+        // ✅ ตรวจสอบ activity_state ตาม action
+        if (action === 'checkin' && activityData.activity_state !== 'Start Activity') {
+          throw new Error('กิจกรรมนี้ยังไม่เปิดให้ลงชื่อเข้าร่วม');
+        } else if (action === 'checkout' && activityData.activity_state !== 'End Activity') {
+          throw new Error('กิจกรรมนี้ยังไม่เปิดให้ลงชื่อออก');
+        }
+        
+        // ✅ ใช้ batch processing เพื่อความเสถียร
+        const batchSize = 10;
+        for (let i = 0; i < checkInOutData.length; i += batchSize) {
+          const batch = checkInOutData.slice(i, i + batchSize);
+          
+          try {
+            // ✅ ตรวจสอบ connection health ก่อนแต่ละ batch
+            if (!this.dataSource!.isConnected) {
+              console.log("🔄 Connection lost during batch processing, reconnecting...");
+              await this.initialize();
+            }
+            
+            console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(checkInOutData.length/batchSize)} (${batch.length} students)`);
+            
+            // ✅ ประมวลผล batch นี้
+            for (const data of batch) {
+              try {
+                // ✅ ตรวจสอบข้อมูลที่จำเป็น
+                if (!data.studentId || !data.timestamp) {
+                  errors.push(`Missing studentId or timestamp for: ${data.name || 'unknown'}`);
+                  continue;
+                }
+                
+                console.log(`🔄 Processing ${action} for student: ${data.studentId}`);
+                
+                // ✅ หา user โดย username (รหัสนิสิต)
+                const userResult = await this.dataSource!.query(
+                  'SELECT users_id FROM users WHERE username = $1',
+                  [data.studentId]
+                );
+                
+                if (userResult.length === 0) {
+                  errors.push(`User not found for student ID: ${data.studentId}`);
+                  continue;
+                }
+                
+                const userId = userResult[0].users_id;
+                
+                // ✅ หา student โดย users_id
+                const studentResult = await this.dataSource!.query(
+                  'SELECT students_id FROM students WHERE users_id = $1',
+                  [userId]
+                );
+                
+                if (studentResult.length === 0) {
+                  errors.push(`Student not found for user ID: ${userId}`);
+                  continue;
+                }
+                
+                const studentId = studentResult[0].students_id;
+                
+                // ✅ ตรวจสอบว่าลงทะเบียนแล้วหรือไม่และดึงข้อมูล enrollment
+                const enrollmentResult = await this.dataSource!.query(
+                  `SELECT j.join_id, ad.time_in, ad.time_out, ad.activity_detail_id 
+                   FROM activity_detail ad 
+                   JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id 
+                   WHERE ad.activity_id = $1 AND j.students_id = $2`,
+                  [activityId, studentId]
+                );
+                
+                if (enrollmentResult.length === 0) {
+                  errors.push(`Student ${data.studentId} is not enrolled in activity ${activityId}`);
+                  continue;
+                }
+                
+                const enrollment = enrollmentResult[0];
+                
+                // ✅ ใช้เวลาปัจจุบันสำหรับ check-in/check-out
+                const actionDate = new Date(); // เวลาปัจจุบัน ณ ตอนที่ทำ bulk check-in/check-out
+                
+                // ✅ ดำเนินการตาม action
+                if (action === 'checkin') {
+                  // ตรวจสอบว่า check-in แล้วหรือไม่
+                  if (enrollment.time_in) {
+                    errors.push(`Student ${data.studentId} already checked in`);
+                    continue;
+                  }
+                  
+                  // Update time_in
+                  await this.dataSource!.query(
+                    `UPDATE activity_detail SET time_in = $1 WHERE activity_detail_id = $2`,
+                    [actionDate, enrollment.activity_detail_id]
+                  );
+                  
+                  console.log(`✅ Checked in student ${data.studentId} at ${actionDate.toLocaleString('th-TH')}`);
+                  
+                } else if (action === 'checkout') {
+                  // ตรวจสอบว่า check-in แล้วหรือไม่
+                  if (!enrollment.time_in) {
+                    errors.push(`Student ${data.studentId} has not checked in yet`);
+                    continue;
+                  }
+                  
+                  // ตรวจสอบว่า check-out แล้วหรือไม่
+                  if (enrollment.time_out) {
+                    errors.push(`Student ${data.studentId} already checked out`);
+                    continue;
+                  }
+                  
+                  // Update time_out
+                  await this.dataSource!.query(
+                    `UPDATE activity_detail SET time_out = $1 WHERE activity_detail_id = $2`,
+                    [actionDate, enrollment.activity_detail_id]
+                  );
+                  
+                  console.log(`✅ Checked out student ${data.studentId} at ${actionDate.toLocaleString('th-TH')}`);
+                }
+                
+                processedCount++;
+                
+              } catch (studentError) {
+                console.error(`❌ Error processing ${action} for student ${data.studentId}:`, studentError);
+                errors.push(`Error processing ${data.studentId}: ${studentError.message}`);
+              }
+            }
+            
+            console.log(`✅ Completed batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(checkInOutData.length/batchSize)}`);
+            
+            // ✅ รอเล็กน้อยระหว่าง batch เพื่อให้ database พัก
+            if (i + batchSize < checkInOutData.length) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+          } catch (batchError) {
+            console.error(`❌ Batch processing error for batch ${Math.floor(i/batchSize) + 1}:`, batchError);
+            errors.push(`Batch error: ${batchError.message}`);
+          }
+        }
+        
+      console.log(`✅ Bulk ${action} completed. Successfully processed ${processedCount}/${checkInOutData.length} students`);
+      return { processedCount, errors };
+        
+    } catch (error) {
+      this.logDbError(`bulk${action.charAt(0).toUpperCase() + action.slice(1)}`, error);
+      throw new Error(`Failed to bulk ${action} students: ${error}`);
+    }
+  }
+
+  
 
   // ✅ ลงทะเบียนนักเรียนหลายคนในกิจกรรม
   public async bulkEnrollStudents(
     activityId: number, 
     enrollmentData: Array<{ timestamp: string; studentId: string; name: string; department: string; email: string }>
   ): Promise<{ enrolledCount: number }> {
-    let connection;
-    let retries = 3;
+    await this.checkConnection();
     
-    while (retries > 0) {
-      try {
-        connection = await connectDatabase();
-        
-        // ✅ ตรวจสอบ connection health
-        if (!connection.isConnected) {
-          console.log("🔄 Connection lost, reconnecting...");
-          await connection.connect();
-        }
+    try {
         
         console.log(`🔄 Starting bulk enrollment for activity ${activityId} with ${enrollmentData.length} students`);
         
@@ -487,9 +594,9 @@ export class TeacherStudentDao {
           
           try {
             // ✅ ตรวจสอบ connection health ก่อนแต่ละ batch
-            if (!connection.isConnected) {
+            if (!this.dataSource!.isConnected) {
               console.log("🔄 Connection lost during batch processing, reconnecting...");
-              await connection.connect();
+              await this.initialize();
             }
             
             console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(enrollmentData.length/batchSize)} (${batch.length} students)`);
@@ -506,7 +613,7 @@ export class TeacherStudentDao {
                 console.log(`🔄 Processing student: ${data.studentId}`);
                 
                 // ✅ หา user โดย username (รหัสนิสิต)
-                const userResult = await connection.query(
+                const userResult = await this.dataSource!.query(
                   'SELECT users_id FROM users WHERE username = $1',
                   [data.studentId]
                 );
@@ -519,7 +626,7 @@ export class TeacherStudentDao {
                 const userId = userResult[0].users_id;
                 
                 // ✅ หา student โดย users_id
-                const studentResult = await connection.query(
+                const studentResult = await this.dataSource!.query(
                   'SELECT students_id FROM students WHERE users_id = $1',
                   [userId]
                 );
@@ -532,7 +639,7 @@ export class TeacherStudentDao {
                 const studentId = studentResult[0].students_id;
                 
                 // ✅ ตรวจสอบว่าลงทะเบียนแล้วหรือไม่
-                const existingEnrollment = await connection.query(
+                const existingEnrollment = await this.dataSource!.query(
                   `SELECT 1 FROM activity_detail ad 
                    JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id 
                    WHERE ad.activity_id = $1 AND j.students_id = $2`,
@@ -568,7 +675,7 @@ export class TeacherStudentDao {
                 }
                 
                 // ✅ สร้าง activity_detail (ไม่ระบุ activity_food_id ให้ใช้ DEFAULT)
-                const activityDetailResult = await connection.query(
+                const activityDetailResult = await this.dataSource!.query(
                   `INSERT INTO activity_detail (activity_id, register_date, status) 
                    VALUES ($1, $2, 'Registered') 
                    RETURNING activity_detail_id`,
@@ -583,14 +690,14 @@ export class TeacherStudentDao {
                 const activityDetailId = activityDetailResult[0].activity_detail_id;
                 
                 // ✅ สร้าง join record
-                await connection.query(
+                await this.dataSource!.query(
                   `INSERT INTO "join" (students_id, activity_detail_id, join_date, status) 
                    VALUES ($1, $2, $3, 'Pending')`,
                   [studentId, activityDetailId, registerDate]
                 );
                 
                 // ✅ อัพเดท registered_count ในตาราง activity
-                await connection.query(
+                await this.dataSource!.query(
                   `UPDATE activity 
                    SET registered_count = COALESCE(registered_count, 0) + 1 
                    WHERE activity_id = $1`,
@@ -617,22 +724,12 @@ export class TeacherStudentDao {
           }
         }
         
-        console.log(`✅ Bulk enrollment completed. Successfully enrolled ${enrolledCount}/${enrollmentData.length} students`);
-        return { enrolledCount };
+      console.log(`✅ Bulk enrollment completed. Successfully enrolled ${enrolledCount}/${enrollmentData.length} students`);
+      return { enrolledCount };
         
-      } catch (error) {
-        retries--;
-        console.error(`❌ Database operation failed, retries left: ${retries}`, error);
-        
-        if (retries === 0) {
-          throw new Error(`Failed to bulk enroll students after 3 attempts: ${error}`);
-        }
-        
-        // รอ 2 วินาทีก่อนลองใหม่
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+    } catch (error) {
+      this.logDbError("bulkEnrollStudents", error);
+      throw new Error(`Failed to bulk enroll students: ${error}`);
     }
-    
-    throw new Error("Failed to bulk enroll students");
   }
 }

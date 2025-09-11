@@ -482,8 +482,8 @@ export const sendEmailToStudentsByRiskStatus = async (activityData: any, riskSta
         SELECT 
           s.students_id,
           s.users_id,
-          s.first_name,
-          s.last_name,
+          s.first_name_tha,
+          s.last_name_tha,
           s.email,
           s.soft_hours,
           s.hard_hours,
@@ -512,7 +512,7 @@ export const sendEmailToStudentsByRiskStatus = async (activityData: any, riskSta
       // 🔍 Debug: ตรวจสอบข้อมูลนิสิตที่ดึงมาได้
       console.log(`🔍 [sendEmailToStudentsByRiskStatus] Students data:`, students.map(s => ({
         id: s.students_id,
-        name: `${s.first_name} ${s.last_name}`,
+        name: `${s.first_name_tha} ${s.last_name_tha}`,
         email: s.email,
         risk_status: s.risk_status
       })));
@@ -578,7 +578,7 @@ export const sendEmailToStudentsByRiskStatus = async (activityData: any, riskSta
           html: renderedHtml,
         });
 
-        console.log(`✅ Email sent to ${student.email} (${student.first_name} ${student.last_name})`);
+        console.log(`✅ Email sent to ${student.email} (${student.first_name_tha} ${student.last_name_tha})`);
         console.log(`✅ Message ID: ${mailResult.messageId}`);
         successCount++;
       } catch (error) {

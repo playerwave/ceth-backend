@@ -39,33 +39,33 @@ export class ActivityDetail {
   activity_food_id?: number;
 
   @Column({ type: "timestamp" })
-  @Transform(({ value }) =>
-    value
-      ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
-          timeZone: "Asia/Bangkok",
-        })
-      : null
-  )
+  // @Transform(({ value }) =>
+  //   value
+  //     ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
+  //         timeZone: "Asia/Bangkok",
+  //       })
+  //     : null
+  // )
   register_date?: Date;
 
   @Column({ type: "timestamp", nullable: true })
-  @Transform(({ value }) =>
-    value
-      ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
-          timeZone: "Asia/Bangkok",
-        })
-      : null
-  )
+  // @Transform(({ value }) =>
+  //   value
+  //     ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
+  //         timeZone: "Asia/Bangkok",
+  //       })
+  //     : null
+  // )
   time_in?: Date | null;
 
   @Column({ type: "timestamp", nullable: true })
-  @Transform(({ value }) =>
-    value
-      ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
-          timeZone: "Asia/Bangkok",
-        })
-      : null
-  )
+  // @Transform(({ value }) =>
+  //   value
+  //     ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
+  //         timeZone: "Asia/Bangkok",
+  //       })
+  //     : null
+  // )
   time_out?: Date | null;
 
   @Column({

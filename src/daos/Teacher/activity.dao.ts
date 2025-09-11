@@ -1168,73 +1168,34 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  // ✅ เมธอดใหม่: ดึงข้อมูลนักเรียนที่ลงทะเบียน
+  // ✅ เมธอดใหม่: ดึงข้อมูลนักเรียนที่ลงทะเบียนทั้งหมด
   public async getEnrolledStudentsForActivity(activityId: number): Promise<any[]> {
     try {
       await this.checkConnection();
       
-      // 1. ดึงข้อมูล activity_state ก่อน
-      const activityQuery = `
-        SELECT activity_state 
-        FROM activity 
-        WHERE activity_id = $1
+      // ✅ ดึงข้อมูลนิสิตที่ลงทะเบียนทั้งหมด โดยไม่ต้องมีเงื่อนไข time_in/time_out
+      const query = `
+        SELECT 
+          s.students_id as id,
+          s.first_name_tha,
+          s.last_name_tha,
+          d.department_short_name,
+          u.username,
+          ad.time_in,
+          ad.time_out
+        FROM students s
+        JOIN users u ON s.users_id = u.users_id
+        JOIN department d ON s.department_id = d.department_id
+        JOIN "join" j ON s.students_id = j.students_id
+        JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+        WHERE ad.activity_id = $1 
+          AND ad.status = 'Registered'
+          AND j.status = 'Pending'
+        ORDER BY s.first_name_tha, s.last_name_tha
       `;
       
-      const activityResult = await this.dataSource!.query(activityQuery, [activityId]);
-      const activityState = activityResult[0]?.activity_state;
-      
-      console.log(`🔍 Activity state for activity ${activityId}: ${activityState}`);
-      
-      // 2. สร้าง query ตาม activity_state
-      let query: string;
-      
-      if (activityState === 'End Activity') {
-        // สำหรับ End Activity: ต้องมี time_in และ time_out ไม่เป็น null
-        query = `
-          SELECT 
-            s.students_id as id,
-            s.first_name,
-            s.last_name,
-            d.department_name,
-            u.username
-          FROM students s
-          JOIN users u ON s.users_id = u.users_id
-          JOIN department d ON s.department_id = d.department_id
-          JOIN "join" j ON s.students_id = j.students_id
-          JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
-          WHERE ad.activity_id = $1 
-            AND ad.status = 'Registered'
-            AND j.status = 'Pending'
-            AND ad.time_in IS NOT NULL
-            AND ad.time_out IS NOT NULL
-          ORDER BY s.first_name, s.last_name
-        `;
-        console.log(`🔍 Using End Activity query - requires time_in AND time_out`);
-      } else {
-        // สำหรับ activity_state อื่นๆ: ต้องมี time_in ไม่เป็น null
-        query = `
-          SELECT 
-            s.students_id as id,
-            s.first_name,
-            s.last_name,
-            d.department_name,
-            u.username
-          FROM students s
-          JOIN users u ON s.users_id = u.users_id
-          JOIN department d ON s.department_id = d.department_id
-          JOIN "join" j ON s.students_id = j.students_id
-          JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
-          WHERE ad.activity_id = $1 
-            AND ad.status = 'Registered'
-            AND j.status = 'Pending'
-            AND ad.time_in IS NOT NULL
-          ORDER BY s.first_name, s.last_name
-        `;
-        console.log(`🔍 Using default query - requires time_in only`);
-      }
-      
       const result = await this.dataSource!.query(query, [activityId]);
-      console.log(`📊 Found ${result.length} enrolled students for activity ${activityId} (state: ${activityState})`);
+      console.log(`📊 Found ${result.length} enrolled students for activity ${activityId} (all registered students)`);
       return result;
     } catch (error) {
       console.error("❌ Error getting enrolled students:", error);
@@ -1560,15 +1521,15 @@ export class ActivityDao extends ErrorHandledDao {
         ORDER BY ad.register_date DESC
       `;
       
-      const joinQuery = `
+              const joinQuery = `
         SELECT 
           j.activity_detail_id,
           j.join_id,
           j.students_id,
           j.join_date,
           j.status as join_status,
-          s.first_name,
-          s.last_name,
+          s.first_name_tha,
+          s.last_name_tha,
           u.username
         FROM "join" j
         LEFT JOIN students s ON j.students_id = s.students_id
@@ -1621,10 +1582,10 @@ export class ActivityDao extends ErrorHandledDao {
       const query = `
         SELECT 
           s.students_id,
-          s.first_name,
-          s.last_name,
+          s.first_name_tha,
+          s.last_name_tha,
           u.username,
-          d.department_name,
+          d.department_short_name,
           ad.activity_detail_id,
           ad.time_in,
           ad.register_date,
@@ -1639,7 +1600,7 @@ export class ActivityDao extends ErrorHandledDao {
           AND ad.status = 'Registered'
           AND j.status = 'Pending'
           AND ad.time_in IS NOT NULL
-        ORDER BY ad.time_in DESC, s.first_name, s.last_name
+        ORDER BY ad.time_in DESC, s.first_name_tha, s.last_name_tha
       `;
       
       const result = await this.dataSource!.query(query, [activityId]);
@@ -1659,10 +1620,10 @@ export class ActivityDao extends ErrorHandledDao {
       const query = `
         SELECT 
           s.students_id,
-          s.first_name,
-          s.last_name,
+          s.first_name_tha,
+          s.last_name_tha,
           u.username,
-          d.department_name,
+          d.department_short_name,
           ad.activity_detail_id,
           ad.time_in,
           ad.time_out,
@@ -1678,7 +1639,7 @@ export class ActivityDao extends ErrorHandledDao {
           AND ad.status = 'Registered'
           AND j.status = 'Pending'
           AND ad.time_out IS NOT NULL
-        ORDER BY ad.time_out DESC, s.first_name, s.last_name
+        ORDER BY ad.time_out DESC, s.first_name_tha, s.last_name_tha
       `;
       
       const result = await this.dataSource!.query(query, [activityId]);

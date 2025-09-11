@@ -181,8 +181,29 @@ export class ActivityController extends ErrorHandledController {
   }
 
   private parseId(value: string): number {
-    const id = parseInt(value, 10);
-    if (isNaN(id)) throw new Error("Invalid ID format");
+    // ✅ เพิ่ม debug log
+    console.log(`🔍 parseId: Received value: "${value}", type: ${typeof value}`);
+    
+    // ✅ ตรวจสอบว่าเป็น string ที่มีตัวอักษรที่ไม่ใช่ตัวเลขหรือไม่
+    if (typeof value !== 'string' || value.trim() === '') {
+      console.error(`❌ parseId: Invalid value type or empty: ${value}`);
+      throw new Error("Invalid ID format: Value must be a non-empty string");
+    }
+    
+    // ✅ ลบ whitespace และตรวจสอบว่าเป็นตัวเลขทั้งหมด
+    const cleanValue = value.trim();
+    if (!/^\d+$/.test(cleanValue)) {
+      console.error(`❌ parseId: Value contains non-numeric characters: "${cleanValue}"`);
+      throw new Error(`Invalid ID format: "${cleanValue}" is not a valid number`);
+    }
+    
+    const id = parseInt(cleanValue, 10);
+    if (isNaN(id)) {
+      console.error(`❌ parseId: parseInt failed for value: "${cleanValue}"`);
+      throw new Error("Invalid ID format: Failed to parse number");
+    }
+    
+    console.log(`✅ parseId: Successfully parsed ID: ${id}`);
     return id;
   }
 
@@ -196,14 +217,14 @@ export class ActivityController extends ErrorHandledController {
       recieve_hours: this.parseOptionalInt(body.recieve_hours) ?? 0, // ✅ ใช้ 0 แทน null
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
-      // ✅ เก็บเวลาไทยใน database โดยตรง ไม่ลบ 7 ชั่วโมง (เหมือน update)
-      special_start_register_date: body.special_start_register_date,
-      start_register_date: body.start_register_date,
-      end_register_date: body.end_register_date,
-      start_activity_date: body.start_activity_date,
-      end_activity_date: body.end_activity_date,
-      start_assessment: body.start_assessment,
-      end_assessment: body.end_assessment,
+      // ✅ แปลง Local Time เป็น UTC ก่อนเก็บใน database
+      special_start_register_date: this.parseDate(body.special_start_register_date),
+      start_register_date: this.parseDate(body.start_register_date),
+      end_register_date: this.parseDate(body.end_register_date),
+      start_activity_date: this.parseDate(body.start_activity_date),
+      end_activity_date: this.parseDate(body.end_activity_date),
+      start_assessment: this.parseDate(body.start_assessment),
+      end_assessment: this.parseDate(body.end_assessment),
       image_url: body.image_url || "ไม่ระบุ",
       activity_status: body.activity_status || "Private", // ENUM
       activity_state: body.activity_state || "Not Start", // ENUM
@@ -226,14 +247,14 @@ export class ActivityController extends ErrorHandledController {
       recieve_hours: this.parseOptionalInt(body.recieve_hours) ?? 0, // ✅ ใช้ 0 แทน null
       event_format: body.event_format || "Online", // ENUM
       create_activity_date: body.create_activity_date || new Date(),
-      // ✅ เก็บเวลาไทยใน database โดยตรง ไม่ลบ 7 ชั่วโมง
-      special_start_register_date: body.special_start_register_date,
-      start_register_date: body.start_register_date,
-      end_register_date: body.end_register_date,
-      start_activity_date: body.start_activity_date,
-      end_activity_date: body.end_activity_date,
-      start_assessment: body.start_assessment,
-      end_assessment: body.end_assessment,
+      // ✅ แปลง Local Time เป็น UTC ก่อนเก็บใน database
+      special_start_register_date: this.parseDate(body.special_start_register_date),
+      start_register_date: this.parseDate(body.start_register_date),
+      end_register_date: this.parseDate(body.end_register_date),
+      start_activity_date: this.parseDate(body.start_activity_date),
+      end_activity_date: this.parseDate(body.end_activity_date),
+      start_assessment: this.parseDate(body.start_assessment),
+      end_assessment: this.parseDate(body.end_assessment),
       image_url: body.image_url || "ไม่ระบุ",
       activity_status: body.activity_status || "Private", // ENUM
       activity_state: body.activity_state || "Not Start", // ENUM
@@ -251,17 +272,17 @@ export class ActivityController extends ErrorHandledController {
     try {
       console.log(`🔍 Parsing date: ${dateString}`);
 
-      // ✅ ตรวจสอบว่าเป็น UTC format หรือ local format
+      // ✅ แปลง Local Time จาก Frontend เป็น UTC เพื่อเก็บใน Database
       if (dateString.includes("Z") || dateString.includes("+")) {
-        // เป็น UTC format ให้แปลงเป็น local time
+        // เป็น UTC format อยู่แล้ว ใช้ตรงๆ
         const date = new Date(dateString);
-        console.log(
-          `📅 UTC format detected, converted to: ${date.toISOString()}`
-        );
+        console.log(`📅 UTC format detected, using as is: ${date.toISOString()}`);
         return date;
       } else {
-        // เป็น local format (YYYY-MM-DD HH:mm:ss)
-        const parts = dateString.split(" ");
+        // เป็น Local Time format ต้องแปลงเป็น UTC
+        const cleanDateString = dateString.replace('T', ' ').split('.')[0];
+        const parts = cleanDateString.split(" ");
+        
         if (parts.length !== 2) {
           console.error("❌ Invalid date format:", dateString);
           return null;
@@ -271,18 +292,24 @@ export class ActivityController extends ErrorHandledController {
         const [year, month, day] = datePart.split("-");
         const [hours, minutes, seconds] = timePart.split(":");
 
-        // ✅ สร้าง Date object ใน local timezone โดยตรง
-        const date = new Date();
-        date.setFullYear(parseInt(year));
-        date.setMonth(parseInt(month) - 1);
-        date.setDate(parseInt(day));
-        date.setHours(parseInt(hours));
-        date.setMinutes(parseInt(minutes));
-        date.setSeconds(parseInt(seconds || "0"));
-        date.setMilliseconds(0);
+        // สร้าง Date object ใน Local Time แล้วลบ 7 ชั่วโมงเพื่อแปลงเป็น UTC
+        const localDate = new Date();
+        localDate.setFullYear(parseInt(year));
+        localDate.setMonth(parseInt(month) - 1);
+        localDate.setDate(parseInt(day));
+        localDate.setHours(parseInt(hours));
+        localDate.setMinutes(parseInt(minutes));
+        localDate.setSeconds(parseInt(seconds || "0"));
+        localDate.setMilliseconds(0);
 
-        console.log(`📅 Local format detected, created: ${date.toISOString()}`);
-        return date;
+        // แปลงเป็น UTC (-7 ชั่วโมง)
+        const utcDate = new Date(localDate.getTime() - (7 * 60 * 60 * 1000));
+        
+        console.log(`📅 Local format detected: ${dateString}`);
+        console.log(`📅 Local time: ${localDate.toISOString()}`);
+        console.log(`📅 Converted to UTC: ${utcDate.toISOString()}`);
+        
+        return utcDate;
       }
     } catch (error) {
       console.error("❌ Error parsing date:", dateString, error);
