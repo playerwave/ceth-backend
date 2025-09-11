@@ -389,21 +389,36 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   public async getAllActivitiesDao(): Promise<Activity[]> {
-    await this.checkConnection();
+    try {
+      await this.checkConnection();
 
-    // ✅ ใช้ raw query เพื่อดึง registered_count
-    const activities = await this.dataSource!.query(
-      `
-        SELECT 
-          *,
-          COALESCE(registered_count, 0) as registered_count
-        FROM activity 
-        WHERE status = 'Active'
-        ORDER BY create_activity_date DESC
-      `
-    );
+      // ✅ ใช้ raw query เพื่อดึง registered_count
+      const activities = await this.dataSource!.query(
+        `
+          SELECT 
+            *,
+            COALESCE(registered_count, 0) as registered_count
+          FROM activity 
+          WHERE status = 'Active'
+          ORDER BY create_activity_date DESC
+        `
+      );
 
-    return activities;
+      // ✅ ตรวจสอบและ return empty array ถ้า null หรือ undefined
+      if (!activities || !Array.isArray(activities)) {
+        console.warn("⚠️ getAllActivitiesDao: No activities found or invalid response");
+        return [];
+      }
+
+      console.log(`✅ getAllActivitiesDao: Retrieved ${activities.length} activities`);
+      return activities;
+    } catch (error) {
+      console.error("❌ getAllActivitiesDao error:", error);
+      this.logDbError("getAllActivitiesDao", error);
+      
+      // ✅ return empty array แทน throw error เพื่อให้ frontend ยังทำงานได้
+      return [];
+    }
   }
 
   public async updateActivityDao(

@@ -122,26 +122,74 @@ export class ActivityService extends ErrorHandledService {
 
   public async getAllActivities(): Promise<Activity[]> {
     const cacheKey = "activity:all";
+    let retries = 3;
 
-    try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        this.logInfo("📦 Returning cached activity data");
-        return JSON.parse(cached);
+    while (retries > 0) {
+      try {
+        // ✅ ลองดึงจาก cache ก่อน
+        try {
+          const cached = await redis.get(cacheKey);
+          if (cached) {
+            this.logInfo("📦 Returning cached activity data");
+            return JSON.parse(cached);
+          }
+        } catch (cacheError) {
+          console.warn("⚠️ Cache read error, proceeding to database:", cacheError);
+        }
+
+        // ✅ ดึงจาก database
+        const activities = await this.activityDao.getAllActivitiesDao();
+        
+        // ✅ ตรวจสอบข้อมูลที่ได้
+        if (!activities || !Array.isArray(activities)) {
+          console.warn("⚠️ Invalid activities data from DAO");
+          if (retries > 1) {
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, 1000)); // รอ 1 วินาที
+            continue;
+          }
+          return [];
+        }
+
+        // ✅ เก็บลง cache เฉพาะเมื่อได้ข้อมูลสำเร็จ
+        try {
+          await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
+        } catch (cacheError) {
+          console.warn("⚠️ Cache write error, but data retrieved successfully:", cacheError);
+        }
+
+        this.logInfo("📤 Activity data retrieved and cached", {
+          count: activities.length,
+        });
+
+        return activities;
+      } catch (error) {
+        retries--;
+        this.logError(`❌ Error in getAllActivities (retries left: ${retries})`, error);
+        
+        if (retries === 0) {
+          // ✅ ลองดึงจาก cache เป็น fallback สุดท้าย
+          try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+              console.log("🔄 Using cached data as fallback");
+              return JSON.parse(cached);
+            }
+          } catch (fallbackError) {
+            console.error("❌ Fallback cache read also failed:", fallbackError);
+          }
+          
+          // ✅ return empty array แทน throw error
+          console.warn("⚠️ All attempts failed, returning empty array");
+          return [];
+        }
+        
+        // ✅ รอสักครู่ก่อนลองใหม่
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-
-      const activities = await this.activityDao.getAllActivitiesDao();
-      await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
-
-      this.logInfo("📤 Activity data retrieved and cached", {
-        count: activities.length,
-      });
-
-      return activities;
-    } catch (error) {
-      this.logError("❌ Error in getAllActivities", error);
-      throw error;
     }
+
+    return [];
   }
 
   public async getActivityById(activity_id: number): Promise<Activity | null> {
