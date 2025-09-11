@@ -131,30 +131,40 @@ export class SetNumberService extends ErrorHandledService {
     if (!oldSet.length) return null;
 
     const original = oldSet[0];
+    console.log("🔍 Original setNumber:", { id: original.set_number_id, name: original.name, assessment_id: original.assessment_id });
 
-    // 2) สร้าง set_number ใหม่
+    // 2) ดึง setNumbers ทั้งหมดใน assessment เดียวกันเพื่อหา order
+    const allSetNumbers = await this.setNumberDao.getSetNumbersByAssessmentID(original.assessment_id);
+    console.log("📋 All setNumbers in assessment:", allSetNumbers.map(sn => ({ id: sn.set_number_id, name: sn.name })));
+
+    // 3) หาตำแหน่งของ setNumber ต้นฉบับ
+    const originalIndex = allSetNumbers.findIndex(sn => sn.set_number_id === original.set_number_id);
+    console.log("🎯 Original index:", originalIndex);
+
+    // 4) สร้าง set_number ใหม่
     const newSet = await this.setNumberDao.addSetNumber(
       original.name + " (Copy)",
       original.status,
       original.assessment_id
     );
+    console.log("✅ Created new setNumber:", { id: newSet.set_number_id, name: newSet.name });
 
-    // 3) ดึงคำถามทั้งหมดของหัวข้อเก่า
+    // 5) ดึงคำถามทั้งหมดของหัวข้อเก่า
     const oldQuestions = await this.questionDao.getQuestionBySetNumberID(original.set_number_id);
 
     for (const q of oldQuestions) {
-      // 4) สร้างคำถามใหม่ผูกกับ set_number ใหม่
+      // 6) สร้างคำถามใหม่ผูกกับ set_number ใหม่
       const newQuestion = await this.questionDao.addQuestion(
         q.question_text,
         newSet.set_number_id,
         q.question_type
       );
 
-      // 5) ดึง choices ของคำถามเก่า
+      // 7) ดึง choices ของคำถามเก่า
       const oldChoices = await this.choiceDao.getChoiceByQuestionID(q.question_id);
 
       for (const c of oldChoices) {
-        // 6) คัดลอก choice ใหม่ไปยัง question ใหม่
+        // 8) คัดลอก choice ใหม่ไปยัง question ใหม่
         await this.choiceDao.addChoice(c.choice_text, newQuestion.question_id);
       }
     }

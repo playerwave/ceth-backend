@@ -71,6 +71,7 @@ export class SetNumberDao extends ErrorHandledDao {
     try {
       const result = await this.dataSource!.query(
         `SELECT sn.set_number_id, sn.name, sn.status, sn.assessment_id, am.assessment_name, am.description, am.assessment_status, am.status FROM set_number as sn INNER JOIN assessment as am ON sn.assessment_id = am.assessment_id WHERE sn.assessment_id = $1 ORDER BY sn.set_number_id ASC`, [assessment_id]);
+      console.log("🔍 getSetNumbersByAssessmentID result:", result.map(r => ({ id: r.set_number_id, name: r.name })));
       return result;
     } catch (error) {
       this.logDbError("getSetNumbersByAssessmentID", error);
