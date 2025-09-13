@@ -939,6 +939,19 @@ export class ActivityDao extends ErrorHandledDao {
       throw new Error("❌ Failed to get activity by ID");
     }
   }
+
+  // ✅ เมธอดสำหรับดึงข้อมูล activity ตาม ID (single result)
+  public async getActivityById(activity_id: number): Promise<Activity | null> {
+    await this.checkConnection();
+    try {
+      const sql = `SELECT * FROM activity WHERE activity_id = $1`;
+      const result = await this.dataSource?.query(sql, [activity_id]);
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      this.logDbError("getActivityById", error);
+      throw new Error("❌ Failed to get activity by ID");
+    }
+  }
 }
 
 

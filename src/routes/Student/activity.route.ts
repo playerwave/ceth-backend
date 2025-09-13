@@ -88,6 +88,8 @@ router.get(
 
 router.get("/get-activity/:id", wrapAsync(activityController.getActivityById));
 
+router.get("/assessment/:activityId", wrapAsync(activityController.getAssessmentByActivityId));
+
 router.get("/searchActivity", wrapAsync(activityController.searchActivity));
 
 // ✅ POST METHOD สำหรับ Check-in/Check-out

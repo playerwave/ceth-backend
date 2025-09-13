@@ -51,6 +51,26 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  public async getAssessmentByActivityId(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      
+      console.log(`🔍 [StudentController] Getting assessment for activity: ${activityId}`);
+      
+      const assessment = await this.activityService.getAssessmentByActivityId(activityId);
+      
+      if (!assessment) {
+        res.status(404).json({ error: "Assessment not found for this activity" });
+        return;
+      }
+
+      console.log(`✅ [StudentController] Found assessment: ${assessment.assessment_name}`);
+      res.status(200).json(assessment);
+    } catch (error) {
+      this.handleError("StudentActivityController.getAssessmentByActivityId", error, res);
+    }
+  }
+
   public async getActivityHistoryByStudentsID(req: Request, res: Response): Promise<void> {
     try {
       const studentId = this.parseId(req.params.studentId);
@@ -251,6 +271,7 @@ const controller = new ActivityController(activityService);
 export const activityController = {
   getStudentActivities: controller.getStudentActivities.bind(controller),
   getActivityById: controller.getActivityById.bind(controller),
+  getAssessmentByActivityId: controller.getAssessmentByActivityId.bind(controller),
   getActivityHistoryByStudentsID: controller.getActivityHistoryByStudentsID.bind(controller),
   getSearch: controller.getSearch.bind(controller),
   enrollActivity: controller.enrollActivity.bind(controller),

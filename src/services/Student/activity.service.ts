@@ -1,11 +1,14 @@
 import { ActivityDao } from "../../daos/Student/activity.dao";
+import { AssessmentDao } from "../../daos/Student/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
+import { Assessment } from "../../entity/assessment.entity";
 import { Join } from "../../entity/join.entity";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
+  private readonly assessmentDao = new AssessmentDao();
 
   public async getStudentActivitiesService(
     studentId: number
@@ -40,6 +43,124 @@ export class ActivityService extends ErrorHandledService {
       return activity;
     } catch (error) {
       this.logError("❌ Error in getActivityByIdService", error);
+      throw error;
+    }
+  }
+
+  public async getAssessmentByActivityId(activityId: number): Promise<Assessment | null> {
+    try {
+      console.log(`🔍 [ActivityService] Getting assessment for activity: ${activityId}`);
+      
+      // ดึงข้อมูล activity เพื่อหา assessment_id
+      const activities = await this.activityDao.getActivityByID(activityId);
+      
+      if (!activities || activities.length === 0) {
+        console.log(`❌ [ActivityService] Activity not found: ${activityId}`);
+        return null;
+      }
+
+      const activity = activities[0];
+
+      if (!activity.assessment_id) {
+        console.log(`❌ [ActivityService] No assessment_id for activity: ${activityId}`);
+        return null;
+      }
+
+      console.log(`🔍 [ActivityService] Found assessment_id: ${activity.assessment_id}`);
+      
+      // ดึงข้อมูล assessment พร้อม questions
+      const assessmentData = await this.assessmentDao.getAssessmentWithQuestions(activity.assessment_id);
+      
+      if (!assessmentData) {
+        console.log(`❌ [ActivityService] Assessment not found: ${activity.assessment_id}`);
+        return null;
+      }
+
+      console.log(`✅ [ActivityService] Found assessment: ${assessmentData.assessment_name}`);
+      
+      // แปลงข้อมูล sections และเก็บโครงสร้างไว้
+      const sections: any[] = [];
+      const allQuestions: any[] = [];
+      
+      if (assessmentData.sections) {
+        // sections ถูกเรียงแล้วจาก database query (ORDER BY number in name, then set_number_id)
+        console.log("🔍 [ActivityService] Sections order from database:", assessmentData.sections.map(s => ({ id: s.set_number_id, name: s.name })));
+        
+        assessmentData.sections.forEach((section: any, sectionIndex: number) => {
+          const sectionQuestions: any[] = [];
+          
+          if (section.questions) {
+            // เรียงคำถามตาม question_number หรือ question_id
+            const sortedQuestions = section.questions.sort((a: any, b: any) => {
+              if (a.question_number && b.question_number) {
+                return a.question_number - b.question_number;
+              }
+              return a.question_id - b.question_id;
+            });
+            
+            sortedQuestions.forEach((question: any) => {
+              // แปลง question_type ให้ตรงกับ frontend
+              let questionType = question.question_type;
+              if (questionType === "Single answer") {
+                questionType = "single_choice";
+              } else if (questionType === "Multiple answer") {
+                questionType = "multiple_choice";
+              } else if (questionType === "Text answer") {
+                questionType = "open_ended";
+              } else if (questionType === "Fix Single answer") {
+                questionType = "satisfaction";
+              }
+              
+              const questionData = {
+                question_id: question.question_id,
+                question_text: question.question_text,
+                question_type: questionType,
+                options: question.choices?.map((choice: any) => choice.choice_text) || [],
+                required: true,
+                section_id: section.set_number_id,
+                section_name: section.name,
+                question_number: question.question_number
+              };
+              
+              sectionQuestions.push(questionData);
+              allQuestions.push(questionData);
+            });
+          }
+          
+          sections.push({
+            section_id: section.set_number_id,
+            section_name: section.name,
+            section_order: sectionIndex + 1,
+            questions: sectionQuestions
+          });
+        });
+      }
+      
+      console.log(`🔍 [ActivityService] Converted ${allQuestions.length} questions in ${sections.length} sections`);
+      sections.forEach(section => {
+        console.log(`📋 Section "${section.section_name}": ${section.questions.length} questions`);
+      });
+      
+      // สร้าง response ที่ frontend คาดหวัง
+      const response = {
+        assessment_id: assessmentData.assessment_id,
+        assessment_name: assessmentData.assessment_name,
+        assessment_description: assessmentData.description || "กรุณาตอบแบบประเมินตามความจริง",
+        activity_name: activity.activity_name, // เพิ่มชื่อกิจกรรม
+        questions: allQuestions,
+        sections: sections
+      };
+      
+      this.logInfo("🔍 Retrieved assessment by activity ID", { 
+        activityId, 
+        assessmentId: assessmentData.assessment_id,
+        assessmentName: assessmentData.assessment_name,
+        questionsCount: allQuestions.length
+      });
+      
+      return response;
+    } catch (error) {
+      this.logError("❌ Error in getAssessmentByActivityId", error);
       throw error;
     }
   }
@@ -463,6 +584,73 @@ export class ActivityService extends ErrorHandledService {
       }
     } catch (error) {
       this.logError("❌ Error in checkInOutActivityService", error);
+      throw error;
+    }
+  }
+
+  public async getAssessmentByActivityIdService(activityId: number): Promise<any> {
+    try {
+      console.log("🔍 [ActivityService] Getting assessment for activity:", activityId);
+      
+      // ดึงข้อมูล activity เพื่อหา assessment_id
+      const activity = await this.activityDao.getActivityById(activityId);
+      if (!activity) {
+        throw new Error("Activity not found");
+      }
+
+      const assessmentId = activity.assessment_id;
+      if (!assessmentId) {
+        throw new Error("No assessment found for this activity");
+      }
+
+      console.log("🔍 [ActivityService] Found assessment_id:", assessmentId);
+
+      // ดึงข้อมูล assessment พร้อมคำถาม
+      const assessment = await this.assessmentDao.getAssessmentWithQuestions(assessmentId);
+      if (!assessment) {
+        throw new Error("Assessment not found");
+      }
+
+      console.log("✅ [ActivityService] Found assessment:", assessment.assessment_name);
+
+      // ดึงข้อมูล set numbers และคำถาม
+      const setNumbersResult = await this.assessmentDao.getSetNumbersByAssessmentId(assessmentId);
+      console.log("🔍 [ActivityService] Sections order from database:", setNumbersResult.map(s => ({ id: s.set_number_id, name: s.name })));
+
+      // ดึงข้อมูลคำถามและตัวเลือก
+      const questionsResult = await this.assessmentDao.getQuestionsByAssessmentId(assessmentId);
+      console.log("🔍 [ActivityService] Converted", questionsResult.length, "questions in", setNumbersResult.length, "sections");
+
+      // จัดกลุ่มคำถามตาม set
+      const sections = setNumbersResult.map((set: any) => {
+        const sectionQuestions = questionsResult.filter((q: any) => q.set_number_id === set.set_number_id);
+        console.log(`📋 Section "${set.name}":`, sectionQuestions.length, "questions");
+        
+        return {
+          section_id: set.set_number_id,
+          section_name: set.name,
+          section_order: set.set_number_id,
+          questions: sectionQuestions
+        };
+      });
+
+      const result = {
+        ...assessment,
+        activity_name: activity.activity_name,
+        sections,
+        questions: questionsResult
+      };
+
+      this.logInfo("🔍 Retrieved assessment by activity ID", {
+        activityId,
+        assessmentId,
+        assessmentName: assessment.assessment_name,
+        questionsCount: questionsResult.length
+      });
+
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in getAssessmentByActivityIdService", error);
       throw error;
     }
   }
