@@ -249,4 +249,254 @@ export class ActivityReportDao extends ErrorHandledDao {
       throw new Error("❌ Failed to get participation status");
     }
   }
+
+  /**
+   * ดึงข้อมูลแบบประเมินและผลการตอบ
+   */
+  public async getAssessmentData(activityId: number): Promise<any> {
+    await this.checkConnection();
+    
+    try {
+      // ดึงข้อมูลแบบประเมินและคำถาม
+      const assessmentQuery = `
+        SELECT 
+          a.assessment_id,
+          a.assessment_name,
+          sn.set_number_id,
+          sn.name as set_number_name,
+          q.question_id,
+          q.question_text,
+          q.question_type,
+          c.choice_id,
+          c.choice_text
+        FROM assessment a
+        INNER JOIN set_number sn ON a.assessment_id = sn.assessment_id
+        INNER JOIN question q ON sn.set_number_id = q.set_number_id
+        LEFT JOIN choice c ON q.question_id = c.question_id
+        WHERE a.assessment_id = (
+          SELECT assessment_id FROM activity WHERE activity_id = $1
+        )
+        ORDER BY sn.set_number_id, q.question_id, c.choice_id
+      `;
+
+      const assessmentResult = await this.dataSource!.query(assessmentQuery, [activityId]);
+      
+      // ดึงข้อมูลการตอบ
+      const answerQuery = `
+        SELECT 
+          a.answer_id,
+          a.join_id,
+          a.question_id,
+          a.choice_id,
+          a.answer_text,
+          q.question_type,
+          c.choice_text,
+          sn.name as set_number_name
+        FROM answer a
+        INNER JOIN question q ON a.question_id = q.question_id
+        INNER JOIN set_number sn ON q.set_number_id = sn.set_number_id
+        LEFT JOIN choice c ON a.choice_id = c.choice_id
+        WHERE a.assessment_id = (
+          SELECT assessment_id FROM activity WHERE activity_id = $1
+        )
+        ORDER BY sn.set_number_id, q.question_id
+      `;
+
+      const answerResult = await this.dataSource!.query(answerQuery, [activityId]);
+
+      // จัดกลุ่มข้อมูลตาม set_number (หัวข้อ)
+      const topicsMap = new Map();
+      
+      // จัดกลุ่มคำถามตามหัวข้อ
+      assessmentResult.forEach((row: any) => {
+        const topicId = row.set_number_id;
+        const topicName = row.set_number_name;
+        
+        if (!topicsMap.has(topicId)) {
+          topicsMap.set(topicId, {
+            topicId,
+            topicName,
+            questions: new Map(),
+            totalRespondents: 0
+          });
+        }
+        
+        const topic = topicsMap.get(topicId);
+        
+        if (!topic.questions.has(row.question_id)) {
+          topic.questions.set(row.question_id, {
+            questionId: row.question_id,
+            questionText: row.question_text,
+            questionType: row.question_type,
+            choices: [],
+            answers: []
+          });
+        }
+        
+        const question = topic.questions.get(row.question_id);
+        
+        if (row.choice_id && !question.choices.find((c: any) => c.choiceId === row.choice_id)) {
+          question.choices.push({
+            choiceId: row.choice_id,
+            choiceText: row.choice_text
+          });
+        }
+      });
+
+      // จัดกลุ่มคำตอบตามหัวข้อและคำถาม
+      answerResult.forEach((row: any) => {
+        const topicId = row.set_number_id;
+        const questionId = row.question_id;
+        
+        if (topicsMap.has(topicId)) {
+          const topic = topicsMap.get(topicId);
+          if (topic.questions.has(questionId)) {
+            const question = topic.questions.get(questionId);
+            question.answers.push({
+              answerId: row.answer_id,
+              joinId: row.join_id,
+              choiceId: row.choice_id,
+              answerText: row.answer_text,
+              choiceText: row.choice_text
+            });
+          }
+        }
+      });
+
+      // แปลงข้อมูลเป็นรูปแบบที่ frontend ต้องการ
+      const topics = Array.from(topicsMap.values()).map((topic: any) => {
+        const questions = Array.from(topic.questions.values()).map((question: any) => {
+          // คำนวณสถิติการตอบ
+          const answerStats = this.calculateAnswerStats(question);
+          
+          return {
+            questionId: question.questionId,
+            questionText: question.questionText,
+            questionType: question.questionType,
+            choices: question.choices,
+            ...answerStats
+          };
+        });
+
+        // คำนวณข้อมูล PieChart สำหรับหัวข้อนี้
+        const pieData = this.calculatePieChartData(questions);
+        
+        return {
+          topicId: topic.topicId,
+          topicName: topic.topicName,
+          questions,
+          pieData,
+          totalRespondents: this.getTotalRespondents(questions)
+        };
+      });
+
+      return topics;
+    } catch (error) {
+      this.logDbError("getAssessmentData", error);
+      throw new Error("❌ Failed to get assessment data");
+    }
+  }
+
+  private calculateAnswerStats(question: any): any {
+    const answers = question.answers;
+    const totalAnswers = answers.length;
+    
+    if (question.questionType === 'satisfaction' || question.questionType === 'single_choice') {
+      const choiceCounts: { [key: string]: number } = {};
+      
+      answers.forEach((answer: any) => {
+        const choiceText = answer.choiceText || answer.answerText;
+        choiceCounts[choiceText] = (choiceCounts[choiceText] || 0) + 1;
+      });
+
+      const stats = question.choices.map((choice: any) => {
+        const count = choiceCounts[choice.choiceText] || 0;
+        return {
+          choiceText: choice.choiceText,
+          count,
+          percentage: totalAnswers > 0 ? ((count / totalAnswers) * 100).toFixed(1) : '0.0'
+        };
+      });
+
+      return {
+        totalAnswers,
+        choiceStats: stats,
+        average: this.calculateAverage(stats)
+      };
+    }
+    
+    return { totalAnswers };
+  }
+
+  private calculatePieChartData(questions: any[]): any[] {
+    // รวมข้อมูลจากทุกคำถามในหัวข้อ
+    const allAnswers: any[] = [];
+    questions.forEach(question => {
+      if (question.choiceStats) {
+        question.choiceStats.forEach((stat: any) => {
+          allAnswers.push({
+            choiceText: stat.choiceText,
+            count: stat.count
+          });
+        });
+      }
+    });
+
+    // จัดกลุ่มและรวมจำนวน
+    const groupedAnswers: { [key: string]: number } = {};
+    allAnswers.forEach(answer => {
+      groupedAnswers[answer.choiceText] = (groupedAnswers[answer.choiceText] || 0) + answer.count;
+    });
+
+    const total = Object.values(groupedAnswers).reduce((sum: number, count: number) => sum + count, 0);
+    
+    // สร้าง PieChart data
+    const pieData = Object.entries(groupedAnswers).map(([choiceText, count]) => ({
+      name: choiceText,
+      value: total > 0 ? ((count / total) * 100).toFixed(1) : '0.0',
+      color: this.getColorForChoice(choiceText)
+    }));
+
+    return pieData;
+  }
+
+  private getColorForChoice(choiceText: string): string {
+    const colorMap: { [key: string]: string } = {
+      'มากที่สุด': '#52C41A',
+      'มาก': '#B7EB8F',
+      'ปานกลาง': '#FADB14',
+      'น้อย': '#FA8C16',
+      'น้อยที่สุด': '#F5222D'
+    };
+    
+    return colorMap[choiceText] || '#D9D9D9';
+  }
+
+  private calculateAverage(stats: any[]): number {
+    const scoreMap: { [key: string]: number } = {
+      'มากที่สุด': 5,
+      'มาก': 4,
+      'ปานกลาง': 3,
+      'น้อย': 2,
+      'น้อยที่สุด': 1
+    };
+
+    let totalScore = 0;
+    let totalCount = 0;
+
+    stats.forEach(stat => {
+      const score = scoreMap[stat.choiceText] || 0;
+      totalScore += score * stat.count;
+      totalCount += stat.count;
+    });
+
+    return totalCount > 0 ? (totalScore / totalCount) : 0;
+  }
+
+  private getTotalRespondents(questions: any[]): number {
+    if (questions.length === 0) return 0;
+    
+    // ใช้จำนวนคำตอบจากคำถามแรกเป็นตัวแทน
+    return questions[0].totalAnswers || 0;
+  }
 }

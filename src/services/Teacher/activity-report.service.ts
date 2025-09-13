@@ -49,4 +49,25 @@ export class ActivityReportService extends ErrorHandledService {
       throw error;
     }
   }
+
+  /**
+   * ดึงข้อมูลแบบประเมินและผลการตอบ
+   */
+  public async getAssessmentDataService(activityId: number): Promise<any> {
+    try {
+      this.logInfo("📊 Getting assessment data", { activityId });
+      
+      const result = await this.activityReportDao.getAssessmentData(activityId);
+      
+      this.logInfo("✅ Assessment data retrieved", {
+        activityId,
+        topics: result.length
+      });
+      
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in getAssessmentDataService", error);
+      throw error;
+    }
+  }
 }

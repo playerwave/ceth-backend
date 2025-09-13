@@ -19,4 +19,11 @@ router.get(
   wrapAsync(activityReportController.getParticipationStatus)
 );
 
+// GET /api/teacher/activity-report/:activityId/assessment-data
+// ดึงข้อมูลแบบประเมินและผลการตอบ
+router.get(
+  "/:activityId/assessment-data",
+  wrapAsync(activityReportController.getAssessmentData)
+);
+
 export default router;

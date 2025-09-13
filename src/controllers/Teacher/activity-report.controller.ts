@@ -70,4 +70,35 @@ export class ActivityReportController extends ErrorHandledController {
       this.handleError("ActivityReportController.getParticipationStatus", error, res);
     }
   };
+
+  /**
+   * ดึงข้อมูลแบบประเมินและผลการตอบ
+   */
+  public getAssessmentData = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const activityId = parseInt(req.params.activityId);
+      
+      if (isNaN(activityId)) {
+        res.status(400).json({ error: "Invalid activity ID" });
+        return;
+      }
+
+      console.log("🔍 [ActivityReportController] Getting assessment data for activity:", activityId);
+      
+      const result = await this.activityReportService.getAssessmentDataService(activityId);
+      
+      console.log("✅ [ActivityReportController] Assessment data retrieved:", {
+        activityId,
+        topics: result.length
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error("❌ [ActivityReportController] Error getting assessment data:", error);
+      this.handleError("ActivityReportController.getAssessmentData", error, res);
+    }
+  };
 }
