@@ -396,7 +396,12 @@ export class AssessmentDao extends ErrorHandledDao {
   if (!assessment.length) return null;
 
   const setNumbers = await this.dataSource!.query(
-    `SELECT * FROM set_number WHERE assessment_id = $1`,
+    `SELECT * FROM set_number WHERE assessment_id = $1 ORDER BY 
+     CASE 
+       WHEN name ~ '^หัวข้อ ([0-9]+):' THEN 
+         CAST(SUBSTRING(name FROM '^หัวข้อ ([0-9]+):') AS INTEGER)
+       ELSE 999
+     END ASC, set_number_id ASC`,
     [assessment_id]
   );
 

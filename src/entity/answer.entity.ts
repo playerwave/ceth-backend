@@ -34,8 +34,8 @@ export class Answer {
   @JoinColumn({ name: "choice_id" })
   choice?: Choice | null;
 
-  @Column({ type: "int" })
-  choice_id?: number;
+  @Column({ type: "int", nullable: true })
+  choice_id?: number | null;
 
   @Column({ type: "text", nullable: true })
   answer_text?: string | null;
