@@ -58,7 +58,8 @@ import {
 } from "typeorm";
 import { SetNumber } from "./setNumbers.entity";
 import { Answer } from "./answer.entity";
-import { Activity } from "./activity.entity";
+import { Activity } from "../activity.entity";
+import { AssessmentVersion } from "./versioning assessment/assessment-version.entity";
 
 import { Transform } from "class-transformer";
 import { parseISO } from "date-fns";
@@ -130,4 +131,7 @@ export class Assessment {
 
   @OneToMany(() => SetNumber, (setNumber) => setNumber.assessment)
   setNumber?: SetNumber[];
+
+  @OneToMany(() => AssessmentVersion, (version) => version.assessment)
+  versions?: AssessmentVersion[];
 }

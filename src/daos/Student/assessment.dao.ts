@@ -67,21 +67,32 @@ export class AssessmentDao extends ErrorHandledDao {
       // ส่งคำตอบ satisfaction
       for (const [questionId, answer] of Object.entries(answers.satisfaction)) {
         if (answer) {
-          // หา choice_id จาก choice_text สำหรับ satisfaction questions
-          const choiceResult = await queryRunner.query(
-            `SELECT choice_id FROM choice WHERE question_id = $1 AND choice_text = $2`,
-            [parseInt(questionId), answer]
+          console.log(`🔍 [AssessmentDao] Processing satisfaction answer: questionId=${questionId}, answer="${answer}"`);
+          
+          // ตรวจสอบว่า question_id มีอยู่จริงและตรงกับ assessment_id หรือไม่
+          const questionCheck = await queryRunner.query(
+            `SELECT q.question_id, q.set_number_id, sn.assessment_id 
+             FROM question q 
+             JOIN set_number sn ON q.set_number_id = sn.set_number_id 
+             WHERE q.question_id = $1 AND sn.assessment_id = $2`,
+            [parseInt(questionId), assessment_id]
           );
           
-          if (choiceResult.length > 0) {
-            await queryRunner.query(
-              `INSERT INTO answer (join_id, question_id, choice_id, answer_text, set_number_id, assessment_id) 
-               SELECT $1, $2, $3, $4, q.set_number_id, $5 
-               FROM question q WHERE q.question_id = $2`,
-              [join_id, parseInt(questionId), choiceResult[0].choice_id, answer, assessment_id]
-            );
-            totalAnswersInserted++;
+          if (questionCheck.length === 0) {
+            console.log(`❌ [AssessmentDao] Question ${questionId} not found for assessment ${assessment_id}`);
+            continue;
           }
+          
+          console.log(`✅ [AssessmentDao] Question ${questionId} found, set_number_id: ${questionCheck[0].set_number_id}`);
+          
+          // สำหรับ satisfaction questions ใช้ answer_text โดยตรง ไม่ต้องใช้ choice_id
+          await queryRunner.query(
+            `INSERT INTO answer (join_id, question_id, answer_text, set_number_id, assessment_id) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            [join_id, parseInt(questionId), answer, questionCheck[0].set_number_id, assessment_id]
+          );
+          totalAnswersInserted++;
+          console.log(`✅ [AssessmentDao] Successfully inserted satisfaction answer for questionId=${questionId}, answer="${answer}"`);
         }
       }
 
@@ -341,6 +352,26 @@ export class AssessmentDao extends ErrorHandledDao {
     } catch (error) {
       this.logDbError("getAnswersByJoinAndAssessment", error);
       throw new Error("❌ Failed to get answers by join and assessment");
+    }
+  }
+
+  /**
+   * ลบคำตอบเก่าออก
+   * @param join_id - ID ของ join
+   * @param assessment_id - ID ของ assessment
+   */
+  public async deleteAnswersByJoinAndAssessment(join_id: number, assessment_id: number): Promise<number> {
+    await this.checkConnection();
+    try {
+      const result = await this.dataSource!.query(
+        `DELETE FROM answer WHERE join_id = $1 AND assessment_id = $2`,
+        [join_id, assessment_id]
+      );
+      console.log(`🗑️ Deleted ${result.rowCount || 0} answers for join_id=${join_id}, assessment_id=${assessment_id}`);
+      return result.rowCount || 0;
+    } catch (error) {
+      this.logDbError("deleteAnswersByJoinAndAssessment", error);
+      throw new Error("❌ Failed to delete answers by join and assessment");
     }
   }
 

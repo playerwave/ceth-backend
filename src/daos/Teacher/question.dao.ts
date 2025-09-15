@@ -1,7 +1,7 @@
 import { DataSource } from "typeorm";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { connectDatabase } from "../../db/database";
-import { Question } from "../../entity/question.entity";
+import { Question } from "../../entity/Assessment/question.entity";
 
 export type QuestionJoinAssessment = {
     question_id: number;

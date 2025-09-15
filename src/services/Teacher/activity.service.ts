@@ -1,7 +1,7 @@
 import { ActivityDao } from "../../daos/Teacher/activity.dao";
 import { AssessmentDao } from "../../daos/Teacher/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
-import { Assessment } from "../../entity/assessment.entity";
+import { Assessment } from "../../entity/Assessment/assessment.entity";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 import { RoomService } from "./room.service";
@@ -514,6 +514,57 @@ export class ActivityService extends ErrorHandledService {
       return students;
     } catch (error) {
       this.logError("❌ Error getting students who checked out", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงคำตอบของนักเรียนใน Activity พร้อม JOIN กับ activity_detail, join, answer
+   */
+  public async getStudentAnswersDetail(activityId: number): Promise<any[]> {
+    try {
+      const studentAnswers = await this.activityDao.getStudentAnswersDetail(activityId);
+      this.logInfo("📥 Retrieved student answers detail", {
+        activityId,
+        count: studentAnswers.length
+      });
+      return studentAnswers;
+    } catch (error) {
+      this.logError("❌ Error getting student answers detail", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงข้อมูล Assessment Structure และ Student Answers รวมกัน
+   */
+  public async getCompleteAssessmentData(activityId: number): Promise<any> {
+    try {
+      const result = await this.activityDao.getCompleteAssessmentData(activityId);
+      this.logInfo("📥 Retrieved complete assessment data", {
+        activityId,
+        studentsCount: result.data?.students?.length || 0
+      });
+      return result;
+    } catch (error) {
+      this.logError("❌ Error getting complete assessment data", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ตรวจสอบและสร้างข้อมูล Assessment Structure ตัวอย่าง
+   */
+  public async checkAndCreateSampleAssessmentData(activityId: number): Promise<any> {
+    try {
+      const result = await this.activityDao.checkAndCreateSampleAssessmentData(activityId);
+      this.logInfo("🔧 Checked and created sample assessment data", {
+        activityId,
+        result
+      });
+      return result;
+    } catch (error) {
+      this.logError("❌ Error checking and creating sample assessment data", error);
       throw error;
     }
   }

@@ -143,14 +143,43 @@ export class AssessmentController extends ErrorHandledController {
 
   public async getAll(req: Request, res: Response): Promise<void> {
     try {
+      console.log("🔄 [AssessmentController] getAll called");
       const page = parseInt(req.query.page as string, 10) || 1;
       const limit = parseInt(req.query.limit as string, 10) || 10;
+      const type = req.query.type as string || 'latest'; // 'latest', 'all', 'published'
+      
+      console.log("📋 [AssessmentController] Request params:", { page, limit, type });
 
-      const assessments = await this.assessmentService.getAssessments(
-        page,
-        limit
-      );
-      res.status(200).json(assessments);
+      let assessments: any[];
+
+      switch (type) {
+        case 'all':
+          console.log("🔄 [AssessmentController] Getting all assessments...");
+          assessments = await this.assessmentService.getAllAssessments(page, limit);
+          break;
+        case 'published':
+          console.log("🔄 [AssessmentController] Getting published assessments...");
+          assessments = await this.assessmentService.getPublishedAssessments(page, limit);
+          break;
+        case 'latest':
+        default:
+          console.log("🔄 [AssessmentController] Getting latest assessments...");
+          assessments = await this.assessmentService.getAssessments(page, limit);
+          break;
+      }
+
+      console.log("✅ [AssessmentController] Assessments retrieved:", assessments);
+      console.log("📊 [AssessmentController] Number of assessments:", assessments.length);
+
+      res.status(200).json({
+        message: `Assessments retrieved successfully (type: ${type})`,
+        data: assessments,
+        pagination: {
+          page,
+          limit,
+          type
+        }
+      });
     } catch (error) {
       this.handleError("AssessmentController.getAll", error, res);
     }
@@ -290,6 +319,94 @@ public async getById(req: Request, res: Response): Promise<void> {
     this.handleError("AssessmentController.delete", error, res);
   }
 }
+
+  // ==================== VERSIONING METHODS ====================
+
+  public async createVersion(req: Request, res: Response): Promise<void> {
+    try {
+      const assessmentId = this.parseId(req.params.assessmentId);
+      const newVersion = await this.assessmentService.createNewVersion(assessmentId);
+      
+      res.status(201).json({
+        message: "สร้างเวอร์ชันใหม่สำเร็จ!",
+        version: newVersion
+      });
+    } catch (error) {
+      this.handleError("AssessmentController.createVersion", error, res);
+    }
+  }
+
+  public async publishVersion(req: Request, res: Response): Promise<void> {
+    try {
+      const assessmentId = this.parseId(req.params.assessmentId);
+      const versionId = this.parseId(req.params.versionId);
+      const publishedVersion = await this.assessmentService.publishVersion(versionId);
+      
+      res.status(200).json({
+        message: "เผยแพร่เวอร์ชันสำเร็จ!",
+        version: publishedVersion
+      });
+    } catch (error) {
+      this.handleError("AssessmentController.publishVersion", error, res);
+    }
+  }
+
+  public async getVersionHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const assessmentId = this.parseId(req.params.assessmentId);
+      const versions = await this.assessmentService.getVersionHistory(assessmentId);
+      
+      res.status(200).json({
+        message: "ดึงประวัติเวอร์ชันสำเร็จ!",
+        versions
+      });
+    } catch (error) {
+      this.handleError("AssessmentController.getVersionHistory", error, res);
+    }
+  }
+
+  public async getLatestPublishedVersion(req: Request, res: Response): Promise<void> {
+    try {
+      const assessmentId = this.parseId(req.params.assessmentId);
+      const version = await this.assessmentService.getLatestPublishedVersion(assessmentId);
+      
+      res.status(200).json({
+        message: "ดึงเวอร์ชันล่าสุดที่เผยแพร่สำเร็จ!",
+        version
+      });
+    } catch (error) {
+      this.handleError("AssessmentController.getLatestPublishedVersion", error, res);
+    }
+  }
+
+  public async getVersionWithFullData(req: Request, res: Response): Promise<void> {
+    try {
+      const versionId = this.parseId(req.params.versionId);
+      const versionData = await this.assessmentService.getVersionWithFullData(versionId);
+      
+      res.status(200).json({
+        message: "ดึงข้อมูลเวอร์ชันครบถ้วนสำเร็จ!",
+        data: versionData
+      });
+    } catch (error) {
+      this.handleError("AssessmentController.getVersionWithFullData", error, res);
+    }
+  }
+
+  public async cloneVersion(req: Request, res: Response): Promise<void> {
+    try {
+      const assessmentId = this.parseId(req.params.assessmentId);
+      const versionId = this.parseId(req.params.versionId);
+      const clonedData = await this.assessmentService.cloneVersion(versionId, assessmentId);
+      
+      res.status(200).json({
+        message: "คัดลอกเวอร์ชันสำเร็จ!",
+        data: clonedData
+      });
+    } catch (error) {
+      this.handleError("AssessmentController.cloneVersion", error, res);
+    }
+  }
 
   // 🔧 Utils
   private parseId(value: string): number {

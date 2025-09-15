@@ -47,7 +47,9 @@ export class AssessmentService extends ErrorHandledService {
       // ตรวจสอบว่าได้ส่งคำตอบไปแล้วหรือยัง
       const existingAnswers = await this.assessmentDao.getAnswersByJoinAndAssessment(join_id, assessment_id);
       if (existingAnswers.length > 0) {
-        throw new Error("Assessment already submitted");
+        console.log(`🔄 Found ${existingAnswers.length} existing answers, deleting them first...`);
+        await this.assessmentDao.deleteAnswersByJoinAndAssessment(join_id, assessment_id);
+        console.log(`✅ Deleted existing answers, proceeding with new submission`);
       }
 
       // ส่งคำตอบไปยัง DAO

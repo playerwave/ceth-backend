@@ -84,4 +84,13 @@ router.patch("/reset-student-times/:activityId", wrapAsync(activityController.re
 router.get("/students-checked-in/:activityId", wrapAsync(activityController.getStudentsCheckedIn));
 router.get("/students-checked-out/:activityId", wrapAsync(activityController.getStudentsCheckedOut));
 
+// ดูคำตอบของนักเรียนใน Activity (JOIN กับ activity_detail, join, answer)
+router.get("/student-answers-detail/:activityId", wrapAsync(activityController.getStudentAnswersDetail));
+
+// ดูข้อมูล Assessment Structure และ Student Answers รวมกัน
+router.get("/complete-assessment-data/:activityId", wrapAsync(activityController.getCompleteAssessmentData));
+
+// ตรวจสอบและสร้างข้อมูล Assessment Structure ตัวอย่าง
+router.post("/create-sample-assessment/:activityId", wrapAsync(activityController.checkAndCreateSampleAssessmentData));
+
 export default router;

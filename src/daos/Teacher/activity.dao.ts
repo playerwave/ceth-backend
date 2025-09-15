@@ -1666,4 +1666,478 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  /**
+   * ดึงโครงสร้าง Assessment ของ Activity (SetNumbers, Questions, Choices)
+   */
+  public async getAssessmentStructure(activityId: number): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      // ดึงข้อมูล Assessment ที่เชื่อมกับ Activity
+      const assessmentQuery = `
+        SELECT 
+          a.activity_id,
+          a.activity_name,
+          av.assessment_version_id,
+          av.version_no,
+          av.is_published,
+          av.published_at,
+          av.created_at
+        FROM activity a
+        LEFT JOIN assessment_version av ON a.assessment_version_id = av.assessment_version_id
+        WHERE a.activity_id = $1
+      `;
+      
+      const assessmentResult = await this.dataSource!.query(assessmentQuery, [activityId]);
+      
+      if (assessmentResult.length === 0 || !assessmentResult[0].assessment_version_id) {
+        return {
+          activity_id: activityId,
+          activity_name: assessmentResult[0]?.activity_name || '',
+          assessment_version_id: null,
+          setNumbers: []
+        };
+      }
+      
+      const assessmentVersionId = assessmentResult[0].assessment_version_id;
+      
+      // ดึงข้อมูล SetNumbers
+      const setNumbersQuery = `
+        SELECT 
+          snv.set_number_version_id,
+          snv.order_index,
+          snv.name,
+          snv.description,
+          snv.created_at
+        FROM set_number_version snv
+        WHERE snv.assessment_version_id = $1
+        ORDER BY snv.order_index
+      `;
+      
+      const setNumbersResult = await this.dataSource!.query(setNumbersQuery, [assessmentVersionId]);
+      
+      // ดึงข้อมูล Questions และ Choices สำหรับแต่ละ SetNumber
+      for (const setNumber of setNumbersResult) {
+        const questionsQuery = `
+          SELECT 
+            qv.question_version_id,
+            qv.order_index,
+            qv.question_text,
+            qv.question_type,
+            qv.set_number_version_id
+          FROM question_version qv
+          WHERE qv.set_number_version_id = $1
+          ORDER BY qv.order_index
+        `;
+        
+        const questionsResult = await this.dataSource!.query(questionsQuery, [setNumber.set_number_version_id]);
+        
+        // ดึงข้อมูล Choices สำหรับแต่ละ Question
+        for (const question of questionsResult) {
+          const choicesQuery = `
+            SELECT 
+              cv.choice_version_id,
+              cv.order_index,
+              cv.choice_text,
+              cv.question_version_id
+            FROM choice_version cv
+            WHERE cv.question_version_id = $1
+            ORDER BY cv.order_index
+          `;
+          
+          const choicesResult = await this.dataSource!.query(choicesQuery, [question.question_version_id]);
+          question.choices = choicesResult;
+        }
+        
+        setNumber.questions = questionsResult;
+      }
+      
+      return {
+        ...assessmentResult[0],
+        setNumbers: setNumbersResult
+      };
+    } catch (error) {
+      console.error("❌ Error getting assessment structure:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงคำตอบของนักเรียนใน Activity (แยกตาม answer แต่ละข้อ)
+   */
+  public async getStudentAnswersDetail(activityId: number): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      // ตรวจสอบข้อมูล Activity และ Assessment ก่อน
+      const activityInfo = await this.dataSource!.query(
+        `SELECT activity_id, activity_name, assessment_id FROM activity WHERE activity_id = $1`,
+        [activityId]
+      );
+      
+      if (activityInfo.length === 0) {
+        console.log(`❌ Activity ${activityId} not found`);
+        return [];
+      }
+      
+      const assessmentId = activityInfo[0].assessment_id;
+      console.log(`🔍 Activity ${activityId} has Assessment ${assessmentId}`);
+      
+      // ตรวจสอบว่ามีคำตอบหรือไม่
+      const answerCount = await this.dataSource!.query(
+        `SELECT COUNT(*) as count FROM answer WHERE assessment_id = $1`,
+        [assessmentId]
+      );
+      
+      console.log(`📊 Found ${answerCount[0].count} answers for assessment ${assessmentId}`);
+      
+      // ถ้าไม่มีคำตอบ ให้แสดงข้อมูลนิสิตที่เข้าร่วมกิจกรรม
+      if (parseInt(answerCount[0].count) === 0) {
+        console.log(`⚠️ No answers found, returning student participation data`);
+        
+        const studentQuery = `
+          SELECT 
+            a.activity_id,
+            a.activity_name,
+            ad.activity_detail_id,
+            ad.time_in,
+            ad.time_out,
+            ad.register_date,
+            j.join_id,
+            j.join_date,
+            j.status as join_status,
+            s.students_id,
+            s.first_name_tha,
+            s.last_name_tha,
+            u.username,
+            d.department_short_name,
+            NULL as answer_id,
+            NULL as answer_text,
+            NULL as assessment_id,
+            NULL as assessment_version_id,
+            NULL as set_number_version_id,
+            NULL as question_version_id,
+            NULL as choice_version_id,
+            NULL as question_text,
+            NULL as question_type,
+            NULL as question_order,
+            NULL as choice_text,
+            NULL as choice_id,
+            NULL as set_number_name,
+            NULL as set_number_order,
+            NULL as assessment_version_no
+          FROM activity a
+          JOIN activity_detail ad ON a.activity_id = ad.activity_id
+          JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+          JOIN students s ON j.students_id = s.students_id
+          JOIN users u ON s.users_id = u.users_id
+          JOIN department d ON s.department_id = d.department_id
+          WHERE a.activity_id = $1
+          ORDER BY s.first_name_tha, s.last_name_tha
+        `;
+        
+        const result = await this.dataSource!.query(studentQuery, [activityId]);
+        console.log(`📊 Found ${result.length} students for activity ${activityId} (no answers yet)`);
+        return result;
+      }
+      
+      // ถ้ามีคำตอบ ให้แสดงข้อมูลคำตอบ
+      const query = `
+        SELECT 
+          a.activity_id,
+          a.activity_name,
+          ad.activity_detail_id,
+          ad.time_in,
+          ad.time_out,
+          ad.register_date,
+          j.join_id,
+          j.join_date,
+          j.status as join_status,
+          s.students_id,
+          s.first_name_tha,
+          s.last_name_tha,
+          u.username,
+          d.department_short_name,
+          ans.answer_id,
+          ans.answer_text,
+          ans.assessment_id,
+          ans.assessment_version_id,
+          ans.set_number_version_id,
+          ans.question_version_id,
+          ans.choice_version_id,
+          q.question_text,
+          q.question_type,
+          q.question_number as question_order,
+          c.choice_text,
+          c.choice_id,
+          sn.name as set_number_name,
+          sn.set_number_id as set_number_order,
+          av.version_no as assessment_version_no
+        FROM activity a
+        JOIN activity_detail ad ON a.activity_id = ad.activity_id
+        JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+        JOIN students s ON j.students_id = s.students_id
+        JOIN users u ON s.users_id = u.users_id
+        JOIN department d ON s.department_id = d.department_id
+        INNER JOIN answer ans ON j.join_id = ans.join_id AND ans.assessment_id = a.assessment_id
+        LEFT JOIN question q ON ans.question_id = q.question_id
+        LEFT JOIN choice c ON ans.choice_id = c.choice_id
+        LEFT JOIN set_number sn ON ans.set_number_id = sn.set_number_id
+        LEFT JOIN assessment_version av ON ans.assessment_version_id = av.assessment_version_id
+        WHERE a.activity_id = $1
+        ORDER BY 
+          s.first_name_tha, s.last_name_tha,
+          COALESCE(sn.set_number_id, 0),
+          COALESCE(q.question_number, 0),
+          COALESCE(c.choice_id, 0),
+          COALESCE(ans.answer_id, 0)
+      `;
+      
+      const result = await this.dataSource!.query(query, [activityId]);
+      console.log(`📊 Found ${result.length} student answers for activity ${activityId}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting student answers detail:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงข้อมูล Assessment Structure และ Student Answers รวมกัน
+   */
+  public async getCompleteAssessmentData(activityId: number): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      // ดึงโครงสร้าง Assessment
+      const assessmentStructure = await this.getAssessmentStructure(activityId);
+      
+      // ดึงคำตอบของนักเรียน
+      const studentAnswers = await this.getStudentAnswersDetail(activityId);
+      
+      // จัดกลุ่มคำตอบตาม student
+      const studentsWithAnswers: any = {};
+      
+      studentAnswers.forEach((answer: any) => {
+        const studentKey = `${answer.students_id}_${answer.join_id}`;
+        
+        if (!studentsWithAnswers[studentKey]) {
+          studentsWithAnswers[studentKey] = {
+            activity_id: answer.activity_id,
+            activity_name: answer.activity_name,
+            activity_detail_id: answer.activity_detail_id,
+            time_in: answer.time_in,
+            time_out: answer.time_out,
+            register_date: answer.register_date,
+            join_id: answer.join_id,
+            join_date: answer.join_date,
+            join_status: answer.join_status,
+            students_id: answer.students_id,
+            first_name_tha: answer.first_name_tha,
+            last_name_tha: answer.last_name_tha,
+            username: answer.username,
+            department_short_name: answer.department_short_name,
+            answers: []
+          };
+        }
+        
+        // เพิ่มคำตอบ (ถ้ามี)
+        if (answer.answer_id) {
+          studentsWithAnswers[studentKey].answers.push({
+            answer_id: answer.answer_id,
+            answer_text: answer.answer_text,
+            assessment_id: answer.assessment_id,
+            assessment_version_id: answer.assessment_version_id,
+            set_number_version_id: answer.set_number_version_id,
+            question_version_id: answer.question_version_id,
+            choice_version_id: answer.choice_version_id,
+            question_text: answer.question_text,
+            question_type: answer.question_type,
+            question_order: answer.question_order,
+            choice_text: answer.choice_text,
+            choice_order: answer.choice_order,
+            set_number_name: answer.set_number_name,
+            set_number_order: answer.set_number_order,
+            assessment_version_no: answer.assessment_version_no
+          });
+        }
+      });
+      
+      // แปลงเป็น array
+      const studentsArray = Object.values(studentsWithAnswers);
+      
+      return {
+        success: true,
+        message: `Found ${studentsArray.length} students with assessment data for activity ${activityId}`,
+        data: {
+          assessment_structure: assessmentStructure,
+          students: studentsArray
+        }
+      };
+    } catch (error) {
+      console.error("❌ Error getting complete assessment data:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ตรวจสอบและสร้างข้อมูล Assessment Structure ตัวอย่าง
+   */
+  public async checkAndCreateSampleAssessmentData(activityId: number): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      // ตรวจสอบว่า Activity มี assessment_version_id หรือไม่
+      const activityQuery = `
+        SELECT 
+          activity_id,
+          activity_name,
+          assessment_id,
+          assessment_version_id
+        FROM activity
+        WHERE activity_id = $1
+      `;
+      
+      const activityResult = await this.dataSource!.query(activityQuery, [activityId]);
+      
+      if (activityResult.length === 0) {
+        return { error: "Activity not found" };
+      }
+      
+      const activity = activityResult[0];
+      console.log(`🔍 Activity ${activityId} data:`, activity);
+      
+      if (!activity.assessment_version_id) {
+        console.log(`⚠️ Activity ${activityId} has no assessment_version_id`);
+        
+        // สร้าง Assessment และ AssessmentVersion ตัวอย่าง
+        const createAssessmentQuery = `
+          INSERT INTO assessment (assessment_name, description, created_at)
+          VALUES ($1, $2, NOW())
+          RETURNING assessment_id
+        `;
+        
+        const assessmentResult = await this.dataSource!.query(createAssessmentQuery, [
+          `แบบประเมินสำหรับ ${activity.activity_name}`,
+          "แบบประเมินผลการอบรม"
+        ]);
+        
+        const assessmentId = assessmentResult[0].assessment_id;
+        console.log(`✅ Created assessment with ID: ${assessmentId}`);
+        
+        // สร้าง AssessmentVersion
+        const createVersionQuery = `
+          INSERT INTO assessment_version (assessment_id, version_no, is_published, created_at)
+          VALUES ($1, 1, true, NOW())
+          RETURNING assessment_version_id
+        `;
+        
+        const versionResult = await this.dataSource!.query(createVersionQuery, [assessmentId]);
+        const versionId = versionResult[0].assessment_version_id;
+        console.log(`✅ Created assessment version with ID: ${versionId}`);
+        
+        // อัปเดต Activity ให้เชื่อมกับ AssessmentVersion
+        const updateActivityQuery = `
+          UPDATE activity 
+          SET assessment_id = $1, assessment_version_id = $2
+          WHERE activity_id = $3
+        `;
+        
+        await this.dataSource!.query(updateActivityQuery, [assessmentId, versionId, activityId]);
+        console.log(`✅ Updated activity ${activityId} with assessment data`);
+        
+        // สร้าง SetNumber ตัวอย่าง
+        const setNumbers = [
+          { name: "ประเมินผลเนื้อหาการอบรม", description: "ประเมินความรู้และความเข้าใจ" },
+          { name: "ประเมินวิทยากร", description: "ประเมินความสามารถของวิทยากร" }
+        ];
+        
+        for (let i = 0; i < setNumbers.length; i++) {
+          const setNumber = setNumbers[i];
+          const createSetNumberQuery = `
+            INSERT INTO set_number_version (assessment_version_id, order_index, name, description, created_at)
+            VALUES ($1, $2, $3, $4, NOW())
+            RETURNING set_number_version_id
+          `;
+          
+          const setNumberResult = await this.dataSource!.query(createSetNumberQuery, [
+            versionId, i + 1, setNumber.name, setNumber.description
+          ]);
+          
+          const setNumberId = setNumberResult[0].set_number_version_id;
+          console.log(`✅ Created set number "${setNumber.name}" with ID: ${setNumberId}`);
+          
+          // สร้าง Questions ตัวอย่าง
+          const questions = i === 0 ? [
+            { text: "ความรู้ความเข้าใจในเรื่องนี้ก่อนการอบรม", type: "single_choice" },
+            { text: "ความรู้ความเข้าใจในเรื่องนี้หลังการอบรม", type: "single_choice" },
+            { text: "ท่านได้รับความรู้แนวคิด ประสบการณ์ใหม่จากโครงการ", type: "single_choice" },
+            { text: "ท่านสามารถนำสิ่งที่ได้รับจากโครงการนี้ไปใช้ประโยชน์ในการปฏิบัติงานในอนาคต", type: "single_choice" },
+            { text: "รูปแบบและวิธีอบรมมีความเหมาะสมกับสถานการณ์ปัจจุบัน", type: "single_choice" }
+          ] : [
+            { text: "ความรู้ความเชี่ยวชาญในเรื่องบรรยายของวิทยากร", type: "single_choice" },
+            { text: "ความสามารถในการบรรยายและถ่ายทอดความรู้ของวิทยากร", type: "single_choice" },
+            { text: "ความสามารถในการถ่ายทอดเนื้อหาให้เป็นที่น่าสนใจ", type: "single_choice" },
+            { text: "เปิดโอกาสให้มีส่วนร่วมในการสอบถามและแสดงความคิดเห็น", type: "single_choice" },
+            { text: "ภาพรวมของการบรรยายมีความชัดเจน", type: "single_choice" }
+          ];
+          
+          for (let j = 0; j < questions.length; j++) {
+            const question = questions[j];
+            const createQuestionQuery = `
+              INSERT INTO question_version (set_number_version_id, order_index, question_text, question_type)
+              VALUES ($1, $2, $3, $4)
+              RETURNING question_version_id
+            `;
+            
+            const questionResult = await this.dataSource!.query(createQuestionQuery, [
+              setNumberId, j + 1, question.text, question.type
+            ]);
+            
+            const questionId = questionResult[0].question_version_id;
+            console.log(`✅ Created question "${question.text}" with ID: ${questionId}`);
+            
+            // สร้าง Choices ตัวอย่าง (Likert Scale)
+            const choices = [
+              "มากที่สุด",
+              "มาก", 
+              "ปานกลาง",
+              "น้อย",
+              "น้อยที่สุด"
+            ];
+            
+            for (let k = 0; k < choices.length; k++) {
+              const createChoiceQuery = `
+                INSERT INTO choice_version (question_version_id, order_index, choice_text)
+                VALUES ($1, $2, $3)
+              `;
+              
+              await this.dataSource!.query(createChoiceQuery, [
+                questionId, k + 1, choices[k]
+              ]);
+            }
+            
+            console.log(`✅ Created ${choices.length} choices for question ${questionId}`);
+          }
+        }
+        
+        return {
+          success: true,
+          message: `Created sample assessment data for activity ${activityId}`,
+          assessment_id: assessmentId,
+          assessment_version_id: versionId
+        };
+      } else {
+        return {
+          success: true,
+          message: `Activity ${activityId} already has assessment_version_id: ${activity.assessment_version_id}`,
+          assessment_version_id: activity.assessment_version_id
+        };
+      }
+    } catch (error) {
+      console.error("❌ Error checking and creating sample assessment data:", error);
+      throw error;
+    }
+  }
+
 }

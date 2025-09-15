@@ -1,7 +1,7 @@
 import { ActivityDao } from "../../daos/Student/activity.dao";
 import { AssessmentDao } from "../../daos/Student/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
-import { Assessment } from "../../entity/assessment.entity";
+import { Assessment } from "../../entity/Assessment/assessment.entity";
 import { Join } from "../../entity/join.entity";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
@@ -651,6 +651,25 @@ export class ActivityService extends ErrorHandledService {
       return result;
     } catch (error) {
       this.logError("❌ Error in getAssessmentByActivityIdService", error);
+      throw error;
+    }
+  }
+
+  public async getJoinIdByStudentAndActivityService(activityId: number, studentId: number): Promise<number | null> {
+    try {
+      console.log("🔍 [ActivityService] Getting join_id for activity:", activityId, "student:", studentId);
+
+      const joinId = await this.activityDao.getJoinIdByStudentAndActivity(activityId, studentId);
+      
+      if (!joinId) {
+        console.log("❌ [ActivityService] No join found for activity:", activityId, "student:", studentId);
+        return null;
+      }
+
+      console.log("✅ [ActivityService] Join ID found:", joinId);
+      return joinId;
+    } catch (error) {
+      this.logError("❌ Error in getJoinIdByStudentAndActivityService", error);
       throw error;
     }
   }

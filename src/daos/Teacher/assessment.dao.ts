@@ -174,7 +174,7 @@
 // }
 
 import { DataSource } from "typeorm";
-import { Assessment } from "../../entity/assessment.entity";
+import { Assessment } from "../../entity/Assessment/assessment.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
 
@@ -221,19 +221,89 @@ export class AssessmentDao extends ErrorHandledDao {
   }
 
   async getAssessments(page: number, limit: number): Promise<Assessment[]> {
+    console.log("🔄 [AssessmentDao] getAssessments called with:", { page, limit });
     await this.checkConnection();
     const offset = (page - 1) * limit;
+    console.log("📊 [AssessmentDao] Calculated offset:", offset);
 
     try {
+      console.log("🔄 [AssessmentDao] Executing SQL query...");
       const result = await this.dataSource!.query(
         `SELECT * FROM assessment
          ORDER BY assessment_id ASC
          LIMIT $1 OFFSET $2`,
         [limit, offset]
       );
+      console.log("✅ [AssessmentDao] Query result:", result);
+      console.log("📊 [AssessmentDao] Number of assessments found:", result.length);
       return result;
     } catch (error) {
+      console.error("❌ [AssessmentDao] Error in getAssessments:", error);
       this.logDbError("getAssessments", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึง assessment ที่มีเวอร์ชันล่าสุดที่ published
+   */
+  async getAssessmentsWithLatestPublishedVersion(page: number, limit: number): Promise<Assessment[]> {
+    await this.checkConnection();
+    const offset = (page - 1) * limit;
+
+    try {
+      const result = await this.dataSource!.query(
+        `SELECT DISTINCT ON (a.assessment_id) 
+         a.*,
+         av.assessment_version_id,
+         av.version_no,
+         av.is_published,
+         av.published_at,
+         av.created_at as version_created_at
+         FROM assessment a
+         LEFT JOIN assessment_version av ON a.assessment_id = av.assessment_id
+         WHERE av.is_published = true OR av.is_published IS NULL
+         ORDER BY a.assessment_id ASC, av.version_no DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+      
+      console.log(`📋 Retrieved ${result.length} assessments with latest published versions`);
+      return result;
+    } catch (error) {
+      this.logDbError("getAssessmentsWithLatestPublishedVersion", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงเฉพาะ assessment ที่มีเวอร์ชันล่าสุดที่ published (ไม่รวม assessment ที่ยังไม่มี version)
+   */
+  async getAssessmentsWithPublishedVersionsOnly(page: number, limit: number): Promise<Assessment[]> {
+    await this.checkConnection();
+    const offset = (page - 1) * limit;
+
+    try {
+      const result = await this.dataSource!.query(
+        `SELECT DISTINCT ON (a.assessment_id) 
+         a.*,
+         av.assessment_version_id,
+         av.version_no,
+         av.is_published,
+         av.published_at,
+         av.created_at as version_created_at
+         FROM assessment a
+         INNER JOIN assessment_version av ON a.assessment_id = av.assessment_id
+         WHERE av.is_published = true
+         ORDER BY a.assessment_id ASC, av.version_no DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+      
+      console.log(`📋 Retrieved ${result.length} assessments with published versions only`);
+      return result;
+    } catch (error) {
+      this.logDbError("getAssessmentsWithPublishedVersionsOnly", error);
       throw error;
     }
   }

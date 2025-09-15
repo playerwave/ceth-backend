@@ -180,19 +180,27 @@ export class ActivityDao extends ErrorHandledDao {
     await this.checkConnection();
 
     const query = `
-      SELECT a.*, COALESCE(a.registered_count, 0) as registered_count
+      SELECT DISTINCT
+        a.*, 
+        COALESCE(a.registered_count, 0) as registered_count,
+        CASE 
+          WHEN ans.answer_id IS NOT NULL THEN true 
+          ELSE false 
+        END as has_submitted_assessment
       FROM activity a
       INNER JOIN activity_detail ad ON ad.activity_id = a.activity_id
       INNER JOIN "join" j ON j.activity_detail_id = ad.activity_detail_id
+      LEFT JOIN answer ans ON j.join_id = ans.join_id AND a.assessment_id = ans.assessment_id
       WHERE j.students_id = $1
         AND a.activity_status = 'Public'
         AND ad.status = 'Registered'
         AND j.status = 'Pending'
+        AND ans.answer_id IS NULL
       ORDER BY a.start_activity_date DESC
     `;
 
     const result = await this.dataSource!.query(query, [studentId]);
-    console.log(`📊 Found ${result.length} enrolled activities for student ${studentId} (Registered status, Pending join)`);
+    console.log(`📊 Found ${result.length} enrolled activities for student ${studentId} (only activities without submitted assessment)`);
     return result;
   }
 
@@ -950,6 +958,29 @@ export class ActivityDao extends ErrorHandledDao {
     } catch (error) {
       this.logDbError("getActivityById", error);
       throw new Error("❌ Failed to get activity by ID");
+    }
+  }
+
+  public async getJoinIdByStudentAndActivity(activityId: number, studentId: number): Promise<number | null> {
+    await this.checkConnection();
+    try {
+      const sql = `
+        SELECT j.join_id 
+        FROM "join" j 
+        JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id 
+        WHERE ad.activity_id = $1 AND j.students_id = $2
+      `;
+      
+      const result = await this.dataSource?.query(sql, [activityId, studentId]);
+      
+      if (result && result.length > 0) {
+        return result[0].join_id;
+      }
+      
+      return null;
+    } catch (error) {
+      this.logDbError("getJoinIdByStudentAndActivity", error);
+      throw new Error("❌ Failed to get join_id by student and activity");
     }
   }
 }

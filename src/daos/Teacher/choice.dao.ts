@@ -1,7 +1,7 @@
 import { DataSource } from "typeorm";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { connectDatabase } from "../../db/database";
-import { Choice } from "../../entity/choice.entity";
+import { Choice } from "../../entity/Assessment/choice.entity";
 
 type ChoiceRow = {
     choice_id: number;

@@ -9,7 +9,7 @@ import {
 } from "typeorm";
 import { Students } from "./students.entity";
 import { ActivityDetail } from "./activitydetail.entity";
-import { Answer } from "./answer.entity";
+import { Answer } from "./Assessment/answer.entity";
 
 import { Transform } from "class-transformer";
 import { parseISO } from "date-fns";

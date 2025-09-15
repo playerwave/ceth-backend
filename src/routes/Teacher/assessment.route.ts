@@ -14,6 +14,10 @@ const assessmentService = new AssessmentService();
 const assessmentController = new AssessmentController(assessmentService);
 
 // ✅ GET /get-assessments → ดึงข้อมูลแบบ paginated
+// Query parameters: ?type=latest|all|published&page=1&limit=10
+// - latest: ดึงเวอร์ชันล่าสุดที่ published (default)
+// - all: ดึงทั้งหมดแบบเดิม (ไม่ใช้ versioning)
+// - published: ดึงเฉพาะที่มีเวอร์ชันที่ published
 router.get(
   "/get-assessments",
   verifyToken,
@@ -69,4 +73,50 @@ router.post(
   "/create-assessment-full",
   (req, res) => assessmentController.createAssessmentFull(req, res)
 );
+
+// ==================== VERSIONING ROUTES ====================
+
+// สร้างเวอร์ชันใหม่
+router.post(
+  "/:assessmentId/versions",
+  verifyToken,
+  wrapAsync(assessmentController.createVersion.bind(assessmentController))
+);
+
+// Publish เวอร์ชัน
+router.post(
+  "/:assessmentId/versions/:versionId/publish",
+  verifyToken,
+  wrapAsync(assessmentController.publishVersion.bind(assessmentController))
+);
+
+// ดึงประวัติเวอร์ชัน
+router.get(
+  "/:assessmentId/versions",
+  verifyToken,
+  wrapAsync(assessmentController.getVersionHistory.bind(assessmentController))
+);
+
+// ดึงเวอร์ชันล่าสุดที่ published
+router.get(
+  "/:assessmentId/versions/latest",
+  verifyToken,
+  wrapAsync(assessmentController.getLatestPublishedVersion.bind(assessmentController))
+);
+
+// ดึงเวอร์ชันพร้อมข้อมูลครบถ้วน
+router.get(
+  "/versions/:versionId",
+  verifyToken,
+  wrapAsync(assessmentController.getVersionWithFullData.bind(assessmentController))
+);
+
+// Clone เวอร์ชัน
+router.post(
+  "/:assessmentId/versions/:versionId/clone",
+  verifyToken,
+  wrapAsync(assessmentController.cloneVersion.bind(assessmentController))
+);
+
+
 export default router;

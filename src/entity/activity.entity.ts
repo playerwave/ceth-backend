@@ -7,7 +7,8 @@ import {
   OneToMany,
   Index,
 } from "typeorm";
-import { Assessment } from "./assessment.entity";
+import { Assessment } from "./Assessment/assessment.entity";
+import { AssessmentVersion } from "./Assessment/versioning assessment/assessment-version.entity";
 import { ActivityFood } from "./activity.food.entity";
 import { ActivityDetail } from "./activitydetail.entity";
 import { Room } from "./room.entity";
@@ -38,6 +39,7 @@ import { QRCode } from "./qr-code.entity";
 @Index("IDX_URL_ACTIVITY", ["url"])
 @Index("IDX_ROOM_ID_ACTIVITY", ["room_id"])
 @Index("IDX_ASSESSMENT_ID_ACTIVITY", ["assessment_id"])
+@Index("IDX_ASSESSMENT_VERSION_ID_ACTIVITY", ["assessment_version_id"])
 @Index("IDX_START_ASSESSMENT_ACTIVITY", ["start_assessment"])
 @Index("IDX_END_ASSESSMENT_ACTIVITY", ["end_assessment"])
 @Index("IDX_REGISTERED_COUNT_ACTIVITY", ["registered_count"])
@@ -150,6 +152,13 @@ export class Activity {
 
   @Column({ type: "int", nullable: true })
   assessment_id?: number | null;
+
+  @ManyToOne(() => AssessmentVersion, (version) => version.activities)
+  @JoinColumn({ name: "assessment_version_id" })
+  assessmentVersion?: AssessmentVersion;
+
+  @Column({ type: "int", nullable: true })
+  assessment_version_id?: number | null;
 
   @Column({ type: "timestamp", nullable: true })
   start_assessment?: Date | null;

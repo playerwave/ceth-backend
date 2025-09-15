@@ -71,6 +71,27 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  public async getJoinIdByStudentAndActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const studentId = this.parseId(req.params.studentId);
+      
+      console.log(`🔍 [StudentController] Getting join_id for activity: ${activityId}, student: ${studentId}`);
+      
+      const joinId = await this.activityService.getJoinIdByStudentAndActivityService(activityId, studentId);
+      
+      if (!joinId) {
+        res.status(404).json({ error: "Student not enrolled in this activity" });
+        return;
+      }
+      
+      console.log(`✅ [StudentController] Join ID found: ${joinId}`);
+      res.status(200).json({ join_id: joinId });
+    } catch (error) {
+      this.handleError("StudentActivityController.getJoinIdByStudentAndActivity", error, res);
+    }
+  }
+
   public async getActivityHistoryByStudentsID(req: Request, res: Response): Promise<void> {
     try {
       const studentId = this.parseId(req.params.studentId);
@@ -272,6 +293,7 @@ export const activityController = {
   getStudentActivities: controller.getStudentActivities.bind(controller),
   getActivityById: controller.getActivityById.bind(controller),
   getAssessmentByActivityId: controller.getAssessmentByActivityId.bind(controller),
+  getJoinIdByStudentAndActivity: controller.getJoinIdByStudentAndActivity.bind(controller),
   getActivityHistoryByStudentsID: controller.getActivityHistoryByStudentsID.bind(controller),
   getSearch: controller.getSearch.bind(controller),
   enrollActivity: controller.enrollActivity.bind(controller),

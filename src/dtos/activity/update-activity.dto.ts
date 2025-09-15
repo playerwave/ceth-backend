@@ -163,7 +163,7 @@ import {
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ExistsInDatabase } from "../../middleware/isExistindatabase.validator";
-import { Assessment } from "../../entity/assessment.entity";
+import { Assessment } from "../../entity/Assessment/assessment.entity";
 import { Room } from "../../entity/room.entity";
 
 export class UpdateActivityDto {

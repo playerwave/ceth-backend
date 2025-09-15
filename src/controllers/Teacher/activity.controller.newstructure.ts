@@ -449,6 +449,114 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  /**
+   * ดึงคำตอบของนักเรียนใน Activity พร้อม JOIN กับ activity_detail, join, answer
+   */
+  public async getStudentAnswersDetail(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const studentAnswers = await this.activityService.getStudentAnswersDetail(activityId);
+      
+      // จัดกลุ่มคำตอบตาม username
+      const groupedAnswers = this.groupAnswersByUsername(studentAnswers);
+      
+      res.status(200).json({
+        success: true,
+        message: `Found answers for ${Object.keys(groupedAnswers).length} students in activity ${activityId}`,
+        data: groupedAnswers,
+        totalStudents: Object.keys(groupedAnswers).length,
+        totalAnswers: studentAnswers.length
+      });
+    } catch (error) {
+      this.handleError("ActivityController.getStudentAnswersDetail", error, res);
+    }
+  }
+
+  /**
+   * จัดกลุ่มคำตอบตาม username
+   */
+  private groupAnswersByUsername(answers: any[]): any {
+    const grouped: any = {};
+    
+    answers.forEach(answer => {
+      const username = answer.username;
+      
+      if (!grouped[username]) {
+        grouped[username] = {
+          student_info: {
+            students_id: answer.students_id,
+            first_name_tha: answer.first_name_tha,
+            last_name_tha: answer.last_name_tha,
+            username: answer.username,
+            department_short_name: answer.department_short_name,
+            join_id: answer.join_id,
+            join_date: answer.join_date,
+            join_status: answer.join_status,
+            time_in: answer.time_in,
+            time_out: answer.time_out
+          },
+          answers: []
+        };
+      }
+      
+      // เพิ่มคำตอบ
+      grouped[username].answers.push({
+        answer_id: answer.answer_id,
+        answer_text: answer.answer_text,
+        question_text: answer.question_text,
+        question_type: answer.question_type,
+        question_order: answer.question_order,
+        set_number_name: answer.set_number_name,
+        set_number_order: answer.set_number_order,
+        choice_text: answer.choice_text,
+        choice_id: answer.choice_id,
+        assessment_id: answer.assessment_id,
+        assessment_version_id: answer.assessment_version_id,
+        assessment_version_no: answer.assessment_version_no
+      });
+    });
+    
+    // เรียงลำดับคำตอบตาม question_order และ set_number_order
+    Object.keys(grouped).forEach(username => {
+      grouped[username].answers.sort((a: any, b: any) => {
+        if (a.set_number_order !== b.set_number_order) {
+          return a.set_number_order - b.set_number_order;
+        }
+        return a.question_order - b.question_order;
+      });
+    });
+    
+    return grouped;
+  }
+
+  /**
+   * ดึงข้อมูล Assessment Structure และ Student Answers รวมกัน
+   */
+  public async getCompleteAssessmentData(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const result = await this.activityService.getCompleteAssessmentData(activityId);
+      
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError("ActivityController.getCompleteAssessmentData", error, res);
+    }
+  }
+
+  /**
+   * ตรวจสอบและสร้างข้อมูล Assessment Structure ตัวอย่าง
+   */
+  public async checkAndCreateSampleAssessmentData(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const result = await this.activityService.checkAndCreateSampleAssessmentData(activityId);
+      
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError("ActivityController.checkAndCreateSampleAssessmentData", error, res);
+    }
+  }
+
   private parseActivityDetailPayload(body: any): any {
     return {
       activity_id: this.parseOptionalInt(body.activity_id),
@@ -486,5 +594,9 @@ export const activityController = {
   // ✅ Check-in/Check-out methods
   getStudentsCheckedIn: controller.getStudentsCheckedIn.bind(controller),
   getStudentsCheckedOut: controller.getStudentsCheckedOut.bind(controller),
+  // ✅ Student answers methods
+  getStudentAnswersDetail: controller.getStudentAnswersDetail.bind(controller),
+  getCompleteAssessmentData: controller.getCompleteAssessmentData.bind(controller),
+  checkAndCreateSampleAssessmentData: controller.checkAndCreateSampleAssessmentData.bind(controller),
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
 };

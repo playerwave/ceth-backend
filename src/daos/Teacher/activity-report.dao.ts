@@ -257,8 +257,23 @@ export class ActivityReportDao extends ErrorHandledDao {
     await this.checkConnection();
     
     try {
-      // ดึงข้อมูลแบบประเมินและคำถาม
+      // ตรวจสอบข้อมูล activity ก่อน
+      const activityCheckQuery = `
+        SELECT activity_id, assessment_id, assessment_version_id, activity_state 
+        FROM activity 
+        WHERE activity_id = $1
+      `;
+      const activityInfo = await this.dataSource!.query(activityCheckQuery, [activityId]);
+      console.log("🔍 [ActivityReportDao] Activity info:", activityInfo[0]);
+      // ดึงข้อมูลแบบประเมินและคำถาม - ใช้ assessment_version_id ถ้ามี หรือ assessment_id ถ้าไม่มี
       const assessmentQuery = `
+        WITH activity_assessment AS (
+          SELECT 
+            assessment_id,
+            assessment_version_id
+          FROM activity 
+          WHERE activity_id = $1
+        )
         SELECT 
           a.assessment_id,
           a.assessment_name,
@@ -267,42 +282,121 @@ export class ActivityReportDao extends ErrorHandledDao {
           q.question_id,
           q.question_text,
           q.question_type,
+          q.question_number,
           c.choice_id,
           c.choice_text
         FROM assessment a
         INNER JOIN set_number sn ON a.assessment_id = sn.assessment_id
         INNER JOIN question q ON sn.set_number_id = q.set_number_id
         LEFT JOIN choice c ON q.question_id = c.question_id
-        WHERE a.assessment_id = (
-          SELECT assessment_id FROM activity WHERE activity_id = $1
+        INNER JOIN activity_assessment aa ON a.assessment_id = (
+          CASE 
+            WHEN aa.assessment_version_id IS NOT NULL THEN (
+              SELECT assessment_id FROM assessment_version 
+              WHERE assessment_version_id = aa.assessment_version_id
+            )
+            ELSE aa.assessment_id
+          END
         )
-        ORDER BY sn.set_number_id, q.question_id, c.choice_id
+        ORDER BY sn.set_number_id, q.question_number, q.question_id, c.choice_id
       `;
 
       const assessmentResult = await this.dataSource!.query(assessmentQuery, [activityId]);
+      console.log("🔍 [ActivityReportDao] Assessment query result:", assessmentResult.length, "rows");
+      console.log("🔍 [ActivityReportDao] Assessment questions found:", assessmentResult.map(r => ({ 
+        question_id: r.question_id, 
+        question_number: r.question_number, 
+        question_text: r.question_text?.substring(0, 50) + "..." 
+      })));
       
-      // ดึงข้อมูลการตอบ
+      // ดึงข้อมูลการตอบ - ใช้โครงสร้างเดียวกับ student-answers-detail
       const answerQuery = `
+        WITH activity_assessment AS (
+          SELECT 
+            assessment_id,
+            assessment_version_id
+          FROM activity 
+          WHERE activity_id = $1
+        )
         SELECT 
           a.answer_id,
           a.join_id,
           a.question_id,
           a.choice_id,
           a.answer_text,
+          a.assessment_id,
           q.question_type,
+          q.question_text,
+          q.question_number,
           c.choice_text,
-          sn.name as set_number_name
+          sn.name as set_number_name,
+          sn.set_number_id
         FROM answer a
         INNER JOIN question q ON a.question_id = q.question_id
         INNER JOIN set_number sn ON q.set_number_id = sn.set_number_id
         LEFT JOIN choice c ON a.choice_id = c.choice_id
-        WHERE a.assessment_id = (
-          SELECT assessment_id FROM activity WHERE activity_id = $1
+        INNER JOIN activity_assessment aa ON a.assessment_id = (
+          CASE 
+            WHEN aa.assessment_version_id IS NOT NULL THEN (
+              SELECT assessment_id FROM assessment_version 
+              WHERE assessment_version_id = aa.assessment_version_id
+            )
+            ELSE aa.assessment_id
+          END
         )
-        ORDER BY sn.set_number_id, q.question_id
+        ORDER BY sn.set_number_id, q.question_number, q.question_id
       `;
 
       const answerResult = await this.dataSource!.query(answerQuery, [activityId]);
+      console.log("🔍 [ActivityReportDao] Answer query result:", answerResult.length, "rows");
+      console.log("🔍 [ActivityReportDao] Answers found:", answerResult.map(r => ({ 
+        answer_id: r.answer_id, 
+        question_id: r.question_id, 
+        question_number: r.question_number, 
+        answer_text: r.answer_text,
+        choice_text: r.choice_text 
+      })));
+
+      // ตรวจสอบว่ามีข้อมูลหรือไม่
+      if (assessmentResult.length === 0) {
+        console.log("⚠️ [ActivityReportDao] No assessment data found for activity:", activityId);
+        return [];
+      }
+
+      // ถ้า activity ไม่มี assessment_version_id ให้กรองคำถามที่เพิ่มหลังจากการเริ่ม assessment
+      if (!activityInfo[0].assessment_version_id && activityInfo[0].activity_state === 'Start Assessment') {
+        console.log("⚠️ [ActivityReportDao] Activity has no version, filtering questions added after assessment started");
+        
+        // หาวันที่เริ่ม assessment
+        const assessmentStartQuery = `
+          SELECT start_assessment 
+          FROM activity 
+          WHERE activity_id = $1
+        `;
+        const startAssessmentResult = await this.dataSource!.query(assessmentStartQuery, [activityId]);
+        const startAssessmentDate = startAssessmentResult[0]?.start_assessment;
+        
+        if (startAssessmentDate) {
+          console.log("🔍 [ActivityReportDao] Assessment started at:", startAssessmentDate);
+          
+          // กรองคำถามที่สร้างหลังจากวันที่เริ่ม assessment
+          const filteredAssessmentResult = assessmentResult.filter(row => {
+            // ตรวจสอบว่าคำถามนี้ถูกสร้างก่อนหรือหลังการเริ่ม assessment
+            // เนื่องจากไม่มี created_at ใน question table ให้ใช้ question_id เป็นตัวกรอง
+            // ถ้า question_id มากกว่า 70 แสดงว่าเป็นคำถามใหม่
+            return row.question_id <= 70; // ปรับตาม question_id ที่เหมาะสม
+          });
+          
+          console.log("🔍 [ActivityReportDao] Filtered questions:", filteredAssessmentResult.length, "out of", assessmentResult.length);
+          assessmentResult.length = 0; // ล้าง array
+          assessmentResult.push(...filteredAssessmentResult); // ใส่ข้อมูลที่กรองแล้ว
+        }
+      }
+
+      if (answerResult.length === 0) {
+        console.log("⚠️ [ActivityReportDao] No answer data found for activity:", activityId);
+        return [];
+      }
 
       // จัดกลุ่มข้อมูลตาม set_number (หัวข้อ)
       const topicsMap = new Map();
@@ -328,6 +422,7 @@ export class ActivityReportDao extends ErrorHandledDao {
             questionId: row.question_id,
             questionText: row.question_text,
             questionType: row.question_type,
+            questionNumber: row.question_number,
             choices: [],
             answers: []
           });
@@ -390,6 +485,14 @@ export class ActivityReportDao extends ErrorHandledDao {
         };
       });
 
+      console.log("✅ [ActivityReportDao] Processed topics:", topics.length);
+      console.log("📊 [ActivityReportDao] Topic details:", topics.map(t => ({
+        topicId: t.topicId,
+        topicName: t.topicName,
+        questionsCount: t.questions.length,
+        totalRespondents: t.totalRespondents
+      })));
+
       return topics;
     } catch (error) {
       this.logDbError("getAssessmentData", error);
@@ -401,27 +504,40 @@ export class ActivityReportDao extends ErrorHandledDao {
     const answers = question.answers;
     const totalAnswers = answers.length;
     
-    if (question.questionType === 'satisfaction' || question.questionType === 'single_choice') {
+    console.log(`🔍 [ActivityReportDao] Calculating stats for question ${question.questionId}:`, {
+      questionText: question.questionText,
+      totalAnswers,
+      answers: answers.map(a => ({ answerText: a.answerText, choiceText: a.choiceText }))
+    });
+    
+    // รองรับ question_type ที่หลากหลาย
+    if (question.questionType === 'satisfaction' || 
+        question.questionType === 'single_choice' || 
+        question.questionType === 'Fix Single answer') {
       const choiceCounts: { [key: string]: number } = {};
       
       answers.forEach((answer: any) => {
-        const choiceText = answer.choiceText || answer.answerText;
-        choiceCounts[choiceText] = (choiceCounts[choiceText] || 0) + 1;
+        // ใช้ answer_text เป็นหลัก (สำหรับ Fix Single answer)
+        const choiceText = answer.answerText || answer.choiceText;
+        if (choiceText) {
+          choiceCounts[choiceText] = (choiceCounts[choiceText] || 0) + 1;
+          console.log(`📊 [ActivityReportDao] Count for "${choiceText}":`, choiceCounts[choiceText]);
+        }
       });
 
-      const stats = question.choices.map((choice: any) => {
-        const count = choiceCounts[choice.choiceText] || 0;
-        return {
-          choiceText: choice.choiceText,
-          count,
-          percentage: totalAnswers > 0 ? ((count / totalAnswers) * 100).toFixed(1) : '0.0'
-        };
-      });
-
+      // สร้าง stats จาก answer_text ที่พบจริง (ไม่ใช้ choices ที่อาจไม่ตรงกัน)
+      const statsFromAnswers = Object.entries(choiceCounts).map(([choiceText, count]) => ({
+        choiceText,
+        count,
+        percentage: totalAnswers > 0 ? ((count / totalAnswers) * 100).toFixed(1) : '0.0'
+      }));
+      
+      console.log(`✅ [ActivityReportDao] Generated stats from actual answers:`, statsFromAnswers);
+      
       return {
         totalAnswers,
-        choiceStats: stats,
-        average: this.calculateAverage(stats)
+        choiceStats: statsFromAnswers,
+        average: this.calculateAverage(statsFromAnswers)
       };
     }
     
