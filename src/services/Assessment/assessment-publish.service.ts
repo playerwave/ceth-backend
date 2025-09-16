@@ -1,6 +1,6 @@
 import { ErrorHandledService } from "../error.handdled.service";
 import { AssessmentVersionService } from "./assessment-version.service";
-import { AssessmentVersion } from "../../entity/Assessment/versioning assessment/assessment-version.entity";
+import { AssessmentVersion } from "../../entity/assessment/versioning assessment/assessment-version.entity";
 
 export interface ValidationResult {
   isValid: boolean;

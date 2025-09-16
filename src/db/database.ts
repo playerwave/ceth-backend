@@ -11,21 +11,21 @@ import { Building } from "../entity/building.entity";
 import { Room } from "../entity/room.entity";
 import { Food } from "../entity/food.entity";
 import { ActivityFood } from "../entity/activity.food.entity";
-import { Question } from "../entity/Assessment/question.entity";
-import { Choice } from "../entity/Assessment/choice.entity";
-import { Answer } from "../entity/Assessment/answer.entity";
-import { Assessment } from "../entity/Assessment/assessment.entity";
-import { Certificate } from "../entity/certificate.entity";
+import { Question } from "../entity/assessment/question.entity";
+import { Choice } from "../entity/assessment/choice.entity";
+import { Answer } from "../entity/assessment/answer.entity";
+import { Assessment } from "../entity/assessment/assessment.entity";
+import { Certificate } from "../entity/certificate/certificate.entity";
 import { Activity } from "../entity/activity.entity";
 import { ActivityDetail } from "../entity/activitydetail.entity";
 import { Join } from "../entity/join.entity";
 import { QRCode } from "../entity/qr-code.entity";
-import { SetNumber } from "../entity/Assessment/setNumbers.entity";
+import { SetNumber } from "../entity/assessment/setNumbers.entity";
 // Import version entities
-import { AssessmentVersion } from "../entity/Assessment/versioning assessment/assessment-version.entity";
-import { SetNumberVersion } from "../entity/Assessment/versioning assessment/setNumber-version.entity";
-import { QuestionVersion } from "../entity/Assessment/versioning assessment/question-version.entity";
-import { ChoiceVersion } from "../entity/Assessment/versioning assessment/choice-version.entity";
+import { AssessmentVersion } from "../entity/assessment/versioning assessment/assessment-version.entity";
+import { SetNumberVersion } from "../entity/assessment/versioning assessment/setNumber-version.entity";
+import { QuestionVersion } from "../entity/assessment/versioning assessment/question-version.entity";
+import { ChoiceVersion } from "../entity/assessment/versioning assessment/choice-version.entity";
 
 // ✅ Singleton Database Manager
 class DatabaseManager {

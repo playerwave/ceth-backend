@@ -7,12 +7,12 @@ import {
   OneToMany,
   Index,
 } from "typeorm";
-import { Assessment } from "./Assessment/assessment.entity";
-import { AssessmentVersion } from "./Assessment/versioning assessment/assessment-version.entity";
+import { Assessment } from "./assessment/assessment.entity";
+import { AssessmentVersion } from "./assessment/versioning assessment/assessment-version.entity";
 import { ActivityFood } from "./activity.food.entity";
 import { ActivityDetail } from "./activitydetail.entity";
 import { Room } from "./room.entity";
-import { Certificate } from "./certificate.entity";
+import { Certificate } from "./certificate/certificate.entity";
 import { QRCode } from "./qr-code.entity";
 
 @Entity()

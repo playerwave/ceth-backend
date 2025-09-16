@@ -1,5 +1,5 @@
 import { DataSource } from "typeorm";
-import { SetNumber } from "../../entity/Assessment/setNumbers.entity";
+import { SetNumber } from "../../entity/assessment/setNumbers.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
 

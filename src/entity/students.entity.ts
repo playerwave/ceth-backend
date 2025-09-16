@@ -13,7 +13,7 @@ import { Grade } from "./grade.entity";
 import { Department } from "./department.entity";
 import { Faculty } from "./faculty.entity";
 import { Join } from "./join.entity";
-import { Certificate } from "./certificate.entity";
+import { Certificate } from "./certificate/certificate.entity";
 
 @Entity()
 export class Students {

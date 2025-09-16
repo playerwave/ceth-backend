@@ -1,7 +1,7 @@
 import { DataSource } from "typeorm";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { connectDatabase } from "../../db/database";
-import { AssessmentVersion } from "../../entity/Assessment/versioning assessment/assessment-version.entity";
+import { AssessmentVersion } from "../../entity/assessment/versioning assessment/assessment-version.entity";
 
 export interface CreateAssessmentVersionDto {
   assessment_id: number;

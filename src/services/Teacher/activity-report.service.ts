@@ -70,4 +70,49 @@ export class ActivityReportService extends ErrorHandledService {
       throw error;
     }
   }
+
+  /**
+   * ดึงข้อมูลแบบประเมินความพึงพอใจ
+   */
+  public async getSatisfactionSurveyService(activityId: number): Promise<any> {
+    try {
+      this.logInfo("📊 Getting satisfaction survey", { activityId });
+      
+      const result = await this.activityReportDao.getSatisfactionSurvey(activityId);
+      
+      this.logInfo("✅ Satisfaction survey retrieved", {
+        activityId,
+        totalRespondents: result.totalRespondents,
+        pieData: result.pieData.length
+      });
+      
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in getSatisfactionSurveyService", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงข้อมูลสถานะการทำแบบประเมินของนิสิต
+   */
+  public async getStudentAssessmentStatusService(activityId: number): Promise<any> {
+    try {
+      this.logInfo("📊 Getting student assessment status", { activityId });
+      
+      const result = await this.activityReportDao.getStudentAssessmentStatus(activityId);
+      
+      this.logInfo("✅ Student assessment status retrieved", {
+        activityId,
+        totalStudents: result.totalStudents,
+        completedAssessments: result.completedAssessments,
+        pendingAssessments: result.pendingAssessments
+      });
+      
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in getStudentAssessmentStatusService", error);
+      throw error;
+    }
+  }
 }

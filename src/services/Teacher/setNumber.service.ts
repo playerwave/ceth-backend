@@ -1,4 +1,4 @@
-import { SetNumber } from "../../entity/Assessment/setNumbers.entity";
+import { SetNumber } from "../../entity/assessment/setNumbers.entity";
 import { ErrorHandledService } from "../error.handdled.service";
 import { SetNumberDao } from "../../daos/Teacher/setNumber.dao";
 import { QuestionDao } from "../../daos/Teacher/question.dao";

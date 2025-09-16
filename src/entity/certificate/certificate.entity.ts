@@ -54,9 +54,9 @@ import {
   JoinColumn,
   Index,
 } from "typeorm";
-import { Students } from "./students.entity";
-import { Teacher } from "./teacher.entity";
-import { Activity } from "./activity.entity";
+import { Students } from "../students.entity";
+import { Teacher } from "../teacher.entity";
+import { Activity } from "../activity.entity";
 
 import { Transform } from "class-transformer";
 import { parseISO } from "date-fns";

@@ -1,7 +1,7 @@
 import { ActivityDao } from "../../daos/Teacher/activity.dao";
 import { AssessmentDao } from "../../daos/Teacher/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
-import { Assessment } from "../../entity/Assessment/assessment.entity";
+import { Assessment } from "../../entity/assessment/assessment.entity";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 import { RoomService } from "./room.service";

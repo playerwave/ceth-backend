@@ -3,7 +3,7 @@ import { AssessmentVersionDao } from "../../daos/Assessment/assessment-version.d
 import { SetNumberVersionDao } from "../../daos/Assessment/set-number-version.dao";
 import { QuestionVersionDao } from "../../daos/Assessment/question-version.dao";
 import { ChoiceVersionDao } from "../../daos/Assessment/choice-version.dao";
-import { AssessmentVersion } from "../../entity/Assessment/versioning assessment/assessment-version.entity";
+import { AssessmentVersion } from "../../entity/assessment/versioning assessment/assessment-version.entity";
 
 export interface AssessmentVersionWithData extends AssessmentVersion {
   setNumbers?: any[];

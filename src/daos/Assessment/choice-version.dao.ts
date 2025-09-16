@@ -1,7 +1,7 @@
 import { DataSource } from "typeorm";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { connectDatabase } from "../../db/database";
-import { ChoiceVersion } from "../../entity/Assessment/versioning assessment/choice-version.entity";
+import { ChoiceVersion } from "../../entity/assessment/versioning assessment/choice-version.entity";
 
 export interface CreateChoiceVersionDto {
   question_version_id: number;

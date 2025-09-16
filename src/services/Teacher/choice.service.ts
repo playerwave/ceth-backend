@@ -1,7 +1,7 @@
 import redis from "../../config/redis";
 import { ChoiceDao } from "../../daos/Teacher/choice.dao";
 import { QuestionDao } from "../../daos/Teacher/question.dao";
-import { Choice } from "../../entity/Assessment/choice.entity";
+import { Choice } from "../../entity/assessment/choice.entity";
 
 import { ErrorHandledService } from "../error.handdled.service";
 

@@ -155,13 +155,13 @@
 
 import redis from "../../config/redis";
 import { AssessmentDao } from "../../daos/Teacher/assessment.dao";
-import { Assessment } from "../../entity/Assessment/assessment.entity";
+import { Assessment } from "../../entity/assessment/assessment.entity";
 import { ErrorHandledService } from "../error.handdled.service";
 
 // import entities ที่เกี่ยวข้อง
-import { SetNumber } from "../../entity/Assessment/setNumbers.entity";
-import { Question } from "../../entity/Assessment/question.entity";
-import { Choice } from "../../entity/Assessment/choice.entity";
+import { SetNumber } from "../../entity/assessment/setNumbers.entity";
+import { Question } from "../../entity/assessment/question.entity";
+import { Choice } from "../../entity/assessment/choice.entity";
 import { connectDatabase } from "../../db/database";
 import { SetNumberDao } from "../../daos/Teacher/setNumber.dao";
 import { QRCodeDao } from "../../daos/Teacher/qr-code.dao";
@@ -170,7 +170,7 @@ import { ChoiceDao } from "../../daos/Teacher/choice.dao";
 
 // import versioning services
 import { AssessmentVersionService } from "../Assessment/assessment-version.service";
-import { AssessmentVersion } from "../../entity/Assessment/versioning assessment/assessment-version.entity";
+import { AssessmentVersion } from "../../entity/assessment/versioning assessment/assessment-version.entity";
 
 export class AssessmentService extends ErrorHandledService {
   private readonly assessmentVersionService = new AssessmentVersionService();

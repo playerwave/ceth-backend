@@ -174,7 +174,7 @@
 // }
 
 import { DataSource } from "typeorm";
-import { Assessment } from "../../entity/Assessment/assessment.entity";
+import { Assessment } from "../../entity/assessment/assessment.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
 

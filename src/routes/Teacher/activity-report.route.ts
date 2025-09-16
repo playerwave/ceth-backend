@@ -26,4 +26,18 @@ router.get(
   wrapAsync(activityReportController.getAssessmentData)
 );
 
+// GET /api/teacher/activity-report/:activityId/satisfaction-survey
+// ดึงข้อมูลแบบประเมินความพึงพอใจ
+router.get(
+  "/:activityId/satisfaction-survey",
+  wrapAsync(activityReportController.getSatisfactionSurvey)
+);
+
+// GET /api/teacher/activity-report/:activityId/student-assessment-status
+// ดึงข้อมูลสถานะการทำแบบประเมินของนิสิต
+router.get(
+  "/:activityId/student-assessment-status",
+  wrapAsync(activityReportController.getStudentAssessmentStatus)
+);
+
 export default router;

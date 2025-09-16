@@ -615,4 +615,144 @@ export class ActivityReportDao extends ErrorHandledDao {
     // ใช้จำนวนคำตอบจากคำถามแรกเป็นตัวแทน
     return questions[0].totalAnswers || 0;
   }
+
+  /**
+   * ดึงข้อมูลแบบประเมินความพึงพอใจ
+   */
+  public async getSatisfactionSurvey(activityId: number): Promise<any> {
+    await this.checkConnection();
+    
+    try {
+      console.log("🔍 [ActivityReportDao] Getting satisfaction survey for activity:", activityId);
+
+      // ดึงข้อมูลแบบประเมินความพึงพอใจ (คำถามที่มี question_type = 'satisfaction')
+      const satisfactionQuery = `
+        SELECT 
+          q.question_id,
+          q.question_text,
+          q.question_type,
+          a.answer_text,
+          c.choice_text,
+          a.join_id
+        FROM question q
+        INNER JOIN set_number sn ON q.set_number_id = sn.set_number_id
+        INNER JOIN assessment a_assess ON sn.assessment_id = a_assess.assessment_id
+        INNER JOIN activity act ON a_assess.assessment_id = act.assessment_id
+        LEFT JOIN answer a ON q.question_id = a.question_id AND a.assessment_id = a_assess.assessment_id
+        LEFT JOIN choice c ON a.choice_id = c.choice_id
+        WHERE act.activity_id = $1 AND q.question_type IN ('Fix Single answer', 'Single answer')
+        ORDER BY q.question_id, a.answer_id
+      `;
+
+      const result = await this.dataSource!.query(satisfactionQuery, [activityId]);
+      console.log("🔍 [ActivityReportDao] Satisfaction survey query result:", result.length, "rows");
+
+      if (result.length === 0) {
+        console.log("⚠️ [ActivityReportDao] No satisfaction survey data found for activity:", activityId);
+        return {
+          pieData: [],
+          totalRespondents: 0,
+          totalText: "ไม่มีข้อมูลแบบประเมินความพึงพอใจ"
+        };
+      }
+
+      // จัดกลุ่มคำตอบตาม choice_text หรือ answer_text และนับจำนวนคนที่ทำแบบประเมิน
+      const choiceCounts: { [key: string]: number } = {};
+      const uniqueRespondents = new Set<number>(); // ใช้ Set เพื่อนับคนที่ไม่ซ้ำ
+
+      result.forEach((row: any) => {
+        if (row.answer_text || row.choice_text) {
+          const choiceText = row.choice_text || row.answer_text;
+          choiceCounts[choiceText] = (choiceCounts[choiceText] || 0) + 1;
+          
+          // เพิ่ม join_id เพื่อนับจำนวนคนที่ไม่ซ้ำ
+          if (row.join_id) {
+            uniqueRespondents.add(row.join_id);
+          }
+        }
+      });
+
+      const totalResponses = uniqueRespondents.size; // จำนวนคนที่ทำแบบประเมิน
+
+      console.log("🔍 [ActivityReportDao] Choice counts:", choiceCounts);
+      console.log("🔍 [ActivityReportDao] Total responses:", totalResponses);
+
+      // สร้าง pieData - คำนวณเปอร์เซ็นต์จากจำนวนคำตอบทั้งหมด (ไม่ใช่จำนวนคน)
+      const totalAnswerCount = Object.values(choiceCounts).reduce((sum, count) => sum + count, 0);
+      const pieData = Object.entries(choiceCounts).map(([choiceText, count]) => ({
+        name: choiceText,
+        value: totalAnswerCount > 0 ? ((count / totalAnswerCount) * 100).toFixed(1) : '0.0',
+        color: this.getColorForChoice(choiceText)
+      }));
+
+      console.log("✅ [ActivityReportDao] Generated pieData:", pieData);
+
+      return {
+        pieData,
+        totalRespondents: totalResponses,
+        totalText: `จากผู้ทำแบบประเมินทั้งหมด ${totalResponses} คน`
+      };
+    } catch (error) {
+      this.logDbError("getSatisfactionSurvey", error);
+      throw new Error("❌ Failed to get satisfaction survey");
+    }
+  }
+
+  /**
+   * ดึงข้อมูลสถานะการทำแบบประเมินของนิสิต
+   */
+  public async getStudentAssessmentStatus(activityId: number): Promise<any> {
+    await this.checkConnection();
+    
+    try {
+      console.log("🔍 [ActivityReportDao] Getting student assessment status for activity:", activityId);
+
+      // นับจำนวนนิสิตที่ลงทะเบียนและทำแบบประเมินแล้ว
+      const statusQuery = `
+        SELECT 
+          COUNT(DISTINCT j.join_id) as total_students,
+          COUNT(DISTINCT CASE WHEN ans.answer_id IS NOT NULL THEN j.join_id END) as completed_assessments,
+          COUNT(DISTINCT CASE WHEN ans.answer_id IS NULL THEN j.join_id END) as pending_assessments
+        FROM "join" j
+        INNER JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+        INNER JOIN activity act ON ad.activity_id = act.activity_id
+        LEFT JOIN answer ans ON j.join_id = ans.join_id AND ans.assessment_id = act.assessment_id
+        WHERE ad.activity_id = $1
+      `;
+
+      const result = await this.dataSource!.query(statusQuery, [activityId]);
+      console.log("🔍 [ActivityReportDao] Student assessment status query result:", result[0]);
+
+      const { total_students, completed_assessments, pending_assessments } = result[0];
+
+      // สร้างข้อมูลสำหรับ BarChart
+      const evaluationStatusData = [
+        {
+          label: "ทำแบบประเมินแล้ว",
+          count: parseInt(completed_assessments),
+          total: parseInt(total_students),
+          barColor: "bg-green-400",
+        },
+        {
+          label: "ยังไม่ทำแบบประเมิน",
+          count: parseInt(pending_assessments),
+          total: parseInt(total_students),
+          barColor: "bg-red-400",
+        }
+      ];
+
+      console.log("✅ [ActivityReportDao] Generated evaluation status data:", evaluationStatusData);
+
+      return {
+        evaluationStatusData,
+        totalStudents: parseInt(total_students),
+        completedAssessments: parseInt(completed_assessments),
+        pendingAssessments: parseInt(pending_assessments),
+        totalText: `จากผู้เข้าร่วมเต็มเวลาทั้งหมด ${total_students} คน (100.0%)`
+      };
+    } catch (error) {
+      this.logDbError("getStudentAssessmentStatus", error);
+      throw new Error("❌ Failed to get student assessment status");
+    }
+  }
 }
