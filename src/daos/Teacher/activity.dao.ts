@@ -854,7 +854,8 @@ export class ActivityDao extends ErrorHandledDao {
 
             if (currentState.length > 0 && currentState[0].activity_state === 'Special Open Register') {
               console.log(`📧 [advanceStatesOnce] Calling sendEmailToStudentsByRiskStatus for activity: ${activity.activity_id}`);
-              await sendEmailToStudentsByRiskStatus(activity, 'Risk', 'OpenRegisterTemplate');
+              // ป้องกันไม่ให้ส่งถ้ายังไม่ได้ใช้งานจริง
+              // await sendEmailToStudentsByRiskStatus(activity, 'Risk', 'OpenRegisterTemplate');
               console.log(`✅ [advanceStatesOnce] Special open register email sent successfully for activity: ${activity.activity_id}`);
             } else {
               console.log(`⚠️ [advanceStatesOnce] Activity ${activity.activity_id} state changed, skipping email send`);
@@ -905,7 +906,8 @@ export class ActivityDao extends ErrorHandledDao {
 
             if (currentState.length > 0 && currentState[0].activity_state === 'Open Register') {
               console.log(`📧 [advanceStatesOnce] Calling sendEmailToStudentsByRiskStatus for activity: ${activity.activity_id}`);
-              await sendEmailToStudentsByRiskStatus(activity, 'Normal', 'OpenRegisterTemplate');
+              // ป้องกันไม่ให้ส่งถ้ายังไม่ได้ใช้งานจริง
+              // await sendEmailToStudentsByRiskStatus(activity, 'Normal', 'OpenRegisterTemplate');
               console.log(`✅ [advanceStatesOnce] Open register email sent successfully for activity: ${activity.activity_id}`);
             } else {
               console.log(`⚠️ [advanceStatesOnce] Activity ${activity.activity_id} state changed, skipping email send`);
@@ -1026,7 +1028,8 @@ export class ActivityDao extends ErrorHandledDao {
 
             if (currentState.length > 0 && currentState[0].activity_state === 'Open Register') {
               console.log(`📧 [advanceStatesOnce] Calling sendEmailToStudentsByRiskStatus for activity: ${activity.activity_id}`);
-              await sendEmailToStudentsByRiskStatus(activity, 'Normal', 'OpenRegisterTemplate');
+              // ป้องกันไม่ให้ส่งถ้ายังไม่ได้ใช้งานจริง
+              // await sendEmailToStudentsByRiskStatus(activity, 'Normal', 'OpenRegisterTemplate');
               console.log(`✅ [advanceStatesOnce] Open register email sent successfully for activity: ${activity.activity_id}`);
             } else {
               console.log(`⚠️ [advanceStatesOnce] Activity ${activity.activity_id} state changed, skipping email send`);
