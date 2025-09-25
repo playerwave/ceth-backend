@@ -1,3 +1,4 @@
-.env
+.env.development
+.env.production
 logs/app.log
 dist
