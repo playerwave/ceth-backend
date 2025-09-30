@@ -211,11 +211,25 @@ export class UserManagementService extends ErrorHandledService {
       
       console.log(`📊 [User Management Service] Found ${students.length} students`);
       
+      // ✅ Debug: Log first student data structure
+      if (students.length > 0) {
+        console.log("🔍 [SERVICE] First student data:", students[0]);
+        console.log("🔍 [SERVICE] Student keys:", Object.keys(students[0]));
+        console.log("🔍 [SERVICE] Username:", students[0].username);
+        console.log("🔍 [SERVICE] Users relation:", students[0].users);
+      }
+      
+      // ✅ Map students to include username
+      const mappedStudents = students.map(student => ({
+        ...student,
+        username: student.users?.username || student.username || 'ไม่ระบุ'
+      }));
+      
       return {
         success: true,
-        data: students,
+        data: mappedStudents,
         department: departmentShortName,
-        count: students.length
+        count: mappedStudents.length
       };
     } catch (error) {
       console.error("❌ [User Management Service] Error:", error);

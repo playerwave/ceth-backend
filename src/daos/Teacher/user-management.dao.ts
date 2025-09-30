@@ -184,6 +184,7 @@ export class UserManagementDAO extends ErrorHandledDao {
         .createQueryBuilder("student")
         .leftJoinAndSelect("student.department", "department")
         .leftJoinAndSelect("student.faculty", "faculty")
+        .leftJoinAndSelect("student.users", "users")
         .where("student.department_id = :departmentId", { departmentId: department.department_id })
         .getMany();
 
