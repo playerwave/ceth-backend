@@ -16,8 +16,11 @@ export class Department {
   @PrimaryGeneratedColumn()
   department_id!: number;
 
-  @Column({ type: "varchar", length: 255, unique: true })
-  department_name?: string;
+  @Column({ type: "varchar", length: 255, unique: true, nullable: true })
+  department_name_eng?: string;
+
+  @Column({ type: "varchar", length: 255, unique: true, nullable: true })
+  department_name_tha?: string;
 
   @Column({ type: "varchar", length: 10, unique: true, nullable: true })
   department_short_name?: string;

@@ -35,24 +35,24 @@ export class UserManagementDAO extends ErrorHandledDao {
     }
   }
 
-  // ✅ แปลงชื่อย่อ department เป็น department_id
-  private async convertDepartmentShortNameToId(shortName: string): Promise<number | null> {
+  // ✅ แปลงชื่อ department เป็น department_id (เช็คกับ department_name_tha)
+  private async convertDepartmentShortNameToId(majorName: string): Promise<number | null> {
     try {
       await this.checkConnection();
       const departmentRepo = this.dataSource!.getRepository(Department);
       const department = await departmentRepo.findOne({
-        where: { department_short_name: shortName }
+        where: { department_name_tha: majorName }
       });
       
       if (department) {
-        console.log(`✅ Found department: ${shortName} -> ID: ${department.department_id}`);
+        console.log(`✅ Found department: ${majorName} -> ID: ${department.department_id}`);
         return department.department_id;
       } else {
-        console.warn(`⚠️ Department not found for short name: ${shortName}`);
+        console.warn(`⚠️ Department not found for major name: ${majorName}`);
         return null;
       }
     } catch (error) {
-      console.error(`❌ Error converting department short name ${shortName}:`, error);
+      console.error(`❌ Error converting department major name ${majorName}:`, error);
       this.logDbError("convertDepartmentShortNameToId", error);
       return null;
     }
@@ -65,7 +65,7 @@ export class UserManagementDAO extends ErrorHandledDao {
     
     for (const student of students) {
       try {
-        // ✅ ถ้ามี department_id เป็น string (ชื่อย่อ) ให้แปลงเป็น ID
+        // ✅ ถ้ามี department_id เป็น string (ชื่อสาขา) ให้แปลงเป็น ID
         if (student.department_id && typeof student.department_id === 'string') {
           const departmentId = await this.convertDepartmentShortNameToId(student.department_id);
           

@@ -54,11 +54,12 @@ export class DepartmentService extends ErrorHandledService {
   ): Promise<Department | null> {
     try {
       const existing = await this.departmentDao.getDepartmentByName(
-        data.department_name!
+        data.department_name_tha!
       );
       if (existing.length > 0) {
         this.logInfo("🚫 Duplicate department name", {
-          department_name: data.department_name,
+          department_name_tha: data.department_name_tha,
+          department_name_eng: data.department_name_eng,
         });
         return null;
       }
@@ -68,7 +69,8 @@ export class DepartmentService extends ErrorHandledService {
 
       this.logInfo("✅ Department created", {
         department_id: created?.department_id,
-        department_name: data.department_name,
+        department_name_tha: data.department_name_tha,
+        department_name_eng: data.department_name_eng,
       });
 
       return created;
@@ -84,17 +86,18 @@ export class DepartmentService extends ErrorHandledService {
   ): Promise<Department | null> {
     try {
       const existing = await this.departmentDao.getDepartmentByName(
-        data.department_name!
+        data.department_name_tha!
       );
       const isDuplicate = existing.some(
         (d) =>
           d.department_id !== department_id &&
-          d.department_name === data.department_name
+          d.department_name_tha === data.department_name_tha
       );
 
       if (isDuplicate) {
         this.logInfo("🚫 Department name already exists on another record", {
-          department_name: data.department_name,
+          department_name_tha: data.department_name_tha,
+          department_name_eng: data.department_name_eng,
           department_id,
         });
         return null;

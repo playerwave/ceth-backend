@@ -55,12 +55,12 @@ export class DepartmentDao extends ErrorHandledDao {
   }
 
   public async getDepartmentByName(
-    department_name: string
+    department_name_tha: string
   ): Promise<Department[]> {
     this.checkConnection();
     try {
-      const name = department_name.trim();
-      const sql = `SELECT department_name FROM department WHERE department_name = $1`;
+      const name = department_name_tha.trim();
+      const sql = `SELECT department_name_tha, department_name_eng FROM department WHERE department_name_tha = $1`;
       const result = await this.dataSource!.query(sql, [`%${name}%`]);
       return result;
     } catch (error) {
@@ -74,9 +74,10 @@ export class DepartmentDao extends ErrorHandledDao {
   ): Promise<Department> {
     this.checkConnection();
     try {
-      const sql = `INSERT INTO department (department_name, department_short_name, faculty_id) VALUES ($1, $2, $3) RETURNING *`;
+      const sql = `INSERT INTO department (department_name_tha, department_name_eng, department_short_name, faculty_id) VALUES ($1, $2, $3, $4) RETURNING *`;
       const result = await this.dataSource!.query(sql, [
-        data.department_name?.trim(),
+        data.department_name_tha?.trim(),
+        data.department_name_eng?.trim(),
         data.department_short_name?.trim(),
         data.faculty_id,
       ]);
@@ -93,9 +94,10 @@ export class DepartmentDao extends ErrorHandledDao {
   ): Promise<Department> {
     this.checkConnection();
     try {
-      const sql = `UPDATE department SET department_name = $1, department_short_name = $2, faculty_id = $3 WHERE department_id = $4 RETURNING *`;
+      const sql = `UPDATE department SET department_name_tha = $1, department_name_eng = $2, department_short_name = $3, faculty_id = $4 WHERE department_id = $5 RETURNING *`;
       const result = await this.dataSource!.query(sql, [
-        data.department_name?.trim(),
+        data.department_name_tha?.trim(),
+        data.department_name_eng?.trim(),
         data.department_short_name?.trim(),
         data.faculty_id,
         department_id,
