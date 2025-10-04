@@ -53,6 +53,14 @@ export class UsersDao extends ErrorHandledDao {
       .getMany();
   }
 
+  public async getAllUsers(): Promise<Users[]> {
+    await this.checkConnection();
+    return await this.usersRepository!.createQueryBuilder("users")
+      .innerJoinAndSelect("users.roles", "roles")
+      .orderBy("users.users_id", "ASC")
+      .getMany();
+  }
+
   public async getUsersByUsername(username: string): Promise<Users[]> {
     await this.checkConnection();
     return await this.usersRepository!.find({

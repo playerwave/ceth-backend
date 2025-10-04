@@ -28,9 +28,8 @@ export class UsersController extends ErrorHandledController {
 
   public async getAll(req: Request, res: Response): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = parseInt(req.query.limit as string, 10) || 10;
-      const users = await this.usersService.getUsers(page, limit);
+      // ลบ pagination ออก - ดึงทั้งหมด
+      const users = await this.usersService.getAllUsers();
       res.status(200).json(users);
     } catch (error) {
       this.handleError("UsersController.getAll", error, res);

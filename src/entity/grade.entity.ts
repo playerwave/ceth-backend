@@ -21,6 +21,9 @@ export class Grade {
   @Column({ type: "varchar", length: 255, nullable: true })
   description?: string;
 
+  @Column({type: "varchar", length: 2, nullable: true})
+  th_year?: string;
+
   @OneToMany(() => EventCoop, (eventCoop) => eventCoop.grade)
   eventCoop?: EventCoop[];
 

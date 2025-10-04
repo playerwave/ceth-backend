@@ -36,11 +36,49 @@ export class FileProcessingUtils {
     }
   }
 
-  // ✅ อ่านไฟล์ Excel และแปลงเป็น JSON
+  // ✅ อ่านไฟล์ Excel/CSV และแปลงเป็น JSON (รองรับ encoding)
   static readExcelFile<T = any>(filePath: string): T[] {
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    return XLSX.utils.sheet_to_json<T>(workbook.Sheets[sheetName]);
+    try {
+      // ตรวจสอบประเภทไฟล์
+      const fileExtension = filePath.toLowerCase().split('.').pop();
+      
+      let workbook;
+      
+      if (fileExtension === 'csv') {
+        // อ่าน CSV ด้วย encoding UTF-8
+        const fs = require('fs');
+        const csvData = fs.readFileSync(filePath, 'utf8');
+        
+        // แปลง CSV เป็น workbook
+        workbook = XLSX.read(csvData, { 
+          type: 'string',
+          codepage: 65001, // UTF-8
+          raw: false
+        });
+      } else {
+        // อ่าน Excel (.xlsx, .xls)
+        workbook = XLSX.readFile(filePath, {
+          codepage: 65001, // UTF-8
+          raw: false
+        });
+      }
+      
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // แปลงเป็น JSON พร้อม encoding
+      const jsonData = XLSX.utils.sheet_to_json<T>(worksheet, {
+        raw: false, // แปลงค่าทั้งหมดเป็น string
+        defval: '' // ค่าเริ่มต้นเป็น string ว่าง
+      });
+      
+      console.log(`📊 Successfully read ${jsonData.length} rows from ${fileExtension.toUpperCase()} file`);
+      return jsonData;
+      
+    } catch (error) {
+      console.error("❌ Error reading file:", error);
+      throw new Error(`ไม่สามารถอ่านไฟล์ได้: ${error.message}`);
+    }
   }
 
   // ✅ แปลงข้อมูลจาก Excel columns เป็น English format

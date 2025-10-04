@@ -15,6 +15,30 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  fileFilter: (req, file, cb) => {
+    // รองรับไฟล์ Excel และ CSV
+    const allowedMimes = [
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'text/csv', // .csv
+      'application/csv' // .csv (alternative)
+    ];
+    
+    const allowedExtensions = ['.xls', '.xlsx', '.csv'];
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
+      cb(null, true);
+    } else {
+      const error = new Error('รองรับเฉพาะไฟล์ .xls, .xlsx, และ .csv เท่านั้น');
+      cb(error as any, false);
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB
+  }
+});
 
 export default upload;

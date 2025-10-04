@@ -30,4 +30,13 @@ router.post(
   wrapAsync(userManagementController.uploadStudents)
 );
 
+// Review upload data
+router.post(
+  "/review-upload",
+  upload.single("file"),
+  verifyToken,
+  CheckRole(["Teacher"]),
+  wrapAsync(userManagementController.reviewUploadData)
+);
+
 export default router;

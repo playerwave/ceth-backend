@@ -35,25 +35,118 @@ export class UserManagementDAO extends ErrorHandledDao {
     }
   }
 
-  // ✅ แปลงชื่อ department เป็น department_id (เช็คกับ department_name_tha)
-  private async convertDepartmentShortNameToId(majorName: string): Promise<number | null> {
+  /**
+   * ดึง username ทั้งหมดที่มีอยู่ในระบบ
+   */
+  public async getAllUsernames(): Promise<{ username: string }[]> {
+    try {
+      await this.checkConnection();
+      
+      // เพิ่มการตรวจสอบ connection อีกครั้ง
+      if (!this.dataSource?.isConnected) {
+        console.log("🔄 Connection lost, reconnecting...");
+        await this.initialize();
+      }
+      
+      const query = `
+        SELECT username 
+        FROM users 
+        WHERE username IS NOT NULL
+        ORDER BY username
+      `;
+      
+      const result = await this.dataSource!.query(query);
+      console.log(`📊 Found ${result.length} existing usernames`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting all usernames:", error);
+      this.logDbError("getAllUsernames", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงข้อมูล user ตาม username
+   */
+  public async getUserByUsername(username: string): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        SELECT u.*, s.*, d.department_name_tha
+        FROM users u
+        LEFT JOIN students s ON u.users_id = s.users_id
+        LEFT JOIN department d ON s.department_id = d.department_id
+        WHERE u.username = $1
+      `;
+      
+      const result = await this.dataSource!.query(query, [username]);
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      console.error("❌ Error getting user by username:", error);
+      this.logDbError("getUserByUsername", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงข้อมูล users หลายคนตาม usernames (batch query)
+   */
+  public async getUsersByUsernames(usernames: string[]): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      if (usernames.length === 0) return [];
+      
+      // สร้าง placeholders สำหรับ IN clause
+      const placeholders = usernames.map((_, index) => `$${index + 1}`).join(',');
+      
+      const query = `
+        SELECT u.*, s.*, d.department_name_tha
+        FROM users u
+        LEFT JOIN students s ON u.users_id = s.users_id
+        LEFT JOIN department d ON s.department_id = d.department_id
+        WHERE u.username IN (${placeholders})
+      `;
+      
+      const result = await this.dataSource!.query(query, usernames);
+      console.log(`📊 Found ${result.length} users for ${usernames.length} usernames`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting users by usernames:", error);
+      this.logDbError("getUsersByUsernames", error);
+      throw error;
+    }
+  }
+
+  // ✅ แปลงชื่อ department เป็น department_id (รองรับทั้ง short_name และ name_tha)
+  private async convertDepartmentNameToId(departmentName: string): Promise<number | null> {
     try {
       await this.checkConnection();
       const departmentRepo = this.dataSource!.getRepository(Department);
-      const department = await departmentRepo.findOne({
-        where: { department_name_tha: majorName }
+      
+      // ✅ ลองหาโดย department_short_name ก่อน
+      let department = await departmentRepo.findOne({
+        where: { department_short_name: departmentName }
       });
       
+      // ✅ ถ้าไม่เจอ ให้ลองหาโดย department_name_tha
+      if (!department) {
+        department = await departmentRepo.findOne({
+          where: { department_name_tha: departmentName }
+        });
+      }
+      
       if (department) {
-        console.log(`✅ Found department: ${majorName} -> ID: ${department.department_id}`);
+        console.log(`✅ Found department: ${departmentName} -> ID: ${department.department_id}`);
         return department.department_id;
       } else {
-        console.warn(`⚠️ Department not found for major name: ${majorName}`);
+        console.warn(`⚠️ Department not found for name: ${departmentName}`);
         return null;
       }
     } catch (error) {
-      console.error(`❌ Error converting department major name ${majorName}:`, error);
-      this.logDbError("convertDepartmentShortNameToId", error);
+      console.error(`❌ Error converting department name ${departmentName}:`, error);
+      this.logDbError("convertDepartmentNameToId", error);
       return null;
     }
   }
@@ -65,9 +158,9 @@ export class UserManagementDAO extends ErrorHandledDao {
     
     for (const student of students) {
       try {
-        // ✅ ถ้ามี department_id เป็น string (ชื่อสาขา) ให้แปลงเป็น ID
+        // ✅ ถ้ามี department_id เป็น string (ชื่อ department) ให้แปลงเป็น ID
         if (student.department_id && typeof student.department_id === 'string') {
-          const departmentId = await this.convertDepartmentShortNameToId(student.department_id);
+          const departmentId = await this.convertDepartmentNameToId(student.department_id);
           
           if (departmentId !== null) {
             // ✅ แปลงข้อมูลใหม่
@@ -145,7 +238,6 @@ export class UserManagementDAO extends ErrorHandledDao {
                 console.log("🔄 Connection lost during individual insert, reconnecting...");
                 await this.initialize();
               }
-              
               await studentRepo.save(student);
             } catch (individualError) {
               console.error("❌ Individual insert student error:", individualError);

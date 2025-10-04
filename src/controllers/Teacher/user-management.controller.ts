@@ -71,6 +71,31 @@ export class UserManagementController extends ErrorHandledController {
       });
     }
   };
+
+  // ================= Review Upload Data =================
+  public async reviewUploadData(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: "No file uploaded"
+        });
+        return;
+      }
+
+      console.log("📁 Processing uploaded file for review:", req.file.originalname);
+      
+      const result = await this.userManagementService.reviewUploadData(req.file);
+      
+      res.status(200).json({
+        success: true,
+        message: "Upload review completed successfully",
+        data: result
+      });
+    } catch (error) {
+      this.handleError("UserManagementController.reviewUploadData", error, res);
+    }
+  }
 }
 
 // ✅ สร้าง service instance และ controller instance
@@ -82,4 +107,5 @@ export const userManagementController = {
   getStudentsByDepartment: controller.getStudentsByDepartment.bind(controller),
   uploadStudents: controller.uploadStudents.bind(controller),
   getAllDepartments: controller.getAllDepartments.bind(controller),
+  reviewUploadData: controller.reviewUploadData.bind(controller),
 };
