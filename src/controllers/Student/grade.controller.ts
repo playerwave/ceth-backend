@@ -87,20 +87,29 @@ export class GradeController extends ErrorHandledController {
     try {
       const grade_id = parseInt(req.params.grade_id);
       const data: UpdateGradeDto = req.body;
+      
+      console.log(`🔍 [CONTROLLER] Updating grade_id: ${grade_id}`);
+      console.log(`🔍 [CONTROLLER] Request body:`, data);
+      console.log(`🔍 [CONTROLLER] Parsed grade_id:`, grade_id);
+      
       const grade = await this.gradeService.updateGrade(grade_id, data);
+      console.log(`🔍 [CONTROLLER] Service result:`, grade);
 
       if (!grade) {
+        console.log(`❌ [CONTROLLER] Grade not found or update failed`);
         res.status(404).json({
           message: "ไม่พบระดับชั้นที่ระบุ หรือไม่สามารถอัปเดตได้",
         });
         return;
       }
 
+      console.log(`✅ [CONTROLLER] Grade updated successfully`);
       res.status(200).json({
         grade,
         message: "อัปเดตระดับชั้นสำเร็จ",
       });
     } catch (error) {
+      console.error(`❌ [CONTROLLER] Error in update:`, error);
       this.handleError("GradeController.update", error, res);
     }
   }

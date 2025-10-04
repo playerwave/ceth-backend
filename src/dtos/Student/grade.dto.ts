@@ -8,6 +8,10 @@ export class CreateGradeDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  th_year?: string;
 }
 
 export class UpdateGradeDto {
@@ -22,4 +26,8 @@ export class UpdateGradeDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  th_year?: string;
 }

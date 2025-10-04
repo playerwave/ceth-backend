@@ -53,7 +53,7 @@ import { Transform } from "class-transformer";
 import { parseISO } from "date-fns";
 import { format } from "date-fns-tz";
 
-@Entity()
+@Entity("event_coop")
 @Index("IDX_DEPARTMENT_ID_EVENTCOOP", ["department_id"])
 @Index("IDX_GRADE_ID_EVENTCOOP", ["grade_id"])
 @Index("IDX_DATE_EVENTCOOP", ["date"])
@@ -75,7 +75,7 @@ export class EventCoop {
   @Column({ type: "int" })
   grade_id!: number;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", nullable: true })
   @Transform(({ value }) =>
     value
       ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
@@ -84,6 +84,12 @@ export class EventCoop {
       : null
   )
   date?: Date;
+
+  @Column({ type: "int", nullable: true })
+  remaining_days!: number;
+
+  @Column({ type: "boolean", nullable: true, default: false })
+  is_on_coop!: boolean;
 
   @OneToMany(() => Students, (students) => students.eventCoop)
   students!: Students[];

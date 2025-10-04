@@ -7,7 +7,7 @@ export class GradeDao extends ErrorHandledDao {
   public async getGrades(): Promise<Grade[]> {
     try {
       const connection = await connectDatabase();
-      const sql = `SELECT grade_id, level, description FROM grade ORDER BY grade_id ASC`;
+      const sql = `SELECT grade_id, level, description, th_year FROM grade ORDER BY grade_id ASC`;
       return await connection.query(sql);
     } catch (error) {
       this.logDbError("getGrades", error);
@@ -26,11 +26,11 @@ export class GradeDao extends ErrorHandledDao {
     }
   }
 
-  public async createGrade(level: string, description?: string): Promise<Grade> {
+  public async createGrade(level: string, description?: string, th_year?: string): Promise<Grade> {
     try {
       const connection = await connectDatabase();
-      const sql = `INSERT INTO grade (level, description) VALUES ($1, $2) RETURNING *`;
-      const result = await connection.query(sql, [level, description]);
+      const sql = `INSERT INTO grade (level, description, th_year) VALUES ($1, $2, $3) RETURNING *`;
+      const result = await connection.query(sql, [level, description, th_year]);
       return result[0];
     } catch (error) {
       this.logDbError("createGrade", error);
@@ -40,18 +40,22 @@ export class GradeDao extends ErrorHandledDao {
 
   public async getGradeById(grade_id: number): Promise<Grade | null> {
     try {
+      console.log(`🔍 [DAO] Getting grade by ID: ${grade_id}`);
       const connection = await connectDatabase();
-      const sql = `SELECT grade_id, level, description FROM grade WHERE grade_id = $1`;
+      const sql = `SELECT grade_id, level, description, th_year FROM grade WHERE grade_id = $1`;
       const result = await connection.query(sql, [grade_id]);
+      console.log(`🔍 [DAO] Query result:`, result);
       return result[0] || null;
     } catch (error) {
+      console.error(`❌ [DAO] Error in getGradeById:`, error);
       this.logDbError("getGradeById", error);
       throw error;
     }
   }
 
-  public async updateGrade(grade_id: number, level?: string, description?: string): Promise<Grade | null> {
+  public async updateGrade(grade_id: number, level?: string, description?: string, th_year?: string): Promise<Grade | null> {
     try {
+      console.log(`🔍 [DAO] Updating grade_id: ${grade_id} with:`, { level, description, th_year });
       const connection = await connectDatabase();
       const updates: string[] = [];
       const values: any[] = [];
@@ -67,16 +71,27 @@ export class GradeDao extends ErrorHandledDao {
         values.push(description);
       }
 
+      if (th_year !== undefined) {
+        updates.push(`th_year = $${paramIndex++}`);
+        values.push(th_year);
+      }
+
       if (updates.length === 0) {
+        console.log(`❌ [DAO] No fields to update`);
         throw new Error("No fields to update");
       }
 
       values.push(grade_id);
 
       const sql = `UPDATE grade SET ${updates.join(", ")} WHERE grade_id = $${paramIndex} RETURNING *`;
+      console.log(`🔍 [DAO] SQL: ${sql}`);
+      console.log(`🔍 [DAO] Values:`, values);
+      
       const result = await connection.query(sql, values);
+      console.log(`✅ [DAO] Update result:`, result);
       return result[0] || null;
     } catch (error) {
+      console.error(`❌ [DAO] Error in updateGrade:`, error);
       this.logDbError("updateGrade", error);
       throw error;
     }
@@ -97,7 +112,7 @@ export class GradeDao extends ErrorHandledDao {
   public async getGradeByLevel(level: string): Promise<Grade | null> {
     try {
       const connection = await connectDatabase();
-      const sql = `SELECT grade_id, level, description FROM grade WHERE level = $1`;
+      const sql = `SELECT grade_id, level, description, th_year FROM grade WHERE level = $1`;
       const result = await connection.query(sql, [level]);
       return result[0] || null;
     } catch (error) {

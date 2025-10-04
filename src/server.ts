@@ -27,6 +27,7 @@ import teacherStudentRoute from "./routes/Teacher/teacherStudent.route";
 import teacherChoiceRoute from "./routes/Teacher/choice.route"
 import teacherActivityReportRoute from "./routes/Teacher/activity-report.route";
 import teacherUserManagementRoute from "./routes/Teacher/user-management.route";
+import teacherEventCoopRoute from "./routes/Teacher/event-coop.route";
 
 import studentActivityRoute from "./routes/Student/activity.route";
 import studentAssessmentRoute from "./routes/Student/assessment.route";
@@ -93,7 +94,7 @@ if (shouldEnableCors) {
       return cb(new Error("Not allowed by CORS"));
     },
     credentials: true, // ✅ สำคัญมากสำหรับ cookies
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",
@@ -177,6 +178,7 @@ app.use("/api/teacher", teacherStudentRoute);
 app.use("/api/teacher/choice", teacherChoiceRoute);
 app.use("/api/teacher/activity-report", teacherActivityReportRoute);
 app.use("/api/teacher/user-management", teacherUserManagementRoute);
+app.use("/api/teacher/event-coop", teacherEventCoopRoute);
 
 // student
 app.use("/api/student/activity", studentActivityRoute);

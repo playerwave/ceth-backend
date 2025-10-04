@@ -34,25 +34,34 @@ export class TeacherStudentDao extends ErrorHandledDao {
       }
     }
   }
-  // ✅ แปลงชื่อย่อ department เป็น department_id
-  private async convertDepartmentShortNameToId(shortName: string): Promise<number | null> {
+  // ✅ แปลงชื่อ department เป็น department_id (รองรับทั้ง short_name และ name_tha)
+  private async convertDepartmentNameToId(departmentName: string): Promise<number | null> {
     try {
       await this.checkConnection();
       const departmentRepo = this.dataSource!.getRepository(Department);
-      const department = await departmentRepo.findOne({
-        where: { department_short_name: shortName }
+      
+      // ✅ ลองหาโดย department_short_name ก่อน
+      let department = await departmentRepo.findOne({
+        where: { department_short_name: departmentName }
       });
       
+      // ✅ ถ้าไม่เจอ ให้ลองหาโดย department_name_tha
+      if (!department) {
+        department = await departmentRepo.findOne({
+          where: { department_name_tha: departmentName }
+        });
+      }
+      
       if (department) {
-        console.log(`✅ Found department: ${shortName} -> ID: ${department.department_id}`);
+        console.log(`✅ Found department: ${departmentName} -> ID: ${department.department_id}`);
         return department.department_id;
       } else {
-        console.warn(`⚠️ Department not found for short name: ${shortName}`);
+        console.warn(`⚠️ Department not found for name: ${departmentName}`);
         return null;
       }
     } catch (error) {
-      console.error(`❌ Error converting department short name ${shortName}:`, error);
-      this.logDbError("convertDepartmentShortNameToId", error);
+      console.error(`❌ Error converting department name ${departmentName}:`, error);
+      this.logDbError("convertDepartmentNameToId", error);
       return null;
     }
   }
@@ -64,9 +73,9 @@ export class TeacherStudentDao extends ErrorHandledDao {
     
     for (const student of students) {
       try {
-        // ✅ ถ้ามี department_id เป็น string (ชื่อย่อ) ให้แปลงเป็น ID
+        // ✅ ถ้ามี department_id เป็น string (ชื่อ department) ให้แปลงเป็น ID
         if (student.department_id && typeof student.department_id === 'string') {
-          const departmentId = await this.convertDepartmentShortNameToId(student.department_id);
+          const departmentId = await this.convertDepartmentNameToId(student.department_id);
           
           if (departmentId !== null) {
             // ✅ แปลงข้อมูลใหม่
@@ -260,6 +269,14 @@ export class TeacherStudentDao extends ErrorHandledDao {
         
       console.log("🔄 Starting reset of all students...");
       
+      // 🔥 ลบข้อมูลในตาราง users ที่มี roles_id = 3 (Student) เสมอ
+      try {
+        const usersResult = await this.dataSource!.query('DELETE FROM users WHERE roles_id = 3');
+        console.log(`✅ Deleted ${usersResult.length || 0} student users from users table`);
+      } catch (error) {
+        console.warn("⚠️ Could not delete student users:", error.message);
+      }
+      
       // ✅ นับจำนวนนักเรียนก่อนลบ
       const studentRepo = this.dataSource!.getRepository(Students);
         const totalStudents = await studentRepo.count();
@@ -296,6 +313,7 @@ export class TeacherStudentDao extends ErrorHandledDao {
       } catch (error) {
         console.warn("⚠️ Could not delete answer data:", error.message);
       }
+      
         
         // ✅ ลบนักเรียนทั้งหมดทีละคน (ไม่ใช้ clear() เพราะมี FK constraints)
         console.log("🔄 Deleting all students one by one...");

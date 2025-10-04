@@ -28,6 +28,16 @@ export class UsersService {
     return users;
   }
 
+  async getAllUsers(): Promise<Users[]> {
+    const cacheKey = "users:all";
+    const cached = await redis.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+
+    const users = await this.usersDao.getAllUsers();
+    await redis.set(cacheKey, JSON.stringify(users), "EX", 60);
+    return users;
+  }
+
   async rolesAdmin(): Promise<Users[]> {
     const cacheKey = "users:roles:admin";
     const cached = await redis.get(cacheKey);
