@@ -8,7 +8,6 @@
     "build": "npx esbuild src/server.ts --bundle --platform=node --target=node22 --external:uuid --outfile=dist/server.js && cp .env.production dist/.env",
     "deploy": "npm run build && ./deploy.sh"
   },
- 
   "keywords": [],
   "author": "",
   "license": "ISC",
