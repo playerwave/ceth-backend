@@ -27,6 +27,7 @@ import teacherStudentRoute from "./routes/Teacher/teacherStudent.route";
 import teacherChoiceRoute from "./routes/Teacher/choice.route"
 import teacherActivityReportRoute from "./routes/Teacher/activity-report.route";
 import teacherUserManagementRoute from "./routes/Teacher/user-management.route";
+import teacherUltraOptimizedUserManagementRoute from "./routes/Teacher/ultra-optimized-user-management.route";
 import teacherEventCoopRoute from "./routes/Teacher/event-coop.route";
 
 import studentActivityRoute from "./routes/Student/activity.route";
@@ -178,6 +179,7 @@ app.use("/api/teacher", teacherStudentRoute);
 app.use("/api/teacher/choice", teacherChoiceRoute);
 app.use("/api/teacher/activity-report", teacherActivityReportRoute);
 app.use("/api/teacher/user-management", teacherUserManagementRoute);
+app.use("/api/teacher/ultra-optimized", teacherUltraOptimizedUserManagementRoute);
 app.use("/api/teacher/event-coop", teacherEventCoopRoute);
 
 // student
