@@ -300,4 +300,245 @@ export class UserManagementDAO extends ErrorHandledDao {
       throw error;
     }
   }
+
+  // ================= Update Grade Year =================
+  /**
+   * อัพเดท th_year ใน grade table (+1)
+   */
+  public async updateGradeYear(): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      console.log("🔄 Updating grade year (+1)...");
+      
+      // ดึงข้อมูล grade ทั้งหมด
+      const query = `
+        SELECT grade_id, th_year, level, description
+        FROM grade
+        ORDER BY grade_id
+      `;
+      
+      const grades = await this.dataSource!.query(query);
+      console.log(`📊 Found ${grades.length} grades to update`);
+      
+      const updatedGrades = [];
+      
+      for (const grade of grades) {
+        try {
+          // แปลง th_year จาก string เป็น number แล้ว +1
+          const currentYear = parseInt(grade.th_year) || 0;
+          const newYear = currentYear + 1;
+          const newYearString = newYear.toString();
+          
+          // อัพเดท th_year
+          const updateQuery = `
+            UPDATE grade 
+            SET th_year = $1 
+            WHERE grade_id = $2
+          `;
+          
+          await this.dataSource!.query(updateQuery, [newYearString, grade.grade_id]);
+          
+          updatedGrades.push({
+            grade_id: grade.grade_id,
+            level: grade.level,
+            description: grade.description,
+            old_th_year: grade.th_year,
+            new_th_year: newYearString
+          });
+          
+          console.log(`✅ Updated grade ${grade.level}: ${grade.th_year} -> ${newYearString}`);
+          
+        } catch (gradeError) {
+          console.error(`❌ Error updating grade ${grade.grade_id}:`, gradeError);
+          this.logDbError("updateGradeYear", gradeError);
+        }
+      }
+      
+      console.log(`✅ Updated ${updatedGrades.length}/${grades.length} grades successfully`);
+      
+      return {
+        updatedGrades: updatedGrades.length,
+        grades: updatedGrades
+      };
+      
+    } catch (error) {
+      console.error("❌ Error in updateGradeYear:", error);
+      this.logDbError("updateGradeYear", error);
+      throw error;
+    }
+  }
+
+  /**
+   * อัพเดท grade_id ของนักเรียนทุกคนตาม username prefix
+   */
+  public async updateStudentGrades(): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      console.log("🔄 Updating student grades based on username prefix...");
+      
+      // ดึงข้อมูลนักเรียนทั้งหมดพร้อม username
+      const studentsQuery = `
+        SELECT s.students_id, s.grade_id as current_grade_id, u.username
+        FROM students s
+        LEFT JOIN users u ON s.users_id = u.users_id
+        WHERE u.username IS NOT NULL
+        ORDER BY s.students_id
+      `;
+      
+      const students = await this.dataSource!.query(studentsQuery);
+      console.log(`📊 Found ${students.length} students to process`);
+      
+      // ดึงข้อมูล grade ทั้งหมดพร้อม th_year ใหม่
+      const gradesQuery = `
+        SELECT grade_id, th_year, level, description
+        FROM grade
+        ORDER BY grade_id
+      `;
+      
+      const grades = await this.dataSource!.query(gradesQuery);
+      console.log(`📊 Found ${grades.length} grades available`);
+      
+      // สร้าง map ของ th_year -> grade_id
+      const gradeMap = new Map();
+      grades.forEach(grade => {
+        gradeMap.set(grade.th_year, grade.grade_id);
+      });
+      
+      console.log("🔍 Grade mapping:", Array.from(gradeMap.entries()));
+      
+      const updatedStudents = [];
+      let totalProcessed = 0;
+      
+      for (const student of students) {
+        try {
+          totalProcessed++;
+          
+          // เอา 2 หลักแรกของ username
+          const usernamePrefix = student.username.substring(0, 2);
+          
+          // หา grade_id ที่ตรงกับ th_year
+          const newGradeId = gradeMap.get(usernamePrefix);
+          
+          if (newGradeId && newGradeId !== student.current_grade_id) {
+            // อัพเดท grade_id ของนักเรียน
+            const updateQuery = `
+              UPDATE students 
+              SET grade_id = $1 
+              WHERE students_id = $2
+            `;
+            
+            await this.dataSource!.query(updateQuery, [newGradeId, student.students_id]);
+            
+            // หาข้อมูล grade ใหม่
+            const newGrade = grades.find(g => g.grade_id === newGradeId);
+            const oldGrade = grades.find(g => g.grade_id === student.current_grade_id);
+            
+            updatedStudents.push({
+              students_id: student.students_id,
+              username: student.username,
+              username_prefix: usernamePrefix,
+              old_grade_id: student.current_grade_id,
+              old_grade_level: oldGrade?.level || 'Unknown',
+              new_grade_id: newGradeId,
+              new_grade_level: newGrade?.level || 'Unknown',
+              new_grade_th_year: newGrade?.th_year || 'Unknown'
+            });
+            
+            console.log(`✅ Updated student ${student.username}: grade ${student.current_grade_id} -> ${newGradeId} (prefix: ${usernamePrefix})`);
+            
+          } else if (newGradeId === student.current_grade_id) {
+            console.log(`ℹ️ Student ${student.username} already has correct grade ${newGradeId}`);
+          } else {
+            console.warn(`⚠️ No grade found for username prefix ${usernamePrefix} (student: ${student.username})`);
+          }
+          
+        } catch (studentError) {
+          console.error(`❌ Error updating student ${student.students_id}:`, studentError);
+          this.logDbError("updateStudentGrades", studentError);
+        }
+      }
+      
+      console.log(`✅ Processed ${totalProcessed} students, updated ${updatedStudents.length} students`);
+      
+      return {
+        updatedStudents: updatedStudents.length,
+        totalProcessed: totalProcessed,
+        students: updatedStudents
+      };
+      
+    } catch (error) {
+      console.error("❌ Error in updateStudentGrades:", error);
+      this.logDbError("updateStudentGrades", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ย้อนกลับ th_year ใน grade table (-1)
+   */
+  public async rollbackGradeYear(): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      console.log("🔄 Rolling back grade year (-1)...");
+      
+      // ดึงข้อมูล grade ทั้งหมด
+      const query = `
+        SELECT grade_id, th_year, level, description
+        FROM grade
+        ORDER BY grade_id
+      `;
+      
+      const grades = await this.dataSource!.query(query);
+      console.log(`📊 Found ${grades.length} grades to rollback`);
+      
+      const rolledBackGrades = [];
+      
+      for (const grade of grades) {
+        try {
+          // แปลง th_year จาก string เป็น number แล้ว -1
+          const currentYear = parseInt(grade.th_year) || 0;
+          const newYear = currentYear - 1;
+          const newYearString = newYear.toString();
+          
+          // อัพเดท th_year
+          const updateQuery = `
+            UPDATE grade 
+            SET th_year = $1 
+            WHERE grade_id = $2
+          `;
+          
+          await this.dataSource!.query(updateQuery, [newYearString, grade.grade_id]);
+          
+          rolledBackGrades.push({
+            grade_id: grade.grade_id,
+            level: grade.level,
+            description: grade.description,
+            old_th_year: grade.th_year,
+            new_th_year: newYearString
+          });
+          
+          console.log(`✅ Rolled back grade ${grade.level}: ${grade.th_year} -> ${newYearString}`);
+          
+        } catch (gradeError) {
+          console.error(`❌ Error rolling back grade ${grade.grade_id}:`, gradeError);
+          this.logDbError("rollbackGradeYear", gradeError);
+        }
+      }
+      
+      console.log(`✅ Rolled back ${rolledBackGrades.length}/${grades.length} grades successfully`);
+      
+      return {
+        rolledBackGrades: rolledBackGrades.length,
+        grades: rolledBackGrades
+      };
+      
+    } catch (error) {
+      console.error("❌ Error in rollbackGradeYear:", error);
+      this.logDbError("rollbackGradeYear", error);
+      throw error;
+    }
+  }
 }

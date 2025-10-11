@@ -11,7 +11,6 @@ export class UserManagementController extends ErrorHandledController {
     try {
       const { departmentCode } = req.params;
       
-      console.log(`🔍 [User Management Controller] Getting students for department: ${departmentCode}`);
 
       if (!departmentCode) {
         res.status(400).json({ 
@@ -41,7 +40,6 @@ export class UserManagementController extends ErrorHandledController {
         return;
       }
 
-      console.log(`📤 Starting upload for file: ${req.file.originalname}`);
       const result = await this.userManagementService.uploadStudents(req.file);
       
       res.json({
@@ -83,7 +81,6 @@ export class UserManagementController extends ErrorHandledController {
         return;
       }
 
-      console.log("📁 Processing uploaded file for review:", req.file.originalname);
       
       const result = await this.userManagementService.reviewUploadData(req.file);
       
@@ -94,6 +91,40 @@ export class UserManagementController extends ErrorHandledController {
       });
     } catch (error) {
       this.handleError("UserManagementController.reviewUploadData", error, res);
+    }
+  }
+
+  // ================= Update Grade Year =================
+  public async updateGradeYear(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔄 Starting grade year update process...");
+      
+      const result = await this.userManagementService.updateGradeYear();
+      
+      res.status(200).json({
+        success: true,
+        message: "Grade year update completed successfully",
+        data: result
+      });
+    } catch (error) {
+      this.handleError("UserManagementController.updateGradeYear", error, res);
+    }
+  }
+
+  // ================= Rollback Grade Year =================
+  public async rollbackGradeYear(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔄 Starting grade year rollback process...");
+      
+      const result = await this.userManagementService.rollbackGradeYear();
+      
+      res.status(200).json({
+        success: true,
+        message: "Grade year rollback completed successfully",
+        data: result
+      });
+    } catch (error) {
+      this.handleError("UserManagementController.rollbackGradeYear", error, res);
     }
   }
 }
@@ -108,4 +139,6 @@ export const userManagementController = {
   uploadStudents: controller.uploadStudents.bind(controller),
   getAllDepartments: controller.getAllDepartments.bind(controller),
   reviewUploadData: controller.reviewUploadData.bind(controller),
+  updateGradeYear: controller.updateGradeYear.bind(controller),
+  rollbackGradeYear: controller.rollbackGradeYear.bind(controller),
 };

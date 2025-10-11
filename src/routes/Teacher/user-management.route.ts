@@ -39,4 +39,20 @@ router.post(
   wrapAsync(userManagementController.reviewUploadData)
 );
 
+// Update grade year
+router.post(
+  "/update-grade-year",
+  verifyToken,
+  CheckRole(["Teacher"]),
+  wrapAsync(userManagementController.updateGradeYear)
+);
+
+// Rollback grade year
+router.post(
+  "/rollback-grade-year",
+  verifyToken,
+  CheckRole(["Teacher"]),
+  wrapAsync(userManagementController.rollbackGradeYear)
+);
+
 export default router;

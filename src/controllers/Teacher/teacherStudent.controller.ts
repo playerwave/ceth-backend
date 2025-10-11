@@ -15,7 +15,6 @@ export class TeacherStudentController extends ErrorHandledController {
         return;
       }
 
-      console.log(`📤 Starting upload for file: ${req.file.originalname}`);
       const result = await this.teacherStudentService.uploadStudents(req.file);
       
       res.json({
@@ -43,7 +42,6 @@ export class TeacherStudentController extends ErrorHandledController {
   // ================= Reset All Students =================
   public async resetAllStudents(req: Request, res: Response): Promise<void> {
     try {
-      console.log("📤 Starting reset of all students...");
       const result = await this.teacherStudentService.resetAllStudents();
       
       res.status(200).json({

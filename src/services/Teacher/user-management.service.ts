@@ -42,14 +42,11 @@ export class UserManagementService extends ErrorHandledService {
       }
       
       if (department) {
-        console.log(`✅ Found department: ${departmentName} -> ID: ${department.department_id}`);
         return department.department_id;
       } else {
-        console.warn(`⚠️ Department not found for name: ${departmentName}`);
         return null;
       }
     } catch (error) {
-      console.error(`❌ Error converting department name ${departmentName}:`, error);
       return null;
     }
   }
@@ -72,10 +69,8 @@ export class UserManagementService extends ErrorHandledService {
       `;
       
       const result = await connection.query(sql, [gradeId, departmentId]);
-      console.log(`🔍 [EVENTCOOP] Found event coop for grade_id: ${gradeId}, department_id: ${departmentId}:`, result[0] || null);
       return result[0] || null;
     } catch (error) {
-      console.error(`❌ Error finding event coop:`, error);
       return null;
     }
   }
@@ -93,7 +88,6 @@ export class UserManagementService extends ErrorHandledService {
       if (typeof departmentId === 'string') {
         const convertedId = await this.convertDepartmentNameToId(departmentId);
         if (convertedId === null) {
-          console.log(`⚠️ Department not found: ${departmentId}, using default risk status`);
           return { riskStatus: 'Normal', riskPercentage: 0 };
         }
         actualDepartmentId = convertedId;
@@ -105,13 +99,11 @@ export class UserManagementService extends ErrorHandledService {
       const eventCoop = await this.getEventCoopForStudent(gradeId, actualDepartmentId);
       
       if (!eventCoop) {
-        console.log(`⚠️ No event coop found for grade_id: ${gradeId}, department_id: ${departmentId}`);
         return { riskStatus: 'Normal', riskPercentage: 0 }; // ถ้าไม่มี EventCoop ให้เป็น Normal
       }
 
       // ถ้าไม่ต้องไปสหกิจ ให้เป็น Normal
       if (!eventCoop.is_on_coop) {
-        console.log(`✅ Student doesn't need to go on coop, risk_status: Normal`);
         return { riskStatus: 'Normal', riskPercentage: 0 };
       }
 
@@ -124,13 +116,6 @@ export class UserManagementService extends ErrorHandledService {
       };
 
       const riskResult = RiskCalculator.calculateRisk(riskInput);
-      
-      console.log(`🎯 [RISK] Risk calculation result:`, {
-        grade_id: gradeId,
-        departmentId,
-        riskPercentage: riskResult.riskPercent,
-        riskStatus: riskResult.riskStatus
-      });
 
       return {
         riskStatus: riskResult.riskStatus,
@@ -180,7 +165,6 @@ export class UserManagementService extends ErrorHandledService {
       });
 
       if (existingUser) {
-        console.log(`✅ User already exists: ${studentData.code}`);
         return existingUser;
       }
 
@@ -195,11 +179,9 @@ export class UserManagementService extends ErrorHandledService {
       });
 
       const savedUser = await userRepo.save(newUser);
-      console.log(`✅ Created new user: ${studentData.code} with ID: ${savedUser.users_id}`);
       return savedUser;
 
     } catch (error) {
-      console.error(`❌ Error creating user for ${studentData.code}:`, error);
       return null;
     }
   }
@@ -262,14 +244,12 @@ export class UserManagementService extends ErrorHandledService {
         };
 
         students.push(student);
-        console.log(`✅ Converted student: ${row.name} - User ID: ${user.users_id} - Grade: ${gradeId} - Risk: ${riskResult.riskStatus} (${riskResult.riskPercentage}%) - Soft: ${softHours} - Hard: ${hardHours}`);
 
       } catch (conversionError) {
         console.error(`❌ Error converting row for ${row.name}:`, conversionError);
       }
     }
 
-    console.log(`✅ Converted ${students.length}/${excelData.length} students successfully`);
     return students;
   }
 
@@ -307,7 +287,6 @@ export class UserManagementService extends ErrorHandledService {
       console.log(`🔍 [UPLOAD] Found ${existingUsernames.length} existing usernames`);
 
       // 🔍 กรองข้อมูลใหม่ก่อนแปลง
-      console.log("🔍 [UPLOAD] Filtering new students...");
       const newStudentsData: StudentExcelData[] = [];
       const duplicateStudents: string[] = [];
       
@@ -323,11 +302,8 @@ export class UserManagementService extends ErrorHandledService {
 
       console.log(`📊 [UPLOAD] Summary:`);
       console.log(`  - Total records: ${data.length}`);
-      console.log(`  - New students: ${newStudentsData.length}`);
-      console.log(`  - Duplicate students: ${duplicateStudents.length}`);
 
       if (newStudentsData.length === 0) {
-        console.log("ℹ️ No new students to insert.");
         return { 
           message: "No new students to insert.", 
           count: 0,
@@ -346,7 +322,6 @@ export class UserManagementService extends ErrorHandledService {
       }
 
       // ✅ Insert students (เฉพาะข้อมูลใหม่)
-      console.log(`📝 Inserting ${students.length} new students...`);
       await this.userManagementDAO.insertStudents(students);
 
       // ✅ Clear cache หลังจาก insert students
@@ -387,18 +362,12 @@ export class UserManagementService extends ErrorHandledService {
 
   async getStudentsByDepartment(departmentShortName: string): Promise<any> {
     try {
-      console.log(`🔍 [User Management Service] Getting students for department: ${departmentShortName}`);
       
       const students = await this.userManagementDAO.getStudentsByDepartmentShortName(departmentShortName);
       
-      console.log(`📊 [User Management Service] Found ${students.length} students`);
       
       // ✅ Debug: Log first student data structure
       if (students.length > 0) {
-        console.log("🔍 [SERVICE] First student data:", students[0]);
-        console.log("🔍 [SERVICE] Student keys:", Object.keys(students[0]));
-        console.log("🔍 [SERVICE] Username:", students[0].username);
-        console.log("🔍 [SERVICE] Users relation:", students[0].users);
       }
       
       // ✅ Map students to include username
@@ -452,8 +421,6 @@ export class UserManagementService extends ErrorHandledService {
       }
 
       // 🔍 [DEBUG] แสดงข้อมูลดิบจากไฟล์ที่อ่านได้
-      console.log(`🔍 [DEBUG] Raw data from uploaded file (first 5 rows):`, data.slice(0, 5));
-      console.log(`🔍 [DEBUG] Raw data from uploaded file (last 5 rows):`, data.slice(-5));
       
       // 🔍 [DEBUG] ตรวจสอบ username 65160397 โดยเฉพาะ
       const targetUsername = '65160397';
@@ -566,10 +533,69 @@ export class UserManagementService extends ErrorHandledService {
         }
       };
 
-      console.log("✅ Upload review completed:", result);
       return result;
     } catch (error) {
       console.error("❌ Error in reviewUploadData:", error);
+      throw error;
+    }
+  }
+
+  // ================= Update Grade Year =================
+  public async updateGradeYear(): Promise<any> {
+    try {
+      console.log("🔄 Starting grade year update process...");
+      
+      // 1. อัพเดท th_year ใน grade table (+1)
+      const gradeUpdateResult = await this.userManagementDAO.updateGradeYear();
+      console.log("✅ Grade year update result:", gradeUpdateResult);
+      
+      // 2. อัพเดท grade_id ของนักเรียนทุกคนตาม username prefix
+      const studentUpdateResult = await this.userManagementDAO.updateStudentGrades();
+      
+      const result = {
+        gradeUpdate: gradeUpdateResult,
+        studentUpdate: studentUpdateResult,
+        summary: {
+          gradesUpdated: gradeUpdateResult.updatedGrades,
+          studentsUpdated: studentUpdateResult.updatedStudents,
+          totalProcessed: studentUpdateResult.totalProcessed
+        }
+      };
+      
+      console.log("✅ Grade year update completed successfully:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ Error in updateGradeYear:", error);
+      throw error;
+    }
+  }
+
+  // ================= Rollback Grade Year =================
+  public async rollbackGradeYear(): Promise<any> {
+    try {
+      console.log("🔄 Starting grade year rollback process...");
+      
+      // 1. ย้อนกลับ th_year ใน grade table (-1)
+      const gradeRollbackResult = await this.userManagementDAO.rollbackGradeYear();
+      console.log("✅ Grade year rollback result:", gradeRollbackResult);
+      
+      // 2. อัพเดท grade_id ของนักเรียนทุกคนตาม username prefix
+      const studentUpdateResult = await this.userManagementDAO.updateStudentGrades();
+      
+      const result = {
+        gradeRollback: gradeRollbackResult,
+        studentUpdate: studentUpdateResult,
+        summary: {
+          gradesRolledBack: gradeRollbackResult.rolledBackGrades,
+          studentsUpdated: studentUpdateResult.updatedStudents,
+          totalProcessed: studentUpdateResult.totalProcessed
+        }
+      };
+      
+      console.log("✅ Grade year rollback completed successfully:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ Error in rollbackGradeYear:", error);
       throw error;
     }
   }

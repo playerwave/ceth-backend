@@ -28,7 +28,6 @@ export class TeacherStudentService extends ErrorHandledService {
     if (!username || typeof username !== 'string') return 1;
     
     const prefix = username.substring(0, 2);
-    console.log(`🔍 [GRADE] Username: ${username}, Prefix: ${prefix}`);
     
     try {
       // ✅ หา grade_id ที่มี th_year ตรงกับ prefix
@@ -37,14 +36,11 @@ export class TeacherStudentService extends ErrorHandledService {
       const grade = await gradeRepo.findOne({ where: { th_year: prefix } });
       
       if (grade) {
-        console.log(`✅ Found grade: th_year ${prefix} -> grade_id: ${grade.grade_id}, level: ${grade.level}`);
         return grade.grade_id;
       } else {
-        console.warn(`⚠️ Grade with th_year ${prefix} not found, using default grade_id: 1`);
         return 1;
       }
     } catch (error) {
-      console.error(`❌ Error finding grade for th_year ${prefix}:`, error);
       return 1; // fallback to default
     }
   }
@@ -98,10 +94,8 @@ export class TeacherStudentService extends ErrorHandledService {
       `;
       
       const result = await connection.query(sql, [gradeId, departmentId]);
-      console.log(`🔍 [EVENTCOOP] Found event coop for grade_id: ${gradeId}, department_id: ${departmentId}:`, result[0] || null);
       return result[0] || null;
     } catch (error) {
-      console.error(`❌ Error finding event coop:`, error);
       return null;
     }
   }
@@ -119,7 +113,6 @@ export class TeacherStudentService extends ErrorHandledService {
       if (typeof departmentId === 'string') {
         const convertedId = await this.convertDepartmentNameToId(departmentId);
         if (convertedId === null) {
-          console.log(`⚠️ Department not found: ${departmentId}, using default risk status`);
           return { riskStatus: 'Normal', riskPercentage: 0 };
         }
         actualDepartmentId = convertedId;
@@ -131,13 +124,11 @@ export class TeacherStudentService extends ErrorHandledService {
       const eventCoop = await this.getEventCoopForStudent(gradeId, actualDepartmentId);
       
       if (!eventCoop) {
-        console.log(`⚠️ No event coop found for grade_id: ${gradeId}, department_id: ${departmentId}`);
         return { riskStatus: 'Normal', riskPercentage: 0 }; // ถ้าไม่มี EventCoop ให้เป็น Normal
       }
 
       // ถ้าไม่ต้องไปสหกิจ ให้เป็น Normal
       if (!eventCoop.is_on_coop) {
-        console.log(`✅ Student doesn't need to go on coop, risk_status: Normal`);
         return { riskStatus: 'Normal', riskPercentage: 0 };
       }
 
@@ -150,20 +141,12 @@ export class TeacherStudentService extends ErrorHandledService {
       };
 
       const riskResult = RiskCalculator.calculateRisk(riskInput);
-      
-      console.log(`🎯 [RISK] Risk calculation result:`, {
-        grade_id: gradeId,
-        departmentId,
-        riskPercentage: riskResult.riskPercent,
-        riskStatus: riskResult.riskStatus
-      });
 
       return {
         riskStatus: riskResult.riskStatus,
         riskPercentage: riskResult.riskPercent
       };
     } catch (error) {
-      console.error(`❌ Error calculating student risk:`, error);
       return { riskStatus: 'Normal', riskPercentage: 0 }; // fallback to Normal
     }
   }
@@ -180,7 +163,6 @@ export class TeacherStudentService extends ErrorHandledService {
       });
 
       if (existingUser) {
-        console.log(`✅ User already exists: ${studentData.code}`);
         return existingUser;
       }
 
@@ -195,11 +177,9 @@ export class TeacherStudentService extends ErrorHandledService {
       });
 
       const savedUser = await userRepo.save(newUser);
-      console.log(`✅ Created new user: ${studentData.code} with ID: ${savedUser.users_id}`);
       return savedUser;
 
     } catch (error) {
-      console.error(`❌ Error creating user for ${studentData.code}:`, error);
       return null;
     }
   }
@@ -262,14 +242,12 @@ export class TeacherStudentService extends ErrorHandledService {
         };
 
         students.push(student);
-        console.log(`✅ Converted student: ${row.name} - User ID: ${user.users_id}`);
 
       } catch (conversionError) {
-        console.error(`❌ Error converting row for ${row.name}:`, conversionError);
+        // Skip invalid rows silently
       }
     }
 
-    console.log(`✅ Converted ${students.length}/${excelData.length} students successfully`);
     return students;
   }
 
@@ -302,7 +280,6 @@ export class TeacherStudentService extends ErrorHandledService {
       }
 
       // ✅ Insert students
-      console.log(`📝 Inserting ${students.length} students...`);
       await this.studentDao.insertStudents(students);
 
       // ✅ Clear cache หลังจาก insert students
@@ -339,8 +316,6 @@ export class TeacherStudentService extends ErrorHandledService {
   // ✅ Reset ข้อมูลนิสิตทั้งหมด
   public async resetAllStudents(): Promise<{ message: string; deletedCount: number }> {
     try {
-      console.log("🔄 Starting reset of all students...");
-      
       const result = await this.studentDao.resetAllStudents();
       
       // ✅ Clear cache หลังจาก reset students
