@@ -7,6 +7,24 @@ export class UserManagementController extends ErrorHandledController {
     super();
   }
 
+  // ================= Get All Students =================
+  getAllStudents = async (req: Request, res: Response): Promise<void> => {
+    try {
+      console.log("🔍 [User Management Controller] Getting all students");
+
+      const result = await this.userManagementService.getAllStudents();
+      
+      res.json(result);
+    } catch (error) {
+      console.error("❌ [User Management Controller] Error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Internal server error" 
+      });
+    }
+  };
+
+  // ================= Get Students By Department =================
   getStudentsByDepartment = async (req: Request, res: Response): Promise<void> => {
     try {
       const { departmentCode } = req.params;
@@ -135,6 +153,7 @@ const controller = new UserManagementController(userManagementService);
 
 // ✅ Export pattern เหมือนกับ teacherStudent controller
 export const userManagementController = {
+  getAllStudents: controller.getAllStudents.bind(controller),
   getStudentsByDepartment: controller.getStudentsByDepartment.bind(controller),
   uploadStudents: controller.uploadStudents.bind(controller),
   getAllDepartments: controller.getAllDepartments.bind(controller),

@@ -130,15 +130,12 @@ app.use(session(getSessionConfig()));
 app.use(passport.initialize());
 app.use(passport.session());
 
-/* ------------ Body parsers (เฉพาะ method ที่ต้องใช้) ------------ */
-app.use((req, res, next) => {
-  if (["POST", "PUT", "PATCH"].includes(req.method)) {
-    express.json({ limit: "10mb" })(req, res, next);
-  } else {
-    next();
-  }
-});
+/* ------------ Body parsers ------------ */
+// ✅ เพิ่ม JSON parser แบบ global เพื่อให้ทุก route ใช้ได้
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
+// ✅ เก็บ bodyParser.urlencoded เอาไว้เผื่อ route เก่าใช้
 app.use((req, res, next) => {
   if (["POST", "PUT", "PATCH"].includes(req.method)) {
     bodyParser.urlencoded({ limit: "10mb", extended: true })(req, res, next);

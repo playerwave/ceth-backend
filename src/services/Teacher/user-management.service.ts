@@ -360,6 +360,33 @@ export class UserManagementService extends ErrorHandledService {
     }
   }
 
+  // ================= Get All Students =================
+  async getAllStudents(): Promise<any> {
+    try {
+      console.log("🔍 [User Management Service] Getting all students");
+      
+      const students = await this.userManagementDAO.getAllStudents();
+      
+      // ✅ Map students to include username
+      const mappedStudents = students.map(student => ({
+        ...student,
+        username: student.users?.username || student.username || 'ไม่ระบุ'
+      }));
+      
+      console.log(`✅ [User Management Service] Retrieved ${mappedStudents.length} students`);
+      
+      return {
+        success: true,
+        data: mappedStudents,
+        count: mappedStudents.length
+      };
+    } catch (error) {
+      console.error("❌ [User Management Service] Error getting all students:", error);
+      throw error;
+    }
+  }
+
+  // ================= Get Students By Department =================
   async getStudentsByDepartment(departmentShortName: string): Promise<any> {
     try {
       

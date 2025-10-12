@@ -256,6 +256,30 @@ export class UserManagementDAO extends ErrorHandledDao {
     }
   }
 
+  // ================= Get All Students =================
+  async getAllStudents(): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      const studentsRepository = this.dataSource!.getRepository(Students);
+
+      const students = await studentsRepository
+        .createQueryBuilder("student")
+        .leftJoinAndSelect("student.department", "department")
+        .leftJoinAndSelect("student.faculty", "faculty")
+        .leftJoinAndSelect("student.users", "users")
+        .leftJoinAndSelect("student.grade", "grade")
+        .getMany();
+      
+      console.log(`✅ [User Management DAO] Retrieved ${students.length} students from database`);
+      return students;
+    } catch (error) {
+      console.error("❌ [User Management DAO] Error getting all students:", error);
+      this.logDbError("getAllStudents", error);
+      throw error;
+    }
+  }
+
+  // ================= Get Students By Department =================
   async getStudentsByDepartmentShortName(departmentShortName: string): Promise<any[]> {
     try {
       await this.checkConnection();

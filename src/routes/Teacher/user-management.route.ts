@@ -7,6 +7,14 @@ import { wrapAsync } from "../../utils/wrapAsync";
 
 const router = Router();
 
+// Get all students
+router.get(
+  "/students",
+  verifyToken,
+  CheckRole(["Teacher"]),
+  wrapAsync(userManagementController.getAllStudents)
+);
+
 // Get students by department short name
 router.get(
   "/students/:departmentCode",
