@@ -204,12 +204,10 @@ export class RoomDao extends ErrorHandledDao {
   ): Promise<Room[]> {
     await this.checkConnection();
     try {
-      // ตรวจสอบทั้ง room_name และ combination ของข้อมูลอื่นๆ
+      // ตรวจสอบแค่ room_name ซ้ำเท่านั้น (เอาเงื่อนไขตำแหน่งห้องซ้ำออก)
       return await this.dataSource!.query(
-        `SELECT * FROM room WHERE 
-          (room_name = $1) OR 
-          (faculty_id = $2 AND building_id = $3 AND floor = $4 AND seat_number = $5)`,
-        [room_name.trim(), faculty_id, building_id, floor.trim(), seat_number]
+        `SELECT * FROM room WHERE room_name = $1`,
+        [room_name.trim()]
       );
     } catch (error) {
       this.logDbError("checkRoomExists", error);
@@ -262,6 +260,24 @@ export class RoomDao extends ErrorHandledDao {
     }
 
     try {
+      // 🔍 เช็ค room_id ล่าสุดและ reset sequence ก่อนสร้าง
+      console.log('🔍 [addRoom] Checking and resetting sequence...');
+      
+      // หา room_id สูงสุดที่มีอยู่ในตาราง
+      const maxIdResult = await this.dataSource!.query(
+        `SELECT COALESCE(MAX(room_id), 0) as max_id FROM room`
+      );
+      const maxId = maxIdResult[0]?.max_id || 0;
+      console.log(`📊 [addRoom] Current max room_id: ${maxId}`);
+
+      // Reset sequence ให้เริ่มจาก max_id + 1
+      await this.dataSource!.query(
+        `SELECT setval('room_room_id_seq', $1, false)`,
+        [maxId + 1]
+      );
+      console.log(`✅ [addRoom] Sequence reset to start from: ${maxId + 1}`);
+
+      // สร้าง room ใหม่
       const result = await this.dataSource!.query(
         `INSERT INTO room (
           faculty_id, building_id, room_name, floor, seat_number, status
@@ -276,6 +292,8 @@ export class RoomDao extends ErrorHandledDao {
           trimmedStatus,
         ]
       );
+      
+      console.log(`✅ [addRoom] Room created successfully with room_id: ${result[0].room_id}`);
       return result[0];
     } catch (error) {
       this.logDbError("addRoom", error);

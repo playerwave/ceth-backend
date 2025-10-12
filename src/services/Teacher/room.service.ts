@@ -187,7 +187,7 @@ export class RoomService extends ErrorHandledService {
     status: string
   ): Promise<{ room: Room | null; duplicateType: string | null }> {
     try {
-      // ✅ ใช้ฟังก์ชันตรวจสอบใหม่ที่ครอบคลุมมากขึ้น
+      // ✅ ตรวจสอบแค่ชื่อห้องซ้ำเท่านั้น
       const exists = await this.roomDao.checkRoomExists(
         faculty_id,
         building_id,
@@ -197,32 +197,9 @@ export class RoomService extends ErrorHandledService {
       );
 
       if (exists.length > 0) {
-        // ✅ ตรวจสอบว่าเป็น room_name ซ้ำหรือ combination ซ้ำ
-        const duplicateName = exists.find(
-          (room) => room.room_name === room_name
-        );
-        const duplicateLocation = exists.find(
-          (room) =>
-            room.faculty_id === faculty_id &&
-            room.building_id === building_id &&
-            room.floor === floor &&
-            room.seat_number === seat_number
-        );
-
-        if (duplicateName) {
-          this.logInfo("🚫 Duplicate room name", { room_name });
-          return { room: null, duplicateType: "name" };
-        }
-
-        if (duplicateLocation) {
-          this.logInfo("🚫 Duplicate room location", {
-            faculty_id,
-            building_id,
-            floor,
-            seat_number,
-          });
-          return { room: null, duplicateType: "location" };
-        }
+        // ✅ ตรวจสอบว่าชื่อห้องซ้ำ
+        this.logInfo("🚫 Duplicate room name", { room_name });
+        return { room: null, duplicateType: "name" };
       }
 
       const created = await this.roomDao.addRoom(
