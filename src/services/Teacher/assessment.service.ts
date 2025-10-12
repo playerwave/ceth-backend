@@ -426,7 +426,7 @@ export class AssessmentService extends ErrorHandledService {
     const dataSource = await connectDatabase();
 
     return await dataSource.transaction(async (manager) => {
-      // 1) Assessment
+      // 1) สร้าง Assessment
       const assessmentResult = await manager
         .createQueryBuilder()
         .insert()
@@ -445,8 +445,16 @@ export class AssessmentService extends ErrorHandledService {
       const assessment = assessmentResult.raw[0];
       const assessment_id = assessment.assessment_id;
 
-      // 2) สร้าง version แรกสำหรับ assessment ใหม่
-      const firstVersion = await this.assessmentVersionService.createNewVersion(assessment_id);
+      // 2) สร้าง version แรกภายใน transaction เดียวกัน
+      const versionResult = await manager.query(
+        `INSERT INTO assessment_version (assessment_id, version_no, is_published, published_at, created_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         RETURNING *`,
+        [assessment_id, 1, false, null]
+      );
+      
+      const firstVersion = versionResult[0];
+      console.log(`✅ Created assessment version ${firstVersion.assessment_version_id} in transaction`);
       
       // 3) Sections
       for (const s of payload.sections || []) {
@@ -455,7 +463,7 @@ export class AssessmentService extends ErrorHandledService {
           .insert()
           .into(SetNumber)
           .values({
-            name: s.name,              // ✅ ใช้ name
+            name: s.name,
             status: s.status || "Active",
             assessment_id,
           })
@@ -464,15 +472,15 @@ export class AssessmentService extends ErrorHandledService {
 
         const set_number_id = sectionResult.raw[0].set_number_id;
 
-        // 3) Questions
+        // 4) Questions
         for (const q of s.questions || []) {
           const questionResult = await manager
             .createQueryBuilder()
             .insert()
             .into(Question)
             .values({
-              question_text: q.question_text,   // ✅ ใช้ question_text
-              question_type: q.question_type,   // ✅ ใช้ question_type
+              question_text: q.question_text,
+              question_type: q.question_type,
               question_number: q.question_number,
               set_number_id,
             })
@@ -481,26 +489,91 @@ export class AssessmentService extends ErrorHandledService {
 
           const question_id = questionResult.raw[0].question_id;
 
-          // 4) Choices
+          // 5) Choices
           for (const opt of q.choices || []) {
             await manager
               .createQueryBuilder()
               .insert()
               .into(Choice)
               .values({
-                choice_text: opt.choice_text,   // ✅ ใช้ choice_text
+                choice_text: opt.choice_text,
                 choice_number: opt.choice_number,
-                question: { question_id },                   // ✅ ใช้ foreign key ตรง ๆ
+                question: { question_id },
               })
               .execute();
           }
         }
       }
 
-      // 4) Clone ข้อมูลไปยัง version tables
-      await this.assessmentVersionService.cloneVersion(firstVersion.assessment_version_id, assessment_id);
+      // 6) Clone ข้อมูลไปยัง version tables ภายใน transaction
+      // Helper function to convert question_type
+      const convertQuestionType = (type: string): string => {
+        const typeMap: Record<string, string> = {
+          "Fix Single answer": "single_choice",
+          "Single answer": "single_choice",
+          "Multiple answer": "multi_choice",
+          "Text answer": "text"
+        };
+        return typeMap[type] || "text";
+      };
+
+      // สร้าง SetNumberVersion
+      const setNumbers = await manager.query(
+        `SELECT * FROM set_number WHERE assessment_id = $1 ORDER BY set_number_id`,
+        [assessment_id]
+      );
+
+      for (let i = 0; i < setNumbers.length; i++) {
+        const setNumber = setNumbers[i];
+        const setNumberVersionResult = await manager.query(
+          `INSERT INTO set_number_version (assessment_version_id, order_index, name, description, created_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           RETURNING *`,
+          [firstVersion.assessment_version_id, i + 1, setNumber.name, setNumber.description || '']
+        );
+
+        const setNumberVersion = setNumberVersionResult[0];
+
+        // Clone Questions
+        const questions = await manager.query(
+          `SELECT * FROM question WHERE set_number_id = $1 ORDER BY question_id`,
+          [setNumber.set_number_id]
+        );
+
+        for (let j = 0; j < questions.length; j++) {
+          const question = questions[j];
+          // แปลง question_type ให้ตรงกับ enum ของ question_version
+          const convertedQuestionType = convertQuestionType(question.question_type);
+          
+          const questionVersionResult = await manager.query(
+            `INSERT INTO question_version (set_number_version_id, order_index, question_text, question_type)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [setNumberVersion.set_number_version_id, j + 1, question.question_text, convertedQuestionType]
+          );
+
+          const questionVersion = questionVersionResult[0];
+
+          // Clone Choices
+          const choices = await manager.query(
+            `SELECT * FROM choice WHERE question_id = $1 ORDER BY choice_id`,
+            [question.question_id]
+          );
+
+          for (let k = 0; k < choices.length; k++) {
+            const choice = choices[k];
+            await manager.query(
+              `INSERT INTO choice_version (question_version_id, order_index, choice_text)
+               VALUES ($1, $2, $3)`,
+              [questionVersion.question_version_id, k + 1, choice.choice_text]
+            );
+          }
+        }
+      }
 
       await redis.del("assessment:all");
+      console.log(`✅ Assessment created successfully with versioning (assessment_id: ${assessment_id}, version_id: ${firstVersion.assessment_version_id})`);
+      
       return { 
         assessment_id, 
         version_id: firstVersion.assessment_version_id,
