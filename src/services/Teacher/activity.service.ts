@@ -553,6 +553,116 @@ export class ActivityService extends ErrorHandledService {
   }
 
   /**
+   * ดึงปีทั้งหมดที่มีกิจกรรม Active
+   */
+  public async getActiveActivityYears(): Promise<number[]> {
+    try {
+      const years = await this.activityDao.getActiveActivityYears();
+      this.logInfo("📅 Retrieved active activity years", { count: years.length, years });
+      return years;
+    } catch (error) {
+      this.logError("❌ Error in getActiveActivityYears", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงสรุปกิจกรรมตามช่วงเวลา (สำหรับ dashboard)
+   */
+  public async getActivitySummary(params: {
+    year: number;
+    month?: number;
+    quarter?: number | "all";
+  }): Promise<any[]> {
+    try {
+      console.log("📊 [ActivityService] Getting activity summary with params:", params);
+      const summary = await this.activityDao.getActivitySummary(params);
+      this.logInfo("📊 Retrieved activity summary", { count: summary.length });
+      return summary;
+    } catch (error) {
+      this.logError("❌ Error in getActivitySummary", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mock การลงทะเบียนกิจกรรมของนิสิตแบบสุ่ม (เต็มที่นั่งทุกกิจกรรม)
+   */
+  public async mockAllActivityRegistrations(): Promise<any> {
+    try {
+      console.log(`🎲 [ActivityService] Mock all activity registrations`);
+      const result = await this.activityDao.mockAllActivityRegistrations();
+      
+      // Clear cache
+      await redis.del("activity:all");
+      
+      this.logInfo("🎲 Mock all registrations completed", result.summary);
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in mockAllActivityRegistrations", error);
+      throw error;
+    }
+  }
+
+  /**
+   * สร้างกิจกรรมจำนวนมากพร้อมกัน (Bulk Create from Excel)
+   */
+  public async bulkCreateActivities(
+    activities: Partial<Activity>[],
+    foodIdsArray?: number[][]
+  ): Promise<{ created: Activity[]; errors: any[] }> {
+    try {
+      console.log(`🔄 [ActivityService] Starting bulk create for ${activities.length} activities`);
+
+      // Sanitize and validate data
+      const sanitizedActivities = activities.map((activity) => ({
+        activity_name: activity.activity_name || "ไม่ระบุ",
+        presenter_company_name: activity.presenter_company_name || "ไม่ระบุ",
+        description: activity.description || "ไม่ระบุ",
+        type: activity.type || "Soft",
+        seat: activity.seat ?? 0,
+        recieve_hours: activity.recieve_hours ?? 0,
+        event_format: activity.event_format || "Online",
+        special_start_register_date: activity.special_start_register_date ?? null,
+        start_register_date: activity.start_register_date ?? null,
+        end_register_date: activity.end_register_date ?? null,
+        start_activity_date: activity.start_activity_date ?? null,
+        end_activity_date: activity.end_activity_date ?? null,
+        start_assessment: activity.start_assessment ?? null,
+        end_assessment: activity.end_assessment ?? null,
+        image_url: activity.image_url || "ไม่ระบุ",
+        activity_status: activity.activity_status || "Private",
+        activity_state: activity.activity_state || "Not Start",
+        status: activity.status || "Active",
+        url: activity.url || "ไม่ระบุ",
+        room_id: activity.room_id ?? null,
+        assessment_id: activity.assessment_id ?? null,
+        create_activity_date: new Date(),
+        last_update_activity_date: new Date(),
+      }));
+
+      const result = await this.activityDao.bulkCreateActivities(
+        sanitizedActivities,
+        foodIdsArray || []
+      );
+
+      // Clear cache
+      await redis.del("activity:all");
+
+      this.logInfo("🆕 Bulk activities created", {
+        total: activities.length,
+        created: result.created.length,
+        errors: result.errors.length,
+      });
+
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in bulkCreateActivities", error);
+      throw error;
+    }
+  }
+
+  /**
    * ตรวจสอบและสร้างข้อมูล Assessment Structure ตัวอย่าง
    */
   public async checkAndCreateSampleAssessmentData(activityId: number): Promise<any> {

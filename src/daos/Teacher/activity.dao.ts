@@ -1984,6 +1984,463 @@ export class ActivityDao extends ErrorHandledDao {
   }
 
   /**
+   * ดึงปีทั้งหมดที่มีกิจกรรม Active
+   */
+  public async getActiveActivityYears(): Promise<number[]> {
+    try {
+      await this.checkConnection();
+      
+      const query = `
+        SELECT DISTINCT EXTRACT(YEAR FROM start_activity_date) as year
+        FROM activity
+        WHERE status = 'Active'
+          AND start_activity_date IS NOT NULL
+        ORDER BY year DESC
+      `;
+      
+      const result = await this.dataSource!.query(query);
+      const years = result.map((row: any) => parseInt(row.year));
+      
+      console.log(`📊 Found ${years.length} distinct years with active activities:`, years);
+      return years;
+    } catch (error) {
+      console.error("❌ Error getting active activity years:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึงสรุปกิจกรรมตามช่วงเวลา (สำหรับ dashboard)
+   */
+  public async getActivitySummary(params: {
+    year: number;
+    month?: number;
+    quarter?: number | "all";
+  }): Promise<any[]> {
+    try {
+      await this.checkConnection();
+      
+      const { year, month, quarter } = params;
+      
+      console.log(`📊 Getting activity summary for:`, params);
+      
+      // สร้างเงื่อนไข WHERE
+      let whereConditions = [
+        `status = 'Active'`,
+        `(event_format = 'Online' OR event_format = 'Onsite')`,
+        `EXTRACT(YEAR FROM start_activity_date) = $1`
+      ];
+      
+      const queryParams: any[] = [year];
+      
+      // ถ้าเลือกไตรมาสเฉพาะ
+      if (quarter && quarter !== "all") {
+        const quarterMonths: { [key: number]: number[] } = {
+          1: [1, 2, 3],
+          2: [4, 5, 6],
+          3: [7, 8, 9],
+          4: [10, 11, 12]
+        };
+        
+        const months = quarterMonths[quarter as number];
+        if (months) {
+          queryParams.push(months);
+          whereConditions.push(`EXTRACT(MONTH FROM start_activity_date) = ANY($${queryParams.length})`);
+        }
+      } else if (month) {
+        // ถ้าเลือกเดือนเฉพาะ (เมื่อ quarter = "all")
+        queryParams.push(month);
+        whereConditions.push(`EXTRACT(MONTH FROM start_activity_date) = $${queryParams.length}`);
+      }
+      
+      const query = `
+        SELECT 
+          a.activity_id as "activityId",
+          a.activity_name as "activityName",
+          a.start_activity_date as "startDate",
+          a.event_format as "eventFormat",
+          COALESCE(a.registered_count, 0) as registered,
+          COALESCE(
+            (SELECT COUNT(DISTINCT j.students_id)
+             FROM activity_detail ad
+             JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+             WHERE ad.activity_id = a.activity_id
+               AND ad.time_in IS NOT NULL
+               AND ad.time_out IS NOT NULL
+               AND j.status = 'Pending'
+            ), 0
+          ) as "attendedFull",
+          COALESCE(
+            (SELECT COUNT(DISTINCT j.students_id)
+             FROM activity_detail ad
+             JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+             WHERE ad.activity_id = a.activity_id
+               AND (ad.time_in IS NULL OR ad.time_out IS NULL)
+               AND j.status = 'Pending'
+            ), 0
+          ) as "attendedPartial"
+        FROM activity a
+        WHERE ${whereConditions.join(' AND ')}
+        ORDER BY a.start_activity_date ASC
+      `;
+      
+      const result = await this.dataSource!.query(query, queryParams);
+      console.log(`✅ Found ${result.length} activities for summary`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error getting activity summary:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mock การลงทะเบียนกิจกรรมของนิสิตแบบสุ่ม (เต็มที่นั่งทุกกิจกรรม)
+   */
+  public async mockAllActivityRegistrations(): Promise<any> {
+    try {
+      await this.checkConnection();
+      
+      console.log(`🎲 [mockAllActivityRegistrations] Starting mock for all activities`);
+      
+      // 1. ดึงกิจกรรมทั้งหมดที่เป็น Active และมี seat > 0
+      const activitiesResult = await this.dataSource!.query(
+        `SELECT activity_id, activity_name, start_activity_date, end_activity_date, seat, event_format 
+         FROM activity 
+         WHERE status = 'Active' 
+           AND (event_format = 'Online' OR event_format = 'Onsite')
+           AND seat > 0
+         ORDER BY activity_id`
+      );
+      
+      if (activitiesResult.length === 0) {
+        throw new Error("No active activities found");
+      }
+      
+      console.log(`📋 Found ${activitiesResult.length} activities to mock`);
+      
+      // 2. ดึงนิสิตทั้งหมดจากระบบ
+      const studentsResult = await this.dataSource!.query(
+        `SELECT students_id FROM students ORDER BY students_id`
+      );
+      
+      if (studentsResult.length === 0) {
+        throw new Error("No students found in system");
+      }
+      
+      console.log(`👥 Total students in system: ${studentsResult.length}`);
+      
+      const results = [];
+      
+      // 3. Loop แต่ละกิจกรรม
+      for (const activity of activitiesResult) {
+        try {
+          console.log(`\n🎯 Processing activity ${activity.activity_id}: ${activity.activity_name}`);
+          console.log(`   Seat: ${activity.seat}, Format: ${activity.event_format}`);
+          
+          // ตรวจสอบว่ามีการลงทะเบียนอยู่แล้วหรือไม่
+          const existingCount = await this.dataSource!.query(
+            `SELECT COUNT(*) as count FROM activity_detail WHERE activity_id = $1`,
+            [activity.activity_id]
+          );
+          
+          if (existingCount[0].count > 0) {
+            console.log(`   ⚠️ Activity already has ${existingCount[0].count} registrations, skipping...`);
+            results.push({
+              activityId: activity.activity_id,
+              activityName: activity.activity_name,
+              status: 'skipped',
+              reason: 'Already has registrations'
+            });
+            continue;
+          }
+          
+          const numToRegister = activity.seat; // ลงทะเบียนเต็มจำนวน
+          
+          // สุ่มนิสิตที่จะลงทะเบียน
+          const shuffledStudents = [...studentsResult].sort(() => Math.random() - 0.5);
+          const studentsToRegister = shuffledStudents.slice(0, Math.min(numToRegister, studentsResult.length));
+          
+          // คำนวณจำนวนนิสิตที่จะไม่มี time_in/time_out (< 5%)
+          const maxMissing = Math.floor(studentsToRegister.length * 0.05);
+          const numMissing = Math.floor(Math.random() * (maxMissing + 1));
+          
+          console.log(`   📊 Will register ${studentsToRegister.length} students (${numMissing} incomplete)`);
+          
+          // สุ่มเลือกนิสิตที่จะไม่มี time_in/time_out
+          const missingIndices = new Set<number>();
+          while (missingIndices.size < numMissing) {
+            missingIndices.add(Math.floor(Math.random() * studentsToRegister.length));
+          }
+          
+          const queryRunner = this.dataSource!.createQueryRunner();
+          await queryRunner.connect();
+          await queryRunner.startTransaction();
+          
+          try {
+            let withComplete = 0;
+            let withoutComplete = 0;
+            
+            for (let i = 0; i < studentsToRegister.length; i++) {
+              const student = studentsToRegister[i];
+              const isMissing = missingIndices.has(i);
+              
+              // สร้าง activity_detail
+              const activityDetailResult = await queryRunner.query(
+                `INSERT INTO activity_detail (activity_id, activity_food_id, register_date, time_in, time_out, status)
+                 VALUES ($1, NULL, NOW(), NULL, NULL, 'Registered')
+                 RETURNING activity_detail_id`,
+                [activity.activity_id]
+              );
+              
+              const activityDetailId = activityDetailResult[0].activity_detail_id;
+              
+              // สร้าง join record
+              await queryRunner.query(
+                `INSERT INTO "join" (students_id, activity_detail_id, join_date, status)
+                 VALUES ($1, $2, NOW(), 'Pending')`,
+                [student.students_id, activityDetailId]
+              );
+              
+              // กำหนด time_in และ time_out
+              let timeIn = null;
+              let timeOut = null;
+              
+              if (!isMissing) {
+                // นิสิตปกติ: มีทั้ง time_in และ time_out
+                const startDate = new Date(activity.start_activity_date);
+                const endDate = new Date(activity.end_activity_date);
+                
+                // time_in: สุ่มภายใน 15 นาทีหลัง start_activity_date
+                const timeInOffset = Math.floor(Math.random() * 16); // 0-15 นาที
+                timeIn = new Date(startDate.getTime() + timeInOffset * 60000);
+                
+                // time_out: สุ่มระหว่าง time_in + 30 นาที ถึง end_activity_date
+                const minTimeOut = new Date(timeIn.getTime() + 30 * 60000);
+                const maxTimeOutTime = endDate.getTime();
+                const minTimeOutTime = minTimeOut.getTime();
+                
+                if (maxTimeOutTime > minTimeOutTime) {
+                  const timeOutOffset = Math.floor(Math.random() * (maxTimeOutTime - minTimeOutTime));
+                  timeOut = new Date(minTimeOutTime + timeOutOffset);
+                } else {
+                  timeOut = minTimeOut;
+                }
+                
+                withComplete++;
+              } else {
+                // นิสิตที่ไม่สมบูรณ์: สุ่มว่าจะเป็นแบบไหน
+                const missingType = Math.random();
+                
+                if (missingType < 0.33) {
+                  // ไม่มีทั้ง time_in และ time_out (ไม่มาเลย)
+                  timeIn = null;
+                  timeOut = null;
+                } else if (missingType < 0.66) {
+                  // มี time_in แต่ไม่มี time_out (มาแต่ออกก่อนเวลา)
+                  const startDate = new Date(activity.start_activity_date);
+                  const timeInOffset = Math.floor(Math.random() * 16);
+                  timeIn = new Date(startDate.getTime() + timeInOffset * 60000);
+                  timeOut = null;
+                } else {
+                  // มี time_out แต่ไม่มี time_in (ไม่ได้เช็คอิน แต่เช็คเอาท์)
+                  timeIn = null;
+                  const endDate = new Date(activity.end_activity_date);
+                  timeOut = new Date(endDate.getTime() - Math.floor(Math.random() * 30) * 60000);
+                }
+                
+                withoutComplete++;
+              }
+              
+              // Update activity_detail ด้วย time_in และ time_out
+              await queryRunner.query(
+                `UPDATE activity_detail 
+                 SET time_in = $1, time_out = $2
+                 WHERE activity_detail_id = $3`,
+                [timeIn, timeOut, activityDetailId]
+              );
+            }
+            
+            // อัพเดท registered_count
+            await queryRunner.query(
+              `UPDATE activity SET registered_count = $1 WHERE activity_id = $2`,
+              [studentsToRegister.length, activity.activity_id]
+            );
+            
+            await queryRunner.commitTransaction();
+            
+            console.log(`   ✅ Success: ${withComplete} complete, ${withoutComplete} incomplete`);
+            
+            results.push({
+              activityId: activity.activity_id,
+              activityName: activity.activity_name,
+              status: 'success',
+              registered: studentsToRegister.length,
+              complete: withComplete,
+              incomplete: withoutComplete
+            });
+          } catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.error(`   ❌ Error for activity ${activity.activity_id}:`, error);
+            results.push({
+              activityId: activity.activity_id,
+              activityName: activity.activity_name,
+              status: 'error',
+              error: error instanceof Error ? error.message : String(error)
+            });
+          } finally {
+            await queryRunner.release();
+          }
+        } catch (error) {
+          console.error(`❌ Error processing activity ${activity.activity_id}:`, error);
+          results.push({
+            activityId: activity.activity_id,
+            activityName: activity.activity_name,
+            status: 'error',
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+      
+      const successCount = results.filter(r => r.status === 'success').length;
+      const skippedCount = results.filter(r => r.status === 'skipped').length;
+      const errorCount = results.filter(r => r.status === 'error').length;
+      
+      console.log(`\n🎉 [mockAllActivityRegistrations] Completed!`);
+      console.log(`   ✅ Success: ${successCount}`);
+      console.log(`   ⚠️ Skipped: ${skippedCount}`);
+      console.log(`   ❌ Error: ${errorCount}`);
+      
+      return {
+        success: true,
+        summary: {
+          total: results.length,
+          success: successCount,
+          skipped: skippedCount,
+          error: errorCount
+        },
+        details: results
+      };
+    } catch (error) {
+      console.error("❌ [mockAllActivityRegistrations] Error:", error);
+      this.logDbError("mockAllActivityRegistrations", error);
+      throw error;
+    }
+  }
+
+  /**
+   * สร้างกิจกรรมจำนวนมากพร้อมกัน (Bulk Create)
+   */
+  public async bulkCreateActivities(
+    activities: Partial<Activity>[],
+    foodIdsArray: number[][] = []
+  ): Promise<{ created: Activity[]; errors: any[] }> {
+    await this.checkConnection();
+
+    const queryRunner = this.dataSource!.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    const created: Activity[] = [];
+    const errors: any[] = [];
+
+    try {
+      console.log(`📦 [bulkCreateActivities] Starting bulk create for ${activities.length} activities`);
+
+      for (let i = 0; i < activities.length; i++) {
+        const data = activities[i];
+        const foodIds = foodIdsArray[i] || [];
+
+        try {
+          console.log(`🔄 [bulkCreateActivities] Creating activity ${i + 1}/${activities.length}: ${data.activity_name}`);
+
+          // Insert Activity
+          const result = await queryRunner.query(
+            `
+            INSERT INTO activity (
+              activity_name, presenter_company_name, type, description,
+              seat, recieve_hours, event_format, create_activity_date,
+              special_start_register_date,
+              start_register_date, end_register_date, start_activity_date, end_activity_date,
+              start_assessment, end_assessment,
+              image_url, activity_status, activity_state, status, url, room_id, assessment_id,
+              last_update_activity_date
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8,
+              $9,
+              $10, $11, $12, $13, $14, $15,
+              $16, $17, $18, $19, $20, $21, $22, $23
+            ) RETURNING *
+            `,
+            [
+              data.activity_name || "ไม่ระบุ",
+              data.presenter_company_name || "ไม่ระบุ",
+              data.type || "Soft",
+              data.description || "ไม่ระบุ",
+              data.seat ?? 0,
+              data.recieve_hours ?? 0,
+              data.event_format || "Online",
+              new Date(), // create_activity_date
+              this.sanitizeDate(data.special_start_register_date) || null,
+              this.sanitizeDate(data.start_register_date) || null,
+              this.sanitizeDate(data.end_register_date) || null,
+              this.sanitizeDate(data.start_activity_date) || null,
+              this.sanitizeDate(data.end_activity_date) || null,
+              this.sanitizeDate(data.start_assessment) || null,
+              this.sanitizeDate(data.end_assessment) || null,
+              data.image_url || "ไม่ระบุ",
+              data.activity_status || "Private",
+              data.activity_state || "Not Start",
+              data.status || "Active",
+              data.url || "ไม่ระบุ",
+              data.room_id ?? null,
+              data.assessment_id ?? null,
+              new Date(),
+            ]
+          );
+
+          const newActivity: Activity = result[0];
+
+          // Insert ActivityFood if provided
+          if (foodIds.length > 0) {
+            const validFoodIds = foodIds.filter((foodId) => foodId > 0);
+
+            if (validFoodIds.length > 0) {
+              const values = validFoodIds
+                .map((foodId) => `(${newActivity.activity_id}, ${foodId})`)
+                .join(", ");
+              await queryRunner.query(
+                `INSERT INTO activity_food (activity_id, food_id) VALUES ${values}`
+              );
+              console.log(`✅ [bulkCreateActivities] Added ${validFoodIds.length} foods to activity ${newActivity.activity_id}`);
+            }
+          }
+
+          created.push(newActivity);
+          console.log(`✅ [bulkCreateActivities] Created activity ${i + 1}/${activities.length}: ${newActivity.activity_name} (ID: ${newActivity.activity_id})`);
+        } catch (error) {
+          console.error(`❌ [bulkCreateActivities] Error creating activity ${i + 1}:`, error);
+          errors.push({
+            index: i,
+            activity_name: data.activity_name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      console.log(`✅ [bulkCreateActivities] Bulk create completed: ${created.length} created, ${errors.length} errors`);
+
+      return { created, errors };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logDbError("bulkCreateActivities", error);
+      throw new Error("❌ Failed to bulk create activities");
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
    * ตรวจสอบและสร้างข้อมูล Assessment Structure ตัวอย่าง
    */
   public async checkAndCreateSampleAssessmentData(activityId: number): Promise<any> {

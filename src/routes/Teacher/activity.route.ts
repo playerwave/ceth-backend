@@ -8,12 +8,12 @@ import {
 } from "express";
 
 // import controller เพื่อทดสอบโครงสร้างใหม่
-import { activityController } from "../../controllers/Teacher/activity.controller.newstructure";
+import { activityController } from "../../controllers/Teacher/activity.controller";
 
 // import validate function & middleware
 import { validateDTO } from "../../middleware/validateDTO.validator";
 import { requestValidator } from "../../middleware/requestValidator";
-import upload from "../../middleware/multer";
+import upload, { uploadExcel } from "../../middleware/multer";
 
 // import utils
 import { wrapAsync } from "../../utils/wrapAsync";
@@ -32,7 +32,45 @@ router.post(
   wrapAsync(activityController.create)
 );
 
+// ✅ Bulk create activities from Excel or JSON
+// Multer เป็น optional: ถ้ามีไฟล์ก็จะ parse, ถ้าไม่มีก็รับ JSON ธรรมดา
+router.post(
+  "/bulk-create-activities",
+  (req, res, next) => {
+    // ✅ ตรวจสอบว่ามี Content-Type เป็น multipart/form-data หรือไม่
+    const contentType = req.headers['content-type'] || '';
+    
+    console.log(`🔍 [bulk-create-activities] Content-Type: ${contentType}`);
+    
+    if (contentType.includes('multipart/form-data')) {
+      // ✅ ถ้ามีไฟล์ ให้ใช้ uploadExcel (memoryStorage)
+      console.log('📎 [bulk-create-activities] Detected multipart/form-data, using uploadExcel');
+      uploadExcel.single("file")(req, res, (err) => {
+        if (err) {
+          // ✅ ถ้า multer error (เช่น ไม่มีไฟล์) ให้ผ่านไปเลย
+          console.log('⚠️ [bulk-create-activities] Multer error, assuming JSON request:', err.message);
+          next();
+        } else {
+          next();
+        }
+      });
+    } else {
+      // ✅ ถ้าเป็น JSON ให้ผ่านไปเลย
+      console.log('📝 [bulk-create-activities] Detected JSON request, skipping multer');
+      next();
+    }
+  },
+  wrapAsync(activityController.bulkCreateActivities)
+);
+
 router.get("/get-search", (activityController.getSearch))
+
+// ✅ Dashboard summary routes
+router.get("/active-years", wrapAsync(activityController.getActiveActivityYears));
+router.get("/summary", wrapAsync(activityController.getActivitySummary));
+
+// ✅ Mock data routes
+router.post("/mock-all-registrations", wrapAsync(activityController.mockAllActivityRegistrations));
 
 // PUT METHOD
 router.put(
@@ -80,7 +118,7 @@ router.delete("/reset-activity-details/:activityId", wrapAsync(activityControlle
 // เพิ่ม route สำหรับ reset time_in และ time_out ของนักเรียน
 router.patch("/reset-student-times/:activityId", wrapAsync(activityController.resetStudentTimes));
 
-// ✅ Routes สำหรับ Check-in/Check-out Students
+// ✅ Routes สำหรับ Check-in/Check-out All Students
 router.get("/students-checked-in/:activityId", wrapAsync(activityController.getStudentsCheckedIn));
 router.get("/students-checked-out/:activityId", wrapAsync(activityController.getStudentsCheckedOut));
 
