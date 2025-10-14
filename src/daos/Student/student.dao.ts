@@ -46,7 +46,7 @@ export class StudentsDao extends ErrorHandledDao {
     this.checkConnection();
     try {
       const offset = (page - 1) * limit;
-      const sql = `SELECT students.students_id, users.username, roles.roles_name, students.first_name_tha, students.first_name_eng, students.last_name_tha, students.last_name_eng, students.email, students.soft_hours, students.hard_hours, students.risk_status, students.education_status, faculty.faculty_name, department.department_name, grade.level, event_coop.date FROM users JOIN roles ON users.roles_id = roles.roles_id JOIN students ON users.users_id = students.users_id JOIN faculty ON students.faculty_id = faculty.faculty_id JOIN department ON students.department_id = department.department_id JOIN grade ON students.grade_id = grade.grade_id JOIN event_coop ON students.eventcoop_id = event_coop.eventcoop_id WHERE users.roles_id = 3 ORDER BY users.users_id ASC LIMIT $1 OFFSET $2`;
+      const sql = `SELECT students.students_id, users.username, roles.roles_name, students.first_name_tha, students.first_name_eng, students.last_name_tha, students.last_name_eng, students.email, students.soft_hours, students.hard_hours, students.risk_status, students.education_status, faculty.faculty_name, department.department_name_tha AS department_name, grade.level, event_coop.date FROM users JOIN roles ON users.roles_id = roles.roles_id JOIN students ON users.users_id = students.users_id JOIN faculty ON students.faculty_id = faculty.faculty_id JOIN department ON students.department_id = department.department_id JOIN grade ON students.grade_id = grade.grade_id JOIN event_coop ON students.eventcoop_id = event_coop.eventcoop_id WHERE users.roles_id = 3 ORDER BY users.users_id ASC LIMIT $1 OFFSET $2`;
       return await this.dataSource!.query(sql, [limit, offset]);
     } catch (error) {
       this.logDbError("getStudentsSuccess", error);
@@ -119,7 +119,7 @@ export class StudentsDao extends ErrorHandledDao {
           s.grade_id,
           s.eventcoop_id,
           f.faculty_name,
-          d.department_name,
+          d.department_name_tha AS department_name,
           g.level as grade_level,
           ec.date as event_coop_date
         FROM students s
@@ -158,7 +158,7 @@ export class StudentsDao extends ErrorHandledDao {
           s.grade_id,
           s.eventcoop_id,
           f.faculty_name,
-          d.department_name,
+          d.department_name_tha AS department_name,
           g.level as grade_level,
           ec.date as event_coop_date
         FROM students s
