@@ -185,7 +185,7 @@ export class UpdateActivityDto {
 
   @ValidateIf((o) => o.activity_status === "Public")
   @IsString()
-  @MinLength(10)
+  @MinLength(5)
   @MaxLength(2000)
   description: string = "ไม่ระบุ";
 
@@ -276,8 +276,10 @@ export class UpdateActivityDto {
   end_register_date!: Date;
 
   // ––– อื่นๆ –––
-  @ValidateIf((o) => o.activity_status === "Public")
-  @Matches(/\.(jpg|png)$/i)
+  @ValidateIf((o) => o.activity_status === "Public" && o.image_url && o.image_url !== "ไม่ระบุ")
+  @Matches(/\.(jpg|png)$/i, {
+    message: "รองรับเฉพาะไฟล์ .jpg หรือ .png"
+  })
   image_url?: string = "ไม่ระบุ";
 
   @IsEnum([
