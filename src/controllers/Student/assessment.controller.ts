@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { AssessmentService } from "../../services/Student/assessment.service";
+import { AssessmentDao } from "../../daos/Student/assessment.dao";
 import { ErrorHandledController } from "../error.handled.controller";
 
 export class AssessmentController extends ErrorHandledController {
   private assessmentService = new AssessmentService();
+  private assessmentDao = new AssessmentDao();
 
   /**
    * ส่งคำตอบ assessment
@@ -125,6 +127,39 @@ export class AssessmentController extends ErrorHandledController {
       });
     } catch (error) {
       console.error("❌ [AssessmentController] Error getting assessment by activity ID:", error);
+      res.status(500).json({
+        error: "Internal Server Error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  };
+
+  /**
+   * Debug: ตรวจสอบข้อมูลกิจกรรมจาก join_id
+   * GET /api/student/assessment/debug-activity/:join_id
+   */
+  public debugActivityInfo = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { join_id } = req.params;
+      
+      if (!join_id) {
+        res.status(400).json({
+          error: "Missing join_id parameter"
+        });
+        return;
+      }
+
+      const activityInfo = await this.assessmentDao.getActivityInfoByJoinId(parseInt(join_id));
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          join_id: parseInt(join_id),
+          activity_info: activityInfo
+        }
+      });
+    } catch (error) {
+      console.error("❌ [AssessmentController] Error in debugActivityInfo:", error);
       res.status(500).json({
         error: "Internal Server Error",
         message: error instanceof Error ? error.message : "Unknown error"

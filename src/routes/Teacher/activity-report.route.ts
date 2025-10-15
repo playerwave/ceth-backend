@@ -40,4 +40,11 @@ router.get(
   wrapAsync(activityReportController.getStudentAssessmentStatus)
 );
 
+// GET /api/teacher/activity-report/:activityId/debug-answers
+// Debug endpoint สำหรับตรวจสอบข้อมูลคำตอบ
+router.get(
+  "/:activityId/debug-answers",
+  wrapAsync(activityReportController.debugAnswers)
+);
+
 export default router;

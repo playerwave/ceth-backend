@@ -1,8 +1,10 @@
 import { AssessmentDao } from "../../daos/Student/assessment.dao";
+import { StudentsService } from "./student.service";
 import { ErrorHandledService } from "../error.handdled.service";
 
 export class AssessmentService extends ErrorHandledService {
   private assessmentDao = new AssessmentDao();
+  private studentsService = new StudentsService();
 
   /**
    * ส่งคำตอบ assessment
@@ -54,6 +56,59 @@ export class AssessmentService extends ErrorHandledService {
 
       // ส่งคำตอบไปยัง DAO
       const result = await this.assessmentDao.submitAssessment(assessment_id, join_id, answers);
+
+      // อัพเดทชั่วโมงสหกิจหลังจากส่งแบบประเมินสำเร็จ
+      try {
+        console.log("🔄 [AssessmentService] Updating cooperative hours after assessment submission");
+        console.log("🔍 [AssessmentService] Debug info:", {
+          assessment_id,
+          join_id,
+          result: result
+        });
+        
+        // ดึงข้อมูลกิจกรรมจาก join_id
+        const activityInfo = await this.assessmentDao.getActivityInfoByJoinId(join_id);
+        
+        console.log("🔍 [AssessmentService] Activity info result:", activityInfo);
+        
+        if (activityInfo) {
+          console.log("🔍 [AssessmentService] Activity info details:", {
+            activity_type: activityInfo.activity_type,
+            recieve_hours: activityInfo.recieve_hours,
+            students_id: activityInfo.students_id,
+            recieve_hours_type: typeof activityInfo.recieve_hours,
+            recieve_hours_greater_than_zero: activityInfo.recieve_hours > 0
+          });
+          
+          if (activityInfo.recieve_hours > 0) {
+            console.log("🔄 [AssessmentService] Found activity info for hours update:", {
+              students_id: activityInfo.students_id,
+              activity_type: activityInfo.activity_type,
+              recieve_hours: activityInfo.recieve_hours
+            });
+            
+            // อัพเดทชั่วโมงสหกิจ
+            const hoursUpdated = await this.studentsService.updateStudentCooperativeHours(
+              activityInfo.students_id,
+              activityInfo.activity_type,
+              activityInfo.recieve_hours
+            );
+            
+            if (hoursUpdated) {
+              console.log("✅ [AssessmentService] Cooperative hours updated successfully");
+            } else {
+              console.log("⚠️ [AssessmentService] Failed to update cooperative hours");
+            }
+          } else {
+            console.log("ℹ️ [AssessmentService] recieve_hours is 0 or null, skipping hours update");
+          }
+        } else {
+          console.log("❌ [AssessmentService] No activity info found for join_id:", join_id);
+        }
+      } catch (hoursError) {
+        // ไม่ให้ error ของการอัพเดทชั่วโมงทำให้การส่งแบบประเมินล้มเหลว
+        console.error("❌ [AssessmentService] Error updating cooperative hours (non-critical):", hoursError);
+      }
 
       this.logInfo("✅ Assessment submitted successfully", {
         assessment_id,

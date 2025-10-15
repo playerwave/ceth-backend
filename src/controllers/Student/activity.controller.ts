@@ -102,6 +102,20 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  public async debugActivityData(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      
+      console.log(`🔍 [StudentController] Debug activity data for: ${activityId}`);
+      
+      const debugData = await this.activityService.debugActivityData(activityId);
+      
+      res.status(200).json(debugData);
+    } catch (error) {
+      this.handleError("StudentActivityController.debugActivityData", error, res);
+    }
+  }
+
   public async getSearch(req: Request, res: Response): Promise<void> {
     const studentId = this.parseId(req.params.studentId);
     const text = (req.query.text as string);
@@ -303,4 +317,5 @@ export const activityController = {
   unEnrollActivity: controller.unEnrollActivity.bind(controller),
   resetRegisteredCounts: controller.resetRegisteredCounts.bind(controller),
   checkInOutActivity: controller.checkInOutActivity.bind(controller),
+  debugActivityData: controller.debugActivityData.bind(controller),
 };

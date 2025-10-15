@@ -592,60 +592,55 @@ export class ActivityService extends ErrorHandledService {
     try {
       console.log("🔍 [ActivityService] Getting assessment for activity:", activityId);
       
-      // ดึงข้อมูล activity เพื่อหา assessment_id
+      // ดึงข้อมูล activity เพื่อหา assessment_id และ assessment_version_id
       const activity = await this.activityDao.getActivityById(activityId);
       if (!activity) {
         throw new Error("Activity not found");
       }
 
       const assessmentId = activity.assessment_id;
+      const assessmentVersionId = activity.assessment_version_id;
+      
       if (!assessmentId) {
         throw new Error("No assessment found for this activity");
       }
 
       console.log("🔍 [ActivityService] Found assessment_id:", assessmentId);
+      console.log("🔍 [ActivityService] Found assessment_version_id:", assessmentVersionId);
 
-      // ดึงข้อมูล assessment พร้อมคำถาม
-      const assessment = await this.assessmentDao.getAssessmentWithQuestions(assessmentId);
+      // ดึงข้อมูล assessment พร้อมคำถาม (รองรับ versioning)
+      const assessment = await this.assessmentDao.getAssessmentWithQuestionsVersioned(assessmentId, assessmentVersionId);
       if (!assessment) {
         throw new Error("Assessment not found");
       }
 
       console.log("✅ [ActivityService] Found assessment:", assessment.assessment_name);
-
-      // ดึงข้อมูล set numbers และคำถาม
-      const setNumbersResult = await this.assessmentDao.getSetNumbersByAssessmentId(assessmentId);
-      console.log("🔍 [ActivityService] Sections order from database:", setNumbersResult.map(s => ({ id: s.set_number_id, name: s.name })));
-
-      // ดึงข้อมูลคำถามและตัวเลือก
-      const questionsResult = await this.assessmentDao.getQuestionsByAssessmentId(assessmentId);
-      console.log("🔍 [ActivityService] Converted", questionsResult.length, "questions in", setNumbersResult.length, "sections");
-
-      // จัดกลุ่มคำถามตาม set
-      const sections = setNumbersResult.map((set: any) => {
-        const sectionQuestions = questionsResult.filter((q: any) => q.set_number_id === set.set_number_id);
-        console.log(`📋 Section "${set.name}":`, sectionQuestions.length, "questions");
-        
-        return {
-          section_id: set.set_number_id,
-          section_name: set.name,
-          section_order: set.set_number_id,
-          questions: sectionQuestions
-        };
-      });
+      console.log("🔍 [ActivityService] Assessment sections:", assessment.sections?.length || 0);
+      console.log("🔍 [ActivityService] Assessment questions:", assessment.questions?.length || 0);
 
       const result = {
         ...assessment,
-        activity_name: activity.activity_name,
-        sections,
-        questions: questionsResult
+        activity_name: activity.activity_name
       };
+
+      // Debug: ตรวจสอบข้อมูลที่ส่งไปยัง frontend
+      console.log("🔍 [ActivityService] Final result sections:", result.sections?.map((s: any) => ({
+        section_name: s.section_name,
+        questions_count: s.questions?.length || 0,
+        questions: s.questions?.map((q: any) => ({
+          question_text: q.question_text,
+          question_type: q.question_type,
+          options: q.options
+        }))
+      })));
 
       this.logInfo("🔍 Retrieved assessment by activity ID", {
         activityId,
         assessmentId,
+        assessmentVersionId,
         assessmentName: assessment.assessment_name,
-        questionsCount: questionsResult.length
+        sectionsCount: assessment.sections?.length || 0,
+        questionsCount: assessment.questions?.length || 0
       });
 
       return result;
@@ -670,6 +665,78 @@ export class ActivityService extends ErrorHandledService {
       return joinId;
     } catch (error) {
       this.logError("❌ Error in getJoinIdByStudentAndActivityService", error);
+      throw error;
+    }
+  }
+
+  public async debugActivityData(activityId: number): Promise<any> {
+    try {
+      console.log("🔍 [ActivityService] Debug activity data for:", activityId);
+      
+      // ดึงข้อมูล activity
+      const activity = await this.activityDao.getActivityById(activityId);
+      if (!activity) {
+        throw new Error("Activity not found");
+      }
+
+      const assessmentId = activity.assessment_id;
+      const assessmentVersionId = activity.assessment_version_id;
+      
+      console.log("🔍 [ActivityService] Activity info:", {
+        activityId,
+        assessmentId,
+        assessmentVersionId,
+        activityState: activity.activity_state
+      });
+
+      // ตรวจสอบข้อมูลจากตารางฐานหลัก
+      const baseData = await this.assessmentDao.getAssessmentWithQuestions(assessmentId);
+      
+      // ตรวจสอบข้อมูลจากตารางเวอร์ชัน (ถ้ามี)
+      let versionedData = null;
+      if (assessmentVersionId) {
+        versionedData = await this.assessmentDao.getAssessmentWithQuestionsVersioned(assessmentId, assessmentVersionId);
+      }
+
+      return {
+        activity: {
+          activity_id: activityId,
+          activity_name: activity.activity_name,
+          assessment_id: assessmentId,
+          assessment_version_id: assessmentVersionId,
+          activity_state: activity.activity_state
+        },
+        baseData: baseData ? {
+          sections: baseData.sections?.length || 0,
+          questions: baseData.questions?.length || 0,
+          sections_detail: baseData.sections?.map((s: any) => ({
+            section_name: s.section_name,
+            questions_count: s.questions?.length || 0,
+            questions: s.questions?.map((q: any) => ({
+              question_text: q.question_text,
+              question_type: q.question_type,
+              options_count: q.options?.length || 0,
+              options: q.options
+            }))
+          }))
+        } : null,
+        versionedData: versionedData ? {
+          sections: versionedData.sections?.length || 0,
+          questions: versionedData.questions?.length || 0,
+          sections_detail: versionedData.sections?.map((s: any) => ({
+            section_name: s.section_name,
+            questions_count: s.questions?.length || 0,
+            questions: s.questions?.map((q: any) => ({
+              question_text: q.question_text,
+              question_type: q.question_type,
+              options_count: q.options?.length || 0,
+              options: q.options
+            }))
+          }))
+        } : null
+      };
+    } catch (error) {
+      this.logError("❌ Error in debugActivityData", error);
       throw error;
     }
   }

@@ -14,4 +14,7 @@ router.get("/:assessmentId", wrapAsync(assessmentController.getAssessment));
 // GET /api/student/activity/:activityId/assessment - ดึงข้อมูล assessment ตาม activity
 router.get("/activity/:activityId/assessment", wrapAsync(assessmentController.getAssessmentByActivityId));
 
+// GET /api/student/assessment/debug-activity/:join_id - Debug ข้อมูลกิจกรรม
+router.get("/debug-activity/:join_id", wrapAsync(assessmentController.debugActivityInfo));
+
 export default router;

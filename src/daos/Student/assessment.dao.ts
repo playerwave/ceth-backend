@@ -185,6 +185,63 @@ export class AssessmentDao extends ErrorHandledDao {
   }
 
   /**
+   * ดึงข้อมูลกิจกรรมจาก join_id เพื่อใช้ในการอัพเดทชั่วโมงสหกิจ
+   * @param join_id - ID ของ join
+   */
+  public async getActivityInfoByJoinId(join_id: number): Promise<{ activity_type: string; recieve_hours: number; students_id: number } | null> {
+    await this.checkConnection();
+    
+    try {
+      const query = `
+        SELECT 
+          a.type as activity_type,
+          a.recieve_hours,
+          j.students_id,
+          a.activity_id,
+          a.activity_name
+        FROM "join" j
+        INNER JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+        INNER JOIN activity a ON ad.activity_id = a.activity_id
+        WHERE j.join_id = $1
+      `;
+      
+      console.log(`🔍 [AssessmentDao] Executing query for join_id: ${join_id}`);
+      const result = await this.dataSource!.query(query, [join_id]);
+      
+      console.log(`🔍 [AssessmentDao] Query result:`, {
+        join_id,
+        resultCount: result.length,
+        result: result
+      });
+      
+      if (result.length === 0) {
+        console.log(`❌ [AssessmentDao] No activity info found for join_id: ${join_id}`);
+        return null;
+      }
+      
+      const activityInfo = result[0];
+      console.log(`✅ [AssessmentDao] Found activity info:`, {
+        join_id,
+        activity_id: activityInfo.activity_id,
+        activity_name: activityInfo.activity_name,
+        activity_type: activityInfo.activity_type,
+        recieve_hours: activityInfo.recieve_hours,
+        students_id: activityInfo.students_id,
+        recieve_hours_type: typeof activityInfo.recieve_hours
+      });
+      
+      return {
+        activity_type: activityInfo.activity_type,
+        recieve_hours: activityInfo.recieve_hours || 0,
+        students_id: activityInfo.students_id
+      };
+    } catch (error) {
+      this.logDbError("getActivityInfoByJoinId", error);
+      throw error;
+    }
+  }
+
+  /**
    * ดึงข้อมูล assessment พร้อมคำถาม
    * @param assessment_id - ID ของ assessment
    */
@@ -234,6 +291,8 @@ export class AssessmentDao extends ErrorHandledDao {
             [question.question_id]
           );
 
+          console.log(`🔍 [AssessmentDao] Question ${question.question_id} choices (base):`, choicesResult);
+
           return {
             ...question,
             options: choicesResult.map((choice: any) => choice.choice_text)
@@ -241,13 +300,19 @@ export class AssessmentDao extends ErrorHandledDao {
         })
       );
 
-      // จัดกลุ่มคำถามตาม set
-      const sections = setNumbersResult.map((set: any) => ({
-        section_id: set.set_number_id,
-        section_name: set.name,
-        section_order: set.set_number_id,
-        questions: questionsWithChoices.filter((q: any) => q.set_number_id === set.set_number_id)
-      }));
+      // จัดกลุ่มคำถามตาม set และเรียงลำดับคำถาม
+      const sections = setNumbersResult.map((set: any) => {
+        const sectionQuestions = questionsWithChoices
+          .filter((q: any) => q.set_number_id === set.set_number_id)
+          .sort((a: any, b: any) => (a.question_number ?? 0) - (b.question_number ?? 0)); // เรียงลำดับคำถาม
+        
+        return {
+          section_id: set.set_number_id,
+          section_name: set.name,
+          section_order: set.set_number_id,
+          questions: sectionQuestions
+        };
+      });
 
       return {
         ...assessment,
@@ -261,6 +326,99 @@ export class AssessmentDao extends ErrorHandledDao {
   }
 
   /**
+   * ดึงข้อมูล assessment พร้อมคำถาม (รองรับ versioning)
+   * @param assessment_id - ID ของ assessment
+   * @param assessment_version_id - ID ของ assessment version (optional)
+   */
+  public async getAssessmentWithQuestionsVersioned(assessment_id: number, assessment_version_id?: number): Promise<any> {
+    await this.checkConnection();
+    try {
+      // ดึงข้อมูล assessment
+      const assessmentResult = await this.dataSource!.query(
+        `SELECT * FROM assessment WHERE assessment_id = $1`,
+        [assessment_id]
+      );
+
+      if (assessmentResult.length === 0) {
+        return null;
+      }
+
+      const assessment = assessmentResult[0];
+
+      if (assessment_version_id) {
+        // ใช้ข้อมูลจากตารางเวอร์ชัน
+        console.log(`🔍 [AssessmentDao] Using versioned data for assessment_version_id: ${assessment_version_id}`);
+        
+        // ดึงข้อมูล set numbers จากเวอร์ชัน
+        const setNumbersResult = await this.dataSource!.query(
+          `SELECT * FROM set_number_version WHERE assessment_version_id = $1 ORDER BY order_index`,
+          [assessment_version_id]
+        );
+
+        // ดึงข้อมูลคำถามและตัวเลือกจากเวอร์ชัน
+        const questionsResult = await this.dataSource!.query(
+          `SELECT 
+             qv.question_version_id as question_id,
+             qv.question_text,
+             qv.order_index as question_number,
+             qv.question_type,
+             qv.set_number_version_id as set_number_id,
+             snv.name as set_name,
+             snv.set_number_version_id as set_number_id
+           FROM question_version qv
+           LEFT JOIN set_number_version snv ON qv.set_number_version_id = snv.set_number_version_id
+           WHERE snv.assessment_version_id = $1
+           ORDER BY snv.order_index, qv.order_index`,
+          [assessment_version_id]
+        );
+
+        // ดึงข้อมูลตัวเลือกสำหรับแต่ละคำถามจากเวอร์ชัน
+        const questionsWithChoices = await Promise.all(
+          questionsResult.map(async (question: any) => {
+            const choicesResult = await this.dataSource!.query(
+              `SELECT choice_version_id as choice_id, choice_text FROM choice_version WHERE question_version_id = $1 ORDER BY order_index`,
+              [question.question_id]
+            );
+
+            console.log(`🔍 [AssessmentDao] Question ${question.question_id} choices:`, choicesResult);
+
+            return {
+              ...question,
+              options: choicesResult.map((choice: any) => choice.choice_text)
+            };
+          })
+        );
+
+        // จัดกลุ่มคำถามตาม set และเรียงลำดับคำถาม
+        const sections = setNumbersResult.map((set: any) => {
+          const sectionQuestions = questionsWithChoices
+            .filter((q: any) => q.set_number_id === set.set_number_version_id)
+            .sort((a: any, b: any) => (a.question_number ?? 0) - (b.question_number ?? 0)); // เรียงลำดับคำถาม
+          
+          return {
+            section_id: set.set_number_version_id,
+            section_name: set.name,
+            section_order: set.order_index,
+            questions: sectionQuestions
+          };
+        });
+
+        return {
+          ...assessment,
+          sections,
+          questions: questionsWithChoices
+        };
+      } else {
+        // ใช้ข้อมูลจากตารางฐานหลัก (เดิม)
+        return await this.getAssessmentWithQuestions(assessment_id);
+      }
+    } catch (error) {
+      this.logDbError("getAssessmentWithQuestionsVersioned", error);
+      throw new Error("❌ Failed to get assessment with questions (versioned)");
+    }
+  }
+
+  /**
    * ดึงข้อมูล assessment ตาม activity ID
    * @param activity_id - ID ของ activity
    */
@@ -269,7 +427,7 @@ export class AssessmentDao extends ErrorHandledDao {
     try {
       // ดึงข้อมูล assessment จาก activity
       const assessmentResult = await this.dataSource!.query(
-        `SELECT a.*, act.activity_name 
+        `SELECT a.*, act.activity_name, act.assessment_version_id
          FROM assessment a
          INNER JOIN activity act ON a.assessment_id = act.assessment_id
          WHERE act.activity_id = $1`,
@@ -282,9 +440,10 @@ export class AssessmentDao extends ErrorHandledDao {
 
       const assessment = assessmentResult[0];
       const assessment_id = assessment.assessment_id;
+      const assessment_version_id = assessment.assessment_version_id;
 
-      // ดึงข้อมูลคำถามและตัวเลือก (ใช้ฟังก์ชันเดิม)
-      const assessmentWithQuestions = await this.getAssessmentWithQuestions(assessment_id);
+      // ดึงข้อมูลคำถามและตัวเลือก (รองรับ versioning)
+      const assessmentWithQuestions = await this.getAssessmentWithQuestionsVersioned(assessment_id, assessment_version_id);
       
       if (assessmentWithQuestions) {
         return {

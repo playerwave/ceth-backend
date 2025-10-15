@@ -139,6 +139,25 @@ export class AssessmentVersionDao extends ErrorHandledDao {
   }
 
   /**
+   * Unpublish เวอร์ชันทั้งหมดของ assessment เดียวกัน
+   */
+  public async unpublishAllForAssessment(assessmentId: number): Promise<void> {
+    await this.checkConnection();
+
+    try {
+      await this.dataSource!.query(
+        `UPDATE assessment_version
+         SET is_published = false, published_at = NULL
+         WHERE assessment_id = $1`,
+        [assessmentId]
+      );
+    } catch (error) {
+      this.logDbError("unpublishAllForAssessment", error);
+      throw error;
+    }
+  }
+
+  /**
    * ดึง version number ถัดไป
    */
   public async getNextVersionNumber(assessmentId: number): Promise<number> {

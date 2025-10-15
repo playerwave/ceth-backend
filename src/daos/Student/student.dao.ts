@@ -344,4 +344,76 @@ export class StudentsDao extends ErrorHandledDao {
     const sql = `DELETE FROM students WHERE users_id = $1`;
     await this.dataSource!.query(sql, [users_id]);
   }
+
+  /**
+   * อัพเดทชั่วโมงสหกิจให้นิสิต
+   * @param students_id - ID ของนิสิต
+   * @param activity_type - ประเภทกิจกรรม (Soft หรือ Hard)
+   * @param recieve_hours - จำนวนชั่วโมงที่จะเพิ่ม
+   */
+  public async updateStudentCooperativeHours(
+    students_id: number,
+    activity_type: string,
+    recieve_hours: number
+  ): Promise<boolean> {
+    await this.checkConnection();
+    
+    try {
+      console.log(`🔄 [StudentDao] Updating cooperative hours for student ${students_id}:`, {
+        activity_type,
+        recieve_hours
+      });
+
+      // ตรวจสอบว่านิสิตมีอยู่จริงหรือไม่
+      const student = await this.dataSource!.query(
+        `SELECT students_id, soft_hours, hard_hours FROM students WHERE students_id = $1`,
+        [students_id]
+      );
+
+      if (student.length === 0) {
+        console.log(`❌ [StudentDao] Student ${students_id} not found`);
+        return false;
+      }
+
+      const currentStudent = student[0];
+      const currentSoftHours = currentStudent.soft_hours || 0;
+      const currentHardHours = currentStudent.hard_hours || 0;
+
+      let updateQuery: string;
+      let updateValues: any[];
+
+      console.log(`🔍 [StudentDao] Activity type check:`, {
+        original_type: activity_type,
+        lowercased: activity_type.toLowerCase(),
+        is_soft: activity_type.toLowerCase() === 'soft',
+        is_hard: activity_type.toLowerCase() === 'hard'
+      });
+
+      if (activity_type.toLowerCase() === 'soft') {
+        // อัพเดท soft_hours
+        updateQuery = `UPDATE students SET soft_hours = $1 WHERE students_id = $2`;
+        updateValues = [currentSoftHours + recieve_hours, students_id];
+        
+        console.log(`✅ [StudentDao] Updating soft_hours: ${currentSoftHours} + ${recieve_hours} = ${currentSoftHours + recieve_hours}`);
+      } else if (activity_type.toLowerCase() === 'hard') {
+        // อัพเดท hard_hours
+        updateQuery = `UPDATE students SET hard_hours = $1 WHERE students_id = $2`;
+        updateValues = [currentHardHours + recieve_hours, students_id];
+        
+        console.log(`✅ [StudentDao] Updating hard_hours: ${currentHardHours} + ${recieve_hours} = ${currentHardHours + recieve_hours}`);
+      } else {
+        console.log(`❌ [StudentDao] Invalid activity_type: ${activity_type}`);
+        console.log(`❌ [StudentDao] Expected 'soft' or 'hard', got: '${activity_type.toLowerCase()}'`);
+        return false;
+      }
+
+      const result = await this.dataSource!.query(updateQuery, updateValues);
+      
+      console.log(`✅ [StudentDao] Successfully updated cooperative hours for student ${students_id}`);
+      return true;
+    } catch (error) {
+      this.logDbError("updateStudentCooperativeHours", error);
+      throw error;
+    }
+  }
 }

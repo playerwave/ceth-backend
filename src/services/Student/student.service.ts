@@ -366,4 +366,45 @@ export class StudentsService extends ErrorHandledService {
       throw error;
     }
   }
+
+  /**
+   * อัพเดทชั่วโมงสหกิจให้นิสิต
+   * @param students_id - ID ของนิสิต
+   * @param activity_type - ประเภทกิจกรรม (Soft หรือ Hard)
+   * @param recieve_hours - จำนวนชั่วโมงที่จะเพิ่ม
+   */
+  public async updateStudentCooperativeHours(
+    students_id: number,
+    activity_type: string,
+    recieve_hours: number
+  ): Promise<boolean> {
+    try {
+      this.logInfo("🔄 [StudentsService] Updating cooperative hours", {
+        students_id,
+        activity_type,
+        recieve_hours
+      });
+
+      const result = await this.studentsDao.updateStudentCooperativeHours(
+        students_id,
+        activity_type,
+        recieve_hours
+      );
+
+      if (result) {
+        // ลบ cache
+        await redis.del("students:all");
+        this.logInfo("✅ [StudentsService] Cooperative hours updated successfully", {
+          students_id,
+          activity_type,
+          recieve_hours
+        });
+      }
+
+      return result;
+    } catch (error) {
+      this.logError("❌ [StudentsService] Error updating cooperative hours", error);
+      throw error;
+    }
+  }
 }

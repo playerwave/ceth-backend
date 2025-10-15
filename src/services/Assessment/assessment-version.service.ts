@@ -23,14 +23,19 @@ export class AssessmentVersionService extends ErrorHandledService {
   public async createNewVersion(assessmentId: number): Promise<AssessmentVersion> {
     try {
       const nextVersionNo = await this.assessmentVersionDao.getNextVersionNumber(assessmentId);
-      
+
+      // Unpublish เวอร์ชันเดิมทั้งหมดก่อน
+      await this.assessmentVersionDao.unpublishAllForAssessment(assessmentId);
+
+      // สร้างเวอร์ชันใหม่และตั้งให้เป็น published ทันที
       const newVersion = await this.assessmentVersionDao.createAssessmentVersion({
         assessment_id: assessmentId,
         version_no: nextVersionNo,
-        is_published: false
+        is_published: true,
+        published_at: new Date()
       });
 
-      console.log(`✅ Created new assessment version: ${newVersion.assessment_version_id}`);
+      console.log(`✅ Created & published new assessment version: ${newVersion.assessment_version_id}`);
       return newVersion;
     } catch (error) {
       this.logError("❌ Error in createNewVersion", error);
@@ -43,6 +48,12 @@ export class AssessmentVersionService extends ErrorHandledService {
    */
   public async publishVersion(versionId: number): Promise<void> {
     try {
+      // หา assessment_id ของเวอร์ชันที่กำลังจะ publish
+      const version = await this.assessmentVersionDao.getVersionById(versionId);
+      if (version?.assessment_id) {
+        await this.assessmentVersionDao.unpublishAllForAssessment(version.assessment_id);
+      }
+
       await this.assessmentVersionDao.publishVersion(versionId);
       console.log(`✅ Published assessment version: ${versionId}`);
     } catch (error) {

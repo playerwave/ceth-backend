@@ -93,6 +93,9 @@ router.get("/assessment/:activityId", wrapAsync(activityController.getAssessment
 // ✅ GET METHOD สำหรับดึง join_id
 router.get("/:activityId/join-id/:studentId", wrapAsync(activityController.getJoinIdByStudentAndActivity));
 
+// Debug endpoint
+router.get("/debug/:activityId", wrapAsync(activityController.debugActivityData));
+
 router.get("/searchActivity", wrapAsync(activityController.searchActivity));
 
 // ✅ POST METHOD สำหรับ Check-in/Check-out

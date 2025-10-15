@@ -445,12 +445,12 @@ export class AssessmentService extends ErrorHandledService {
       const assessment = assessmentResult.raw[0];
       const assessment_id = assessment.assessment_id;
 
-      // 2) สร้าง version แรกภายใน transaction เดียวกัน
+      // 2) สร้าง version แรกภายใน transaction เดียวกัน (และ publish ทันที)
       const versionResult = await manager.query(
         `INSERT INTO assessment_version (assessment_id, version_no, is_published, published_at, created_at)
          VALUES ($1, $2, $3, $4, NOW())
          RETURNING *`,
-        [assessment_id, 1, false, null]
+        [assessment_id, 1, true, new Date()]
       );
       
       const firstVersion = versionResult[0];

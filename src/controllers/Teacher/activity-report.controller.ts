@@ -166,4 +166,30 @@ export class ActivityReportController extends ErrorHandledController {
       this.handleError("ActivityReportController.getStudentAssessmentStatus", error, res);
     }
   };
+
+  /**
+   * ตรวจสอบข้อมูลคำตอบในฐานข้อมูล (Debug endpoint)
+   */
+  public debugAnswers = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const activityId = parseInt(req.params.activityId);
+      
+      if (isNaN(activityId)) {
+        res.status(400).json({ error: "Invalid activity ID" });
+        return;
+      }
+
+      console.log("🔍 [ActivityReportController] Debug answers for activity:", activityId);
+      
+      const result = await this.activityReportService.debugAnswersService(activityId);
+      
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error("❌ [ActivityReportController] Error debugging answers:", error);
+      this.handleError("ActivityReportController.debugAnswers", error, res);
+    }
+  };
 }

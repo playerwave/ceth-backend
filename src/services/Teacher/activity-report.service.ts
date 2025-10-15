@@ -115,4 +115,26 @@ export class ActivityReportService extends ErrorHandledService {
       throw error;
     }
   }
+
+  /**
+   * ตรวจสอบข้อมูลคำตอบในฐานข้อมูล (Debug service)
+   */
+  public async debugAnswersService(activityId: number): Promise<any> {
+    try {
+      this.logInfo("🔍 Debugging answers", { activityId });
+      
+      const result = await this.activityReportDao.debugAnswers(activityId);
+      
+      this.logInfo("✅ Debug answers retrieved", {
+        activityId,
+        totalAnswers: result.totalAnswers,
+        fixSingleAnswers: result.fixSingleAnswers?.length || 0
+      });
+      
+      return result;
+    } catch (error) {
+      this.logError("❌ Error in debugAnswersService", error);
+      throw error;
+    }
+  }
 }

@@ -265,7 +265,9 @@ export class ActivityReportDao extends ErrorHandledDao {
       `;
       const activityInfo = await this.dataSource!.query(activityCheckQuery, [activityId]);
       console.log("🔍 [ActivityReportDao] Activity info:", activityInfo[0]);
-      // ดึงข้อมูลแบบประเมินและคำถาม - ใช้ assessment_version_id ถ้ามี หรือ assessment_id ถ้าไม่มี
+      console.log("🔍 [ActivityReportDao] Assessment version ID:", activityInfo[0]?.assessment_version_id);
+      console.log("🔍 [ActivityReportDao] Assessment ID:", activityInfo[0]?.assessment_id);
+      // ดึงข้อมูลแบบประเมินและคำถาม - ใช้ version tables ถ้ามี assessment_version_id
       const assessmentQuery = `
         WITH activity_assessment AS (
           SELECT 
@@ -275,30 +277,34 @@ export class ActivityReportDao extends ErrorHandledDao {
           WHERE activity_id = $1
         )
         SELECT 
-          a.assessment_id,
-          a.assessment_name,
-          sn.set_number_id,
-          sn.name as set_number_name,
-          q.question_id,
-          q.question_text,
-          q.question_type,
-          q.question_number,
-          c.choice_id,
-          c.choice_text
-        FROM assessment a
-        INNER JOIN set_number sn ON a.assessment_id = sn.assessment_id
-        INNER JOIN question q ON sn.set_number_id = q.set_number_id
-        LEFT JOIN choice c ON q.question_id = c.question_id
-        INNER JOIN activity_assessment aa ON a.assessment_id = (
+          COALESCE(av.assessment_id, a.assessment_id) as assessment_id,
+          a.assessment_name as assessment_name,
+          COALESCE(snv.set_number_version_id, sn.set_number_id) as set_number_id,
+          COALESCE(snv.name, sn.name) as set_number_name,
+          COALESCE(qv.question_version_id, q.question_id) as question_id,
+          COALESCE(qv.question_text, q.question_text) as question_text,
           CASE 
-            WHEN aa.assessment_version_id IS NOT NULL THEN (
-              SELECT assessment_id FROM assessment_version 
-              WHERE assessment_version_id = aa.assessment_version_id
-            )
-            ELSE aa.assessment_id
-          END
-        )
-        ORDER BY sn.set_number_id, q.question_number, q.question_id, c.choice_id
+            WHEN qv.question_type IS NOT NULL THEN qv.question_type::text
+            WHEN q.question_type IS NOT NULL THEN q.question_type::text
+            ELSE NULL
+          END as question_type,
+          COALESCE(qv.order_index, q.question_number) as question_number,
+          COALESCE(cv.choice_version_id, c.choice_id) as choice_id,
+          COALESCE(cv.choice_text, c.choice_text) as choice_text
+        FROM activity_assessment aa
+        LEFT JOIN assessment_version av ON aa.assessment_version_id = av.assessment_version_id
+        LEFT JOIN set_number_version snv ON av.assessment_version_id = snv.assessment_version_id
+        LEFT JOIN question_version qv ON snv.set_number_version_id = qv.set_number_version_id
+        LEFT JOIN choice_version cv ON qv.question_version_id = cv.question_version_id
+        LEFT JOIN assessment a ON aa.assessment_id = a.assessment_id
+        LEFT JOIN set_number sn ON a.assessment_id = sn.assessment_id AND aa.assessment_version_id IS NULL
+        LEFT JOIN question q ON sn.set_number_id = q.set_number_id AND aa.assessment_version_id IS NULL
+        LEFT JOIN choice c ON q.question_id = c.question_id AND aa.assessment_version_id IS NULL
+        WHERE COALESCE(qv.question_version_id, q.question_id) IS NOT NULL
+        ORDER BY COALESCE(snv.set_number_version_id, sn.set_number_id), 
+                 COALESCE(qv.order_index, q.question_number), 
+                 COALESCE(qv.question_version_id, q.question_id), 
+                 COALESCE(cv.choice_version_id, c.choice_id)
       `;
 
       const assessmentResult = await this.dataSource!.query(assessmentQuery, [activityId]);
@@ -309,7 +315,7 @@ export class ActivityReportDao extends ErrorHandledDao {
         question_text: r.question_text?.substring(0, 50) + "..." 
       })));
       
-      // ดึงข้อมูลการตอบ - ใช้โครงสร้างเดียวกับ student-answers-detail
+      // ดึงข้อมูลการตอบ - ใช้ base tables เนื่องจาก assessment_version_id เป็น null
       const answerQuery = `
         WITH activity_assessment AS (
           SELECT 
@@ -325,37 +331,61 @@ export class ActivityReportDao extends ErrorHandledDao {
           a.choice_id,
           a.answer_text,
           a.assessment_id,
-          q.question_type,
+          q.question_type::text as question_type,
           q.question_text,
           q.question_number,
           c.choice_text,
           sn.name as set_number_name,
           sn.set_number_id
         FROM answer a
+        INNER JOIN activity_assessment aa ON a.assessment_id = aa.assessment_id
         INNER JOIN question q ON a.question_id = q.question_id
         INNER JOIN set_number sn ON q.set_number_id = sn.set_number_id
         LEFT JOIN choice c ON a.choice_id = c.choice_id
-        INNER JOIN activity_assessment aa ON a.assessment_id = (
-          CASE 
-            WHEN aa.assessment_version_id IS NOT NULL THEN (
-              SELECT assessment_id FROM assessment_version 
-              WHERE assessment_version_id = aa.assessment_version_id
-            )
-            ELSE aa.assessment_id
-          END
-        )
+        WHERE aa.assessment_version_id IS NULL
         ORDER BY sn.set_number_id, q.question_number, q.question_id
       `;
 
       const answerResult = await this.dataSource!.query(answerQuery, [activityId]);
       console.log("🔍 [ActivityReportDao] Answer query result:", answerResult.length, "rows");
-      console.log("🔍 [ActivityReportDao] Answers found:", answerResult.map(r => ({ 
-        answer_id: r.answer_id, 
-        question_id: r.question_id, 
-        question_number: r.question_number, 
-        answer_text: r.answer_text,
-        choice_text: r.choice_text 
-      })));
+      if (answerResult.length > 0) {
+        console.log("🔍 [ActivityReportDao] Sample answers:", answerResult.slice(0, 3).map(r => ({ 
+          answer_id: r.answer_id, 
+          join_id: r.join_id,
+          question_id: r.question_id, 
+          question_number: r.question_number, 
+          question_type: r.question_type,
+          answer_text: r.answer_text,
+          choice_text: r.choice_text,
+          choice_id: r.choice_id,
+          set_number_name: r.set_number_name
+        })));
+        
+        // ตรวจสอบข้อมูล Fix Single answer โดยเฉพาะ
+        const fixSingleAnswers = answerResult.filter(r => r.question_type === 'Fix Single answer');
+        console.log("🔍 [ActivityReportDao] Fix Single answer responses:", fixSingleAnswers.map(r => ({
+          question_id: r.question_id,
+          question_text: r.question_text,
+          answer_text: r.answer_text,
+          choice_text: r.choice_text,
+          join_id: r.join_id
+        })));
+      } else {
+        console.log("⚠️ [ActivityReportDao] No answers found - checking raw answer data...");
+        // ตรวจสอบข้อมูลดิบใน answer table
+        const rawAnswerCheck = await this.dataSource!.query(
+          `SELECT a.*, q.question_text, c.choice_text 
+           FROM answer a 
+           LEFT JOIN question q ON a.question_id = q.question_id 
+           LEFT JOIN choice c ON a.choice_id = c.choice_id 
+           WHERE a.assessment_id = $1`,
+          [activityInfo[0].assessment_id]
+        );
+        console.log("🔍 [ActivityReportDao] Raw answer data:", rawAnswerCheck.length, "rows");
+        if (rawAnswerCheck.length > 0) {
+          console.log("🔍 [ActivityReportDao] Raw answers sample:", rawAnswerCheck.slice(0, 3));
+        }
+      }
 
       // ตรวจสอบว่ามีข้อมูลหรือไม่
       if (assessmentResult.length === 0) {
@@ -395,7 +425,8 @@ export class ActivityReportDao extends ErrorHandledDao {
 
       if (answerResult.length === 0) {
         console.log("⚠️ [ActivityReportDao] No answer data found for activity:", activityId);
-        return [];
+        console.log("🔄 [ActivityReportDao] Returning questions without answers");
+        // อย่า return [] ให้แสดงคำถามแม้ไม่มีคนตอบ
       }
 
       // จัดกลุ่มข้อมูลตาม set_number (หัวข้อ)
@@ -464,11 +495,20 @@ export class ActivityReportDao extends ErrorHandledDao {
           // คำนวณสถิติการตอบ
           const answerStats = this.calculateAnswerStats(question);
           
+          console.log(`🔍 [ActivityReportDao] Question ${question.questionId} processed:`, {
+            questionType: question.questionType,
+            originalChoices: question.choices?.length || 0,
+            answerStatsChoices: answerStats.choiceStats?.length || 0,
+            totalRespondents: answerStats.totalRespondents || 0,
+            answers: question.answers?.length || 0
+          });
+          
           return {
             questionId: question.questionId,
             questionText: question.questionText,
             questionType: question.questionType,
-            choices: question.choices,
+            choices: answerStats.choiceStats || question.choices,
+            totalRespondents: answerStats.totalRespondents || 0,
             ...answerStats
           };
         });
@@ -507,12 +547,17 @@ export class ActivityReportDao extends ErrorHandledDao {
     console.log(`🔍 [ActivityReportDao] Calculating stats for question ${question.questionId}:`, {
       questionText: question.questionText,
       totalAnswers,
+      availableChoices: question.choices?.length || 0,
+      choices: question.choices?.map(c => c.choiceText) || [],
       answers: answers.map(a => ({ answerText: a.answerText, choiceText: a.choiceText }))
     });
     
     // รองรับ question_type ที่หลากหลาย
     if (question.questionType === 'satisfaction' || 
         question.questionType === 'single_choice' || 
+        question.questionType === 'multiple_choice' ||
+        question.questionType === 'Single answer' ||
+        question.questionType === 'Multiple answer' ||
         question.questionType === 'Fix Single answer') {
       const choiceCounts: { [key: string]: number } = {};
       
@@ -525,17 +570,82 @@ export class ActivityReportDao extends ErrorHandledDao {
         }
       });
 
-      // สร้าง stats จาก answer_text ที่พบจริง (ไม่ใช้ choices ที่อาจไม่ตรงกัน)
-      const statsFromAnswers = Object.entries(choiceCounts).map(([choiceText, count]) => ({
-        choiceText,
-        count,
-        percentage: totalAnswers > 0 ? ((count / totalAnswers) * 100).toFixed(1) : '0.0'
-      }));
+      // สำหรับ multiple choice - นับจำนวนคนที่เลือกแต่ละตัวเลือก
+      const uniqueRespondents = new Set();
+      answers.forEach((answer: any) => {
+        if (answer.join_id) {
+          uniqueRespondents.add(answer.join_id);
+        }
+      });
+      const totalRespondents = uniqueRespondents.size;
+
+      // เริ่มต้นด้วย choices ทั้งหมดจาก question.choices (ถ้ามี)
+      let statsFromAnswers: any[] = [];
       
-      console.log(`✅ [ActivityReportDao] Generated stats from actual answers:`, statsFromAnswers);
+      if (question.choices && question.choices.length > 0) {
+        // ใช้ choices จาก question.choices เป็นหลัก
+        statsFromAnswers = question.choices.map((choice: any) => {
+          const choiceText = choice.choiceText;
+          const count = choiceCounts[choiceText] || 0;
+          return {
+            choiceText,
+            count,
+            percentage: totalRespondents > 0 ? `${((count / totalRespondents) * 100).toFixed(1)}%` : '0.0%'
+          };
+        });
+      } else {
+        // ถ้าไม่มี question.choices ให้ใช้จาก answer_text ที่พบ
+        statsFromAnswers = Object.entries(choiceCounts).map(([choiceText, count]) => ({
+          choiceText,
+          count,
+          percentage: totalRespondents > 0 ? `${((count / totalRespondents) * 100).toFixed(1)}%` : '0.0%'
+        }));
+      }
+      
+      // สำหรับ Fix Single answer - ใช้ answer_text แทน choice_text
+      if (question.questionType === 'Fix Single answer') {
+        console.log(`🔍 [ActivityReportDao] Fix Single answer - using answer_text instead of choice_text`);
+        statsFromAnswers = Object.entries(choiceCounts).map(([answerText, count]) => ({
+          choiceText: answerText, // ใช้ answerText เป็น choiceText
+          answerText: answerText, // เก็บ answerText ไว้ด้วย
+          count,
+          percentage: totalRespondents > 0 ? `${((count / totalRespondents) * 100).toFixed(1)}%` : '0.0%'
+        }));
+      }
+      
+      console.log(`✅ [ActivityReportDao] Generated stats from actual answers:`, {
+        totalChoices: statsFromAnswers.length,
+        stats: statsFromAnswers.map(s => ({ choiceText: s.choiceText, count: s.count, percentage: s.percentage }))
+      });
+      
+      // สำหรับ Fix Single answer - คำนวณ most, much, medium, less, least
+      if (question.questionType === 'Fix Single answer') {
+        console.log(`🔍 [ActivityReportDao] Processing Fix Single answer question ${question.questionId}:`, {
+          questionText: question.questionText,
+          statsFromAnswers,
+          totalRespondents,
+          totalAnswers
+        });
+        
+        const fixSingleStats = this.calculateFixSingleStats(statsFromAnswers, totalRespondents);
+        
+        console.log(`✅ [ActivityReportDao] Fix Single answer result for question ${question.questionId}:`, {
+          ...fixSingleStats,
+          totalRespondents: totalRespondents || totalAnswers
+        });
+        
+        return {
+          totalAnswers,
+          totalRespondents: totalRespondents || totalAnswers,
+          choiceStats: statsFromAnswers,
+          average: fixSingleStats.average,
+          ...fixSingleStats
+        };
+      }
       
       return {
         totalAnswers,
+        totalRespondents: totalRespondents || totalAnswers,
         choiceStats: statsFromAnswers,
         average: this.calculateAverage(statsFromAnswers)
       };
@@ -609,11 +719,169 @@ export class ActivityReportDao extends ErrorHandledDao {
     return totalCount > 0 ? (totalScore / totalCount) : 0;
   }
 
+  private calculateFixSingleStats(choiceStats: any[], totalRespondents: number): any {
+    console.log(`🔍 [ActivityReportDao] Calculating Fix Single stats:`, {
+      choiceStats: choiceStats.map(c => ({ choiceText: c.choiceText, count: c.count })),
+      totalRespondents
+    });
+
+    // กำหนดค่าเริ่มต้น
+    let most = 0;
+    let much = 0;
+    let medium = 0;
+    let less = 0;
+    let least = 0;
+
+    // นับจำนวนตามตัวเลือก
+    choiceStats.forEach(stat => {
+      // ใช้ choiceText หรือ answerText (สำหรับ Fix Single answer)
+      const choiceText = (stat.choiceText || stat.answerText || '').toLowerCase().trim();
+      const count = stat.count || 0;
+      
+      console.log(`🔍 [ActivityReportDao] Processing choice:`, {
+        choiceText: stat.choiceText,
+        answerText: stat.answerText,
+        processedText: choiceText,
+        count
+      });
+      
+      if (choiceText.includes('มากที่สุด') || choiceText.includes('5')) {
+        most = count;
+        console.log(`✅ [ActivityReportDao] Found 'มากที่สุด': ${count}`);
+      } else if (choiceText.includes('มาก') || choiceText.includes('4')) {
+        much = count;
+        console.log(`✅ [ActivityReportDao] Found 'มาก': ${count}`);
+      } else if (choiceText.includes('ปานกลาง') || choiceText.includes('3')) {
+        medium = count;
+        console.log(`✅ [ActivityReportDao] Found 'ปานกลาง': ${count}`);
+      } else if (choiceText.includes('น้อย') || choiceText.includes('2')) {
+        less = count;
+        console.log(`✅ [ActivityReportDao] Found 'น้อย': ${count}`);
+      } else if (choiceText.includes('น้อยที่สุด') || choiceText.includes('1')) {
+        least = count;
+        console.log(`✅ [ActivityReportDao] Found 'น้อยที่สุด': ${count}`);
+      }
+    });
+
+    // คำนวณค่าเฉลี่ย
+    const totalCount = most + much + medium + less + least;
+    const average = totalCount > 0 ? ((most * 5) + (much * 4) + (medium * 3) + (less * 2) + (least * 1)) / totalCount : 0;
+
+    console.log(`✅ [ActivityReportDao] Fix Single stats calculated:`, {
+      most, much, medium, less, least, average: average.toFixed(2)
+    });
+
+    return {
+      most,
+      much,
+      medium,
+      less,
+      least,
+      average
+    };
+  }
+
   private getTotalRespondents(questions: any[]): number {
     if (questions.length === 0) return 0;
     
-    // ใช้จำนวนคำตอบจากคำถามแรกเป็นตัวแทน
-    return questions[0].totalAnswers || 0;
+    // คำนวณจำนวนผู้ตอบที่ไม่ซ้ำจาก join_id ในทุกคำตอบ
+    const uniqueRespondents = new Set<number>();
+    questions.forEach(question => {
+      if (question.answers && question.answers.length > 0) {
+        question.answers.forEach((answer: any) => {
+          if (answer.joinId) {
+            uniqueRespondents.add(answer.joinId);
+          }
+        });
+      }
+    });
+    
+    return uniqueRespondents.size;
+  }
+
+  /**
+   * ตรวจสอบข้อมูลคำตอบในฐานข้อมูล (Debug method)
+   */
+  public async debugAnswers(activityId: number): Promise<any> {
+    await this.checkConnection();
+    
+    try {
+      // ตรวจสอบข้อมูล Activity และ Assessment
+      const activityInfo = await this.dataSource!.query(
+        `SELECT activity_id, activity_name, assessment_id FROM activity WHERE activity_id = $1`,
+        [activityId]
+      );
+      
+      if (activityInfo.length === 0) {
+        return { error: `Activity ${activityId} not found` };
+      }
+      
+      const assessmentId = activityInfo[0].assessment_id;
+      console.log(`🔍 [ActivityReportDao] Debug - Activity ${activityId} has Assessment ${assessmentId}`);
+      
+      // ตรวจสอบจำนวนคำตอบทั้งหมด
+      const totalAnswers = await this.dataSource!.query(
+        `SELECT COUNT(*) as count FROM answer WHERE assessment_id = $1`,
+        [assessmentId]
+      );
+      
+      // ตรวจสอบคำตอบ Fix Single answer
+      const fixSingleAnswers = await this.dataSource!.query(
+        `SELECT a.*, q.question_text, q.question_type, c.choice_text 
+         FROM answer a 
+         INNER JOIN question q ON a.question_id = q.question_id 
+         LEFT JOIN choice c ON a.choice_id = c.choice_id 
+         WHERE a.assessment_id = $1 AND q.question_type = 'Fix Single answer'
+         ORDER BY q.question_number, a.join_id`,
+        [assessmentId]
+      );
+      
+      // ตรวจสอบคำถาม Fix Single answer
+      const fixSingleQuestions = await this.dataSource!.query(
+        `SELECT q.*, c.choice_text 
+         FROM question q 
+         LEFT JOIN choice c ON q.question_id = c.question_id 
+         WHERE q.set_number_id IN (
+           SELECT set_number_id FROM set_number WHERE assessment_id = $1
+         ) AND q.question_type = 'Fix Single answer'
+         ORDER BY q.question_number`,
+        [assessmentId]
+      );
+      
+      console.log(`🔍 [ActivityReportDao] Debug results:`, {
+        activityId,
+        assessmentId,
+        totalAnswers: totalAnswers[0].count,
+        fixSingleAnswers: fixSingleAnswers.length,
+        fixSingleQuestions: fixSingleQuestions.length
+      });
+      
+      return {
+        activityId,
+        assessmentId,
+        totalAnswers: parseInt(totalAnswers[0].count),
+        fixSingleAnswers: fixSingleAnswers.map(r => ({
+          answer_id: r.answer_id,
+          join_id: r.join_id,
+          question_id: r.question_id,
+          question_text: r.question_text,
+          question_type: r.question_type,
+          answer_text: r.answer_text,
+          choice_text: r.choice_text,
+          choice_id: r.choice_id
+        })),
+        fixSingleQuestions: fixSingleQuestions.map(q => ({
+          question_id: q.question_id,
+          question_text: q.question_text,
+          question_type: q.question_type,
+          question_number: q.question_number,
+          choice_text: q.choice_text
+        }))
+      };
+    } catch (error) {
+      this.logDbError("debugAnswers", error);
+      throw error;
+    }
   }
 
   /**
