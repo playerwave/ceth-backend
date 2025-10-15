@@ -116,6 +116,25 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  // ✅ เมธอดใหม่: เช็คสถานะการทำแบบประเมิน
+  public async checkAssessmentStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      const studentId = this.parseId(req.params.studentId);
+      
+      console.log(`🔍 [StudentController] Checking assessment status for activity: ${activityId}, student: ${studentId}`);
+      
+      const status = await this.activityService.checkAssessmentStatusService(activityId, studentId);
+      
+      res.status(200).json({
+        success: true,
+        data: status
+      });
+    } catch (error) {
+      this.handleError("StudentActivityController.checkAssessmentStatus", error, res);
+    }
+  }
+
   public async getSearch(req: Request, res: Response): Promise<void> {
     const studentId = this.parseId(req.params.studentId);
     const text = (req.query.text as string);
@@ -318,4 +337,5 @@ export const activityController = {
   resetRegisteredCounts: controller.resetRegisteredCounts.bind(controller),
   checkInOutActivity: controller.checkInOutActivity.bind(controller),
   debugActivityData: controller.debugActivityData.bind(controller),
+  checkAssessmentStatus: controller.checkAssessmentStatus.bind(controller),
 };

@@ -131,4 +131,7 @@ router.get("/complete-assessment-data/:activityId", wrapAsync(activityController
 // ตรวจสอบและสร้างข้อมูล Assessment Structure ตัวอย่าง
 router.post("/create-sample-assessment/:activityId", wrapAsync(activityController.checkAndCreateSampleAssessmentData));
 
+// ✅ Reset การทำแบบประเมินของนิสิตในกิจกรรม
+router.delete("/reset-assessment/:activityId", wrapAsync(activityController.resetAssessmentForActivity));
+
 export default router;

@@ -41,7 +41,60 @@ export class ActivityDao extends ErrorHandledDao {
   public async getActivityHistoryByStudentsID(students_id: number): Promise<Activity[]> {
     await this.checkConnection();
     try {
-      const sql = `SELECT ac.activity_id, ac.activity_name, ac.presenter_company_name, ac.type, ac.description, ac.seat, ac.recieve_hours, ac.event_format, ac.start_activity_date, ac.end_activity_date, ac.image_url, ac.activity_state, r.room_name, asm.assessment_name, ac.start_assessment, ac.end_assessment, ac.registered_count FROM students as st INNER JOIN "join" as j ON st.students_id = j.students_id INNER JOIN activity_detail as acd ON j.activity_detail_id = acd.activity_detail_id INNER JOIN activity as ac ON acd.activity_id = ac.activity_id INNER JOIN room as r ON ac.room_id = r.room_id INNER JOIN assessment as asm ON ac.assessment_id = asm.assessment_id WHERE ((((ac.event_format = 'Online' OR ac.event_format = 'Onsite') AND ac.activity_state = 'End Assessment') OR (ac.event_format = 'Course' AND ac.activity_state = 'End Activity')) AND (st.students_id = $1)) ORDER BY ac.activity_id ASC`
+      const sql = `
+        SELECT DISTINCT
+          ac.activity_id, 
+          ac.activity_name, 
+          ac.presenter_company_name, 
+          ac.type, 
+          ac.description, 
+          ac.seat, 
+          ac.recieve_hours, 
+          ac.event_format, 
+          ac.start_activity_date, 
+          ac.end_activity_date, 
+          ac.image_url, 
+          ac.activity_state, 
+          r.room_name, 
+          asm.assessment_name, 
+          ac.start_assessment, 
+          ac.end_assessment, 
+          ac.registered_count,
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM answer a2 
+              WHERE a2.assessment_id = asm.assessment_id 
+              AND a2.join_id = j.join_id
+            ) THEN 'End Assessment'
+            ELSE ac.activity_state
+          END as display_state
+        FROM students as st 
+        INNER JOIN "join" as j ON st.students_id = j.students_id 
+        INNER JOIN activity_detail as acd ON j.activity_detail_id = acd.activity_detail_id 
+        INNER JOIN activity as ac ON acd.activity_id = ac.activity_id 
+        INNER JOIN room as r ON ac.room_id = r.room_id 
+        INNER JOIN assessment as asm ON ac.assessment_id = asm.assessment_id 
+        WHERE (
+          (
+            (ac.event_format = 'Online' OR ac.event_format = 'Onsite') AND ac.activity_state = 'End Assessment'
+          ) 
+          OR 
+          (
+            ac.event_format = 'Course' AND ac.activity_state = 'End Activity'
+          )
+          OR
+          (
+            EXISTS (
+              SELECT 1 FROM answer a3 
+              WHERE a3.assessment_id = asm.assessment_id 
+              AND a3.join_id = j.join_id
+            )
+            AND j.status = 'Completed'
+          )
+        ) 
+        AND (st.students_id = $1) 
+        ORDER BY ac.activity_id ASC
+      `;
       const result = await this.dataSource?.query(sql, [students_id]);
       return result
     } catch (error) {
@@ -55,7 +108,64 @@ export class ActivityDao extends ErrorHandledDao {
     try {
       const Text1 = text
       const Text2 = `%${text}%`
-      const sql = `SELECT ac.activity_id, ac.activity_name, ac.presenter_company_name, ac.type, ac.description, ac.seat, ac.recieve_hours, ac.event_format, ac.start_activity_date, ac.end_activity_date, ac.image_url, ac.activity_state, r.room_name, asm.assessment_name, ac.start_assessment, ac.end_assessment, ac.registered_count, GREATEST(similarity(ac.activity_name, $1), similarity(ac.presenter_company_name, $1), similarity(ac.type::text, $1)) AS relevance FROM students as st INNER JOIN "join" as j ON st.students_id = j.students_id INNER JOIN activity_detail as acd ON j.activity_detail_id = acd.activity_detail_id INNER JOIN activity as ac ON acd.activity_id = ac.activity_id INNER JOIN room as r ON ac.room_id = r.room_id INNER JOIN assessment as asm ON ac.assessment_id = asm.assessment_id WHERE ((ac.activity_name ILIKE $2 OR ac.presenter_company_name ILIKE $2 OR ac.type::text ILIKE $2) AND st.students_id = $3) ORDER BY relevance DESC`
+      const sql = `
+        SELECT DISTINCT
+          ac.activity_id, 
+          ac.activity_name, 
+          ac.presenter_company_name, 
+          ac.type, 
+          ac.description, 
+          ac.seat, 
+          ac.recieve_hours, 
+          ac.event_format, 
+          ac.start_activity_date, 
+          ac.end_activity_date, 
+          ac.image_url, 
+          ac.activity_state, 
+          r.room_name, 
+          asm.assessment_name, 
+          ac.start_assessment, 
+          ac.end_assessment, 
+          ac.registered_count,
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM answer a2 
+              WHERE a2.assessment_id = asm.assessment_id 
+              AND a2.join_id = j.join_id
+            ) THEN 'End Assessment'
+            ELSE ac.activity_state
+          END as display_state,
+          GREATEST(similarity(ac.activity_name, $1), similarity(ac.presenter_company_name, $1), similarity(ac.type::text, $1)) AS relevance 
+        FROM students as st 
+        INNER JOIN "join" as j ON st.students_id = j.students_id 
+        INNER JOIN activity_detail as acd ON j.activity_detail_id = acd.activity_detail_id 
+        INNER JOIN activity as ac ON acd.activity_id = ac.activity_id 
+        INNER JOIN room as r ON ac.room_id = r.room_id 
+        INNER JOIN assessment as asm ON ac.assessment_id = asm.assessment_id 
+        WHERE (
+          (ac.activity_name ILIKE $2 OR ac.presenter_company_name ILIKE $2 OR ac.type::text ILIKE $2) 
+          AND st.students_id = $3
+          AND (
+            (
+              (ac.event_format = 'Online' OR ac.event_format = 'Onsite') AND ac.activity_state = 'End Assessment'
+            ) 
+            OR 
+            (
+              ac.event_format = 'Course' AND ac.activity_state = 'End Activity'
+            )
+            OR
+            (
+              EXISTS (
+                SELECT 1 FROM answer a3 
+                WHERE a3.assessment_id = asm.assessment_id 
+                AND a3.join_id = j.join_id
+              )
+              AND j.status = 'Completed'
+            )
+          )
+        ) 
+        ORDER BY relevance DESC
+      `;
       const result = await this.dataSource?.query(sql, [Text1, Text2, students_id]);
       return result;
     } catch (error) {
@@ -228,12 +338,12 @@ export class ActivityDao extends ErrorHandledDao {
       WHERE j.students_id = $1
         AND ad.status = 'Registered'
         AND j.status = 'Pending'
-        AND a.activity_state IN ('Start Activity', 'End Activity')
+        AND a.activity_state IN ('Start Activity', 'End Activity', 'Start Assessment', 'End Assessment')
       ORDER BY a.start_activity_date DESC
     `;
 
     const result = await this.dataSource!.query(query, [studentId]);
-    console.log(`📊 Found ${result.length} ongoing activities for student ${studentId} (Start Activity or End Activity state)`);
+    console.log(`📊 Found ${result.length} ongoing activities for student ${studentId} (Start Activity, End Activity, Start Assessment, or End Assessment state)`);
     
     if (result.length > 0) {
       console.log(`🔍 [DEBUG] Ongoing activities details:`, result.map((r: any) => ({
@@ -981,6 +1091,64 @@ export class ActivityDao extends ErrorHandledDao {
     } catch (error) {
       this.logDbError("getJoinIdByStudentAndActivity", error);
       throw new Error("❌ Failed to get join_id by student and activity");
+    }
+  }
+
+  // ✅ เมธอดใหม่: เช็คสถานะการทำแบบประเมินของนิสิต
+  public async checkAssessmentStatus(activityId: number, studentId: number): Promise<{ hasSubmitted: boolean; assessmentName?: string; submittedDate?: Date }> {
+    await this.checkConnection();
+    try {
+      const sql = `
+        SELECT 
+          CASE 
+            WHEN a.answer_id IS NOT NULL 
+            THEN true 
+            ELSE false 
+          END as has_submitted,
+          asm.assessment_name,
+          j.join_date as submitted_date,
+          j.status as join_status,
+          a.answer_id,
+          j.join_id
+        FROM activity ac
+        INNER JOIN assessment asm ON ac.assessment_id = asm.assessment_id
+        LEFT JOIN "join" j ON j.students_id = $2 AND j.activity_detail_id IN (
+          SELECT ad.activity_detail_id 
+          FROM activity_detail ad 
+          WHERE ad.activity_id = $1
+        )
+        LEFT JOIN answer a ON a.join_id = j.join_id AND a.assessment_id = asm.assessment_id
+        WHERE ac.activity_id = $1
+        LIMIT 1
+      `;
+      
+      const result = await this.dataSource?.query(sql, [activityId, studentId]);
+      
+      console.log(`🔍 [ActivityDao] checkAssessmentStatus query result:`, result);
+      
+      if (result && result.length > 0) {
+        const data = result[0];
+        console.log(`🔍 [ActivityDao] Assessment status data:`, {
+          has_submitted: data.has_submitted,
+          assessment_name: data.assessment_name,
+          submitted_date: data.submitted_date,
+          join_status: data.join_status,
+          answer_id: data.answer_id,
+          join_id: data.join_id
+        });
+        
+        return {
+          hasSubmitted: data.has_submitted || false,
+          assessmentName: data.assessment_name,
+          submittedDate: data.submitted_date
+        };
+      }
+      
+      console.log(`❌ [ActivityDao] No assessment status data found`);
+      return { hasSubmitted: false };
+    } catch (error) {
+      this.logDbError("checkAssessmentStatus", error);
+      throw new Error("❌ Failed to check assessment status");
     }
   }
 }

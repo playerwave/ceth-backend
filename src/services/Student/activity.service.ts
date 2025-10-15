@@ -740,4 +740,19 @@ export class ActivityService extends ErrorHandledService {
       throw error;
     }
   }
+
+  // ✅ เมธอดใหม่: เช็คสถานะการทำแบบประเมิน
+  public async checkAssessmentStatusService(activityId: number, studentId: number): Promise<{ hasSubmitted: boolean; assessmentName?: string; submittedDate?: Date }> {
+    try {
+      console.log("🔍 [ActivityService] Checking assessment status for activity:", activityId, "student:", studentId);
+      
+      const status = await this.activityDao.checkAssessmentStatus(activityId, studentId);
+      
+      console.log("✅ [ActivityService] Assessment status:", status);
+      return status;
+    } catch (error) {
+      this.logError("❌ Error in checkAssessmentStatusService", error);
+      throw error;
+    }
+  }
 }

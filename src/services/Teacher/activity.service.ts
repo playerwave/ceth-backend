@@ -678,4 +678,52 @@ export class ActivityService extends ErrorHandledService {
       throw error;
     }
   }
+
+  /**
+   * 🔄 Reset การทำแบบประเมินของนิสิตในกิจกรรม
+   */
+  public async resetAssessmentForActivity(activityId: number): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      studentsAffected: number;
+      answersDeleted: number;
+      joinsReset: number;
+      hoursReset: number;
+    };
+  }> {
+    try {
+      console.log(`🔄 [ActivityService] Resetting assessment for activity ${activityId}`);
+      
+      // 1. ตรวจสอบว่ากิจกรรมมีอยู่จริง
+      const activity = await this.activityDao.findById(activityId);
+      if (!activity) {
+        throw new Error(`Activity ${activityId} not found`);
+      }
+      
+      console.log(`✅ [ActivityService] Activity found: ${activity.activity_name}`);
+      
+      // 2. เรียกใช้ DAO method
+      const result = await this.activityDao.resetAssessmentForActivity(activityId);
+      
+      // 3. Clear cache
+      await redis.del("activity:all");
+      await redis.del(`activity:${activityId}`);
+      console.log(`🧹 [ActivityService] Cache cleared for activity ${activityId}`);
+      
+      this.logInfo("✅ Reset assessment completed", {
+        activityId,
+        result
+      });
+      
+      return {
+        success: true,
+        message: `Reset assessment completed for activity ${activityId}`,
+        data: result
+      };
+    } catch (error) {
+      this.logError("❌ Error resetting assessment", error);
+      throw error;
+    }
+  }
 }

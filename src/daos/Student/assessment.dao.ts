@@ -596,4 +596,24 @@ export class AssessmentDao extends ErrorHandledDao {
       throw new Error("❌ Failed to get questions by assessment ID");
     }
   }
+
+  // ✅ เมธอดใหม่: อัพเดท join_status เป็น 'Completed'
+  public async updateJoinStatusToCompleted(join_id: number): Promise<void> {
+    await this.checkConnection();
+    try {
+      console.log(`🔄 [AssessmentDao] Updating join status to Completed for join_id: ${join_id}`);
+      
+      const query = `
+        UPDATE "join" 
+        SET status = 'Completed' 
+        WHERE join_id = $1
+      `;
+      
+      const result = await this.dataSource!.query(query, [join_id]);
+      console.log(`✅ [AssessmentDao] Join status updated to Completed for join_id: ${join_id}`);
+    } catch (error) {
+      this.logDbError("updateJoinStatusToCompleted", error);
+      throw new Error("❌ Failed to update join status to Completed");
+    }
+  }
 }

@@ -2600,4 +2600,159 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
+  /**
+   * 🔄 Reset การทำแบบประเมินของนิสิตในกิจกรรม
+   */
+  public async resetAssessmentForActivity(activityId: number): Promise<{
+    studentsAffected: number;
+    answersDeleted: number;
+    joinsReset: number;
+    hoursReset: number;
+  }> {
+    try {
+      await this.checkConnection();
+      
+      console.log(`🔄 [ActivityDao] Starting reset assessment for activity ${activityId}...`);
+      
+      const queryRunner = this.dataSource!.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      
+      try {
+        // 1️⃣ หานิสิตที่ทำแบบประเมินแล้วและข้อมูลกิจกรรม
+        const studentsQuery = `
+          SELECT DISTINCT 
+            s.students_id,
+            s.soft_hours,
+            s.hard_hours,
+            a.type as activity_type,
+            a.recieve_hours,
+            a.assessment_id,
+            j.join_id
+          FROM activity a
+          INNER JOIN assessment asm ON a.assessment_id = asm.assessment_id
+          INNER JOIN activity_detail ad ON a.activity_id = ad.activity_id
+          INNER JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
+          INNER JOIN students s ON j.students_id = s.students_id
+          WHERE a.activity_id = $1 
+            AND j.status = 'Completed'
+        `;
+        
+        const studentsResult = await queryRunner.query(studentsQuery, [activityId]);
+        console.log(`📊 Found ${studentsResult.length} students who completed assessment`);
+        
+        if (studentsResult.length === 0) {
+          await queryRunner.commitTransaction();
+          return {
+            studentsAffected: 0,
+            answersDeleted: 0,
+            joinsReset: 0,
+            hoursReset: 0
+          };
+        }
+        
+        const assessmentId = studentsResult[0]?.assessment_id;
+        const activityType = studentsResult[0]?.activity_type;
+        const receiveHours = studentsResult[0]?.recieve_hours || 0;
+        
+        console.log(`🔍 Activity info:`, {
+          assessmentId,
+          activityType,
+          receiveHours
+        });
+        
+        // 2️⃣ ลบคำตอบทั้งหมดของนิสิตในกิจกรรม
+        const deleteAnswersQuery = `
+          DELETE FROM answer 
+          WHERE assessment_id = $1
+            AND join_id IN (
+              SELECT j.join_id 
+              FROM "join" j
+              INNER JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+              WHERE ad.activity_id = $2
+            )
+          RETURNING answer_id
+        `;
+        
+        const deletedAnswers = await queryRunner.query(deleteAnswersQuery, [assessmentId, activityId]);
+        console.log(`🗑️ Deleted ${deletedAnswers.length} answers`);
+        
+        // 3️⃣ Reset join status เป็น Pending
+        const resetJoinQuery = `
+          UPDATE "join" 
+          SET status = 'Pending' 
+          WHERE activity_detail_id IN (
+            SELECT activity_detail_id 
+            FROM activity_detail 
+            WHERE activity_id = $1
+          ) 
+          AND status = 'Completed'
+          RETURNING join_id
+        `;
+        
+        const resetJoins = await queryRunner.query(resetJoinQuery, [activityId]);
+        console.log(`🔄 Reset ${resetJoins.length} join statuses to Pending`);
+        
+        // 4️⃣ ลบชั่วโมงสหกิจที่ได้รับ
+        let hoursReset = 0;
+        
+        if (receiveHours > 0) {
+          for (const student of studentsResult) {
+            const currentSoftHours = student.soft_hours || 0;
+            const currentHardHours = student.hard_hours || 0;
+            
+            console.log(`👤 Student ${student.students_id}:`, {
+              currentSoftHours,
+              currentHardHours,
+              activityType,
+              receiveHours
+            });
+            
+            if (activityType.toLowerCase() === 'soft' && currentSoftHours >= receiveHours) {
+              // ลด soft_hours
+              await queryRunner.query(
+                `UPDATE students SET soft_hours = soft_hours - $1 WHERE students_id = $2`,
+                [receiveHours, student.students_id]
+              );
+              hoursReset++;
+              console.log(`✅ Reduced soft_hours for student ${student.students_id}: ${currentSoftHours} - ${receiveHours} = ${currentSoftHours - receiveHours}`);
+            } else if (activityType.toLowerCase() === 'hard' && currentHardHours >= receiveHours) {
+              // ลด hard_hours
+              await queryRunner.query(
+                `UPDATE students SET hard_hours = hard_hours - $1 WHERE students_id = $2`,
+                [receiveHours, student.students_id]
+              );
+              hoursReset++;
+              console.log(`✅ Reduced hard_hours for student ${student.students_id}: ${currentHardHours} - ${receiveHours} = ${currentHardHours - receiveHours}`);
+            } else {
+              console.log(`⚠️ Cannot reduce hours for student ${student.students_id} (insufficient hours)`);
+            }
+          }
+        }
+        
+        await queryRunner.commitTransaction();
+        
+        const result = {
+          studentsAffected: studentsResult.length,
+          answersDeleted: deletedAnswers.length,
+          joinsReset: resetJoins.length,
+          hoursReset: hoursReset
+        };
+        
+        console.log(`✅ Reset assessment completed for activity ${activityId}:`, result);
+        return result;
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        console.error(`❌ Error during reset assessment transaction:`, error);
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
+    } catch (error) {
+      console.error("❌ Error resetting assessment for activity:", error);
+      this.logDbError("resetAssessmentForActivity", error);
+      throw error;
+    }
+  }
+
 }

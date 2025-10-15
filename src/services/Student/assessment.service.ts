@@ -57,6 +57,16 @@ export class AssessmentService extends ErrorHandledService {
       // ส่งคำตอบไปยัง DAO
       const result = await this.assessmentDao.submitAssessment(assessment_id, join_id, answers);
 
+      // อัพเดท join_status เป็น 'Completed' หลังจากส่งแบบประเมินสำเร็จ
+      try {
+        console.log("🔄 [AssessmentService] Updating join status to Completed");
+        await this.assessmentDao.updateJoinStatusToCompleted(join_id);
+        console.log("✅ [AssessmentService] Join status updated to Completed");
+      } catch (statusError) {
+        console.error("❌ [AssessmentService] Error updating join status:", statusError);
+        // ไม่ให้ error นี้ทำให้การส่งแบบประเมินล้มเหลว
+      }
+
       // อัพเดทชั่วโมงสหกิจหลังจากส่งแบบประเมินสำเร็จ
       try {
         console.log("🔄 [AssessmentService] Updating cooperative hours after assessment submission");

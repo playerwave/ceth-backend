@@ -96,6 +96,9 @@ router.get("/:activityId/join-id/:studentId", wrapAsync(activityController.getJo
 // Debug endpoint
 router.get("/debug/:activityId", wrapAsync(activityController.debugActivityData));
 
+// ✅ เมธอดใหม่: เช็คสถานะการทำแบบประเมิน
+router.get("/assessment-status/:activityId/:studentId", wrapAsync(activityController.checkAssessmentStatus));
+
 router.get("/searchActivity", wrapAsync(activityController.searchActivity));
 
 // ✅ POST METHOD สำหรับ Check-in/Check-out

@@ -771,6 +771,27 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  /**
+   * 🔄 Reset การทำแบบประเมินของนิสิตในกิจกรรม
+   */
+  public async resetAssessmentForActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      
+      console.log(`🔄 [ActivityController] Resetting assessment for activity: ${activityId}`);
+      
+      const result = await this.activityService.resetAssessmentForActivity(activityId);
+      
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result.data
+      });
+    } catch (error) {
+      this.handleError("ActivityController.resetAssessmentForActivity", error, res);
+    }
+  }
+
   private parseActivityDetailPayload(body: any): any {
     return {
       activity_id: this.parseOptionalInt(body.activity_id),
@@ -818,5 +839,7 @@ export const activityController = {
   getActivitySummary: controller.getActivitySummary.bind(controller),
   // ✅ Mock data methods
   mockAllActivityRegistrations: controller.mockAllActivityRegistrations.bind(controller),
+  // ✅ Reset assessment method
+  resetAssessmentForActivity: controller.resetAssessmentForActivity.bind(controller),
   // getEnrolledStudents: controller.getEnrolledStudents.bind(controller),
 };
