@@ -4,6 +4,8 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Activity } from "../activity.entity";
 
@@ -33,4 +35,67 @@ export class CertificateBase {
 
   @Column({ type: "timestamp", nullable: true })
   claim_expiration_date?: Date | null;
+
+  // ✅ เพิ่มฟิลด์ใหม่สำหรับระบบตรวจสอบ
+  @Column({ type: "varchar", length: 500, nullable: true })
+  template_image_url?: string;
+
+  @Column({ type: "json", nullable: true })
+  validation_rules?: {
+    requiredFields: string[];
+    fieldFormats: { [key: string]: string };
+    securityFeatures: string[];
+  };
+
+  // ✅ เพิ่มฟิลด์สำหรับ Certificate Template (Course activities)
+  @Column({ type: "json", nullable: true })
+  ocr_data?: {
+    course_name?: string;
+    instructor_name?: string;
+    university_name?: string;
+    completion_date?: string;
+    certificate_id?: string;
+    raw_text?: string;
+  } | null;
+
+  @Column({ type: "json", nullable: true })
+  image_analysis?: {
+    dominantColors?: {
+      dominant: string;
+      palette: string[];
+    };
+    logoPosition?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    watermark?: {
+      detected: boolean;
+      confidence: number;
+    };
+    signature?: {
+      detected: boolean;
+      confidence: number;
+    };
+    layout?: {
+      width: number;
+      height: number;
+      textRegions: number;
+      imageRegions: number;
+      emptySpaceRatio: number;
+    };
+  } | null;
+
+  @Column({ type: "text", nullable: true })
+  description?: string | null;
+
+  @Column({ type: "boolean", default: true })
+  is_active!: boolean;
+
+  @CreateDateColumn({ type: "timestamp" })
+  created_at!: Date;
+
+  @UpdateDateColumn({ type: "timestamp" })
+  updated_at!: Date;
 }
