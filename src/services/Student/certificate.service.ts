@@ -1,11 +1,63 @@
 // src/services/Student/certificate.service.ts
 import { CertificateDAO } from "../../daos/Student/certificate.dao";
+import * as fs from "fs";
+import * as path from "path";
 
 export class CertificateService {
   private certificateDAO: CertificateDAO;
 
   constructor() {
     this.certificateDAO = new CertificateDAO();
+  }
+
+  //--------------------- Upload Certificate -------------------------
+  async uploadCertificate(data: {
+    students_id: number;
+    activity_id: number;
+    hours?: number;
+    date?: Date;
+    file: Express.Multer.File;
+    ocr_extracted_data?: any;
+  }): Promise<any> {
+    console.log("📤 [Certificate Service] Uploading certificate for student:", data.students_id);
+    
+    try {
+      // สร้างโฟลเดอร์ uploads ถ้ายังไม่มี
+      const uploadsDir = path.join(__dirname, "../../../uploads/certificates");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      // สร้างชื่อไฟล์ที่ไม่ซ้ำ
+      const timestamp = Date.now();
+      const fileExtension = path.extname(data.file.originalname);
+      const filename = `cert_${data.students_id}_${timestamp}${fileExtension}`;
+      const filepath = path.join(uploadsDir, filename);
+
+      // บันทึกไฟล์
+      fs.writeFileSync(filepath, data.file.buffer);
+      console.log("💾 [Certificate Service] File saved:", filepath);
+
+      // สร้าง certificate record
+      const certificate = await this.certificateDAO.createCertificate({
+        students_id: data.students_id,
+        activity_id: data.activity_id,
+        hours: data.hours,
+        date: data.date,
+        img: `/uploads/certificates/${filename}`,
+        original_filename: data.file.originalname,
+        file_type: data.file.mimetype,
+        file_size: data.file.size,
+        ocr_extracted_data: data.ocr_extracted_data,
+        status: "Pending"
+      });
+
+      console.log("✅ [Certificate Service] Certificate created:", certificate.certificate_id);
+      return certificate;
+    } catch (error) {
+      console.error("❌ [Certificate Service] Upload error:", error);
+      throw error;
+    }
   }
 
   //--------------------- Get Certificate By Id -------------------------
@@ -22,6 +74,21 @@ export class CertificateService {
 
       console.log("✅ [Certificate Service] Certificate found:", certificate);
       return certificate;
+    } catch (error) {
+      console.error("❌ [Certificate Service] Error:", error);
+      throw error;
+    }
+  }
+
+  //--------------------- Get Certificates By Student ID -------------------------
+  async getCertificatesByStudentId(studentId: number): Promise<any[]> {
+    console.log("🔍 [Certificate Service] Getting certificates for student:", { studentId });
+    
+    try {
+      const certificates = await this.certificateDAO.getCertificatesByStudentId(studentId);
+      
+      console.log("✅ [Certificate Service] Certificates found:", certificates.length);
+      return certificates;
     } catch (error) {
       console.error("❌ [Certificate Service] Error:", error);
       throw error;
