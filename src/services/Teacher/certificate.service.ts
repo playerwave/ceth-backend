@@ -9,6 +9,7 @@ import { callTyphoonOCR } from "../Student/ocr.service";
 import { analyzeCertificate, calculateConfidenceScore as calcScore } from "../../utils/certificate-analyzer";
 import { imageAnalyzer } from "../../utils/image-analysis";
 import sharp from "sharp";
+import cloudinary from "../../utils/cloudinary";
 
 export class CertificateService extends ErrorHandledService {
   private readonly certificateDao = new CertificateDao();
@@ -508,26 +509,29 @@ export class CertificateService extends ErrorHandledService {
     try {
       console.log("☁️ [CertificateService] Uploading to Cloudinary");
       
-      const FormData = require('form-data');
-      const formData = new FormData();
-      formData.append("file", file.buffer, {
-        filename: file.filename,
-        contentType: file.mimetype || 'image/jpeg'
+      // ✅ ใช้ Cloudinary SDK แบบถูกต้อง (upload_stream สำหรับ Buffer)
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            upload_preset: "ceth-project",
+            resource_type: "auto"
+          },
+          (error, result) => {
+            if (error) {
+              console.error("❌ [Cloudinary] Upload failed:", error);
+              reject(error);
+            } else if (result) {
+              console.log("✅ [Cloudinary] Upload success:", result.secure_url);
+              resolve(result.secure_url);
+            } else {
+              reject(new Error("Cloudinary upload failed: No result returned"));
+            }
+          }
+        );
+        
+        // ส่ง Buffer ไปยัง upload stream
+        uploadStream.end(file.buffer);
       });
-      formData.append("upload_preset", "ceth-project");
-      
-      const response = await fetch("https://api.cloudinary.com/v1_1/dn5vhwoue/image/upload", {
-        method: "POST",
-        body: formData,
-        headers: formData.getHeaders()
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Cloudinary upload failed: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data.secure_url;
     } catch (error) {
       this.logError("❌ Error uploading to Cloudinary", error);
       throw error;
@@ -582,14 +586,78 @@ export class CertificateService extends ErrorHandledService {
     try {
       console.log("🔍 [CertificateService] Performing OCR on certificate");
       
-      const ocrResult = await callTyphoonOCR(file, {
+      const rawOcrResult = await callTyphoonOCR(file, {
         model: "typhoon-ocr-preview"
       });
       
-      return ocrResult;
+      // ✅ Extract เฉพาะข้อมูลที่สำคัญจาก OCR result
+      const extractedText = this.extractOCRText(rawOcrResult);
+      
+      console.log("📄 [CertificateService] Extracted OCR text:", {
+        text_length: extractedText.natural_text?.length || 0,
+        has_text: !!extractedText.natural_text
+      });
+      
+      return {
+        natural_text: extractedText.natural_text || "",
+        extracted_fields: extractedText.extracted_fields || {},
+        processing_time: rawOcrResult.processing_time || 0,
+        total_pages: rawOcrResult.total_pages || 1,
+        raw_response: rawOcrResult // เก็บไว้สำหรับ debug
+      };
     } catch (error) {
       this.logError("❌ Error performing OCR", error);
-      throw error;
+      return {
+        natural_text: "",
+        extracted_fields: {},
+        processing_time: 0,
+        total_pages: 0,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * Extract ข้อความจาก OCR result
+   */
+  private extractOCRText(ocrResult: any): { natural_text: string; extracted_fields: any } {
+    try {
+      // ✅ ลอง parse จาก Typhoon OCR response structure
+      if (ocrResult?.results && Array.isArray(ocrResult.results) && ocrResult.results.length > 0) {
+        const firstResult = ocrResult.results[0];
+        
+        // ✅ ดึงข้อความจาก message.choices[0].message.content
+        if (firstResult?.message?.choices?.[0]?.message?.content) {
+          const content = firstResult.message.choices[0].message.content;
+          
+          // ✅ ถ้า content เป็น JSON string ให้ parse
+          try {
+            const parsed = JSON.parse(content);
+            return {
+              natural_text: parsed.natural_text || parsed.text || content,
+              extracted_fields: parsed
+            };
+          } catch {
+            // ถ้า parse ไม่ได้ก็ใช้ content ตรงๆ
+            return {
+              natural_text: content,
+              extracted_fields: {}
+            };
+          }
+        }
+      }
+      
+      // ✅ Fallback: ถ้าไม่เจอข้อความ
+      return {
+        natural_text: "",
+        extracted_fields: {}
+      };
+    } catch (error) {
+      console.error("❌ [CertificateService] Error extracting OCR text:", error);
+      return {
+        natural_text: "",
+        extracted_fields: {}
+      };
     }
   }
 

@@ -47,7 +47,7 @@ export class CertificateDao extends ErrorHandledDao {
   ): Promise<any> {
     await this.checkConnection();
     try {
-      console.log("💾 [CertificateDao] Creating activity certificate template:", {
+      console.log("💾 [CertificateDao] Creating/Updating activity certificate template:", {
         activity_id: activityId,
         template_url: data.template_url,
         has_ocr_data: !!data.ocr_data,
@@ -60,56 +60,91 @@ export class CertificateDao extends ErrorHandledDao {
       await queryRunner.startTransaction();
 
       try {
-        // 1. สร้าง certificate template
-        console.log("🔄 [CertificateDao] Inserting into activity_certificate_template...");
-        const templateResult = await queryRunner.query(
-          `
-          INSERT INTO activity_certificate_template (
-            template_name,
-            template_url,
-            ocr_data,
-            image_analysis,
-            description
-          ) VALUES ($1, $2, $3, $4, $5)
-          RETURNING template_id, template_name, template_url, description
-          `,
-          [
-            `Certificate for Activity ${activityId}`,
-            data.template_url,
-            JSON.stringify(data.ocr_data),
-            JSON.stringify(data.image_analysis),
-            data.description
-          ]
+        // 1. เช็คว่า activity นี้มี certificate_base อยู่แล้วหรือไม่
+        console.log("🔍 [CertificateDao] Checking existing certificate_base for activity:", activityId);
+        const existingBase = await queryRunner.query(
+          `SELECT certificate_base_id FROM certificate_base WHERE activity_id = $1`,
+          [activityId]
         );
 
-        const templateId = templateResult[0].template_id;
-        console.log("✅ [CertificateDao] Template created with ID:", templateId);
+        let templateResult;
+        let isUpdate = false;
 
-        // 2. อัปเดต activity table ให้เชื่อมกับ template
-        console.log("🔄 [CertificateDao] Updating activity with template_id...");
-        const activityResult = await queryRunner.query(
-          `
-          UPDATE activity 
-          SET 
-            certificate_template_id = $1,
-            last_update_activity_date = NOW()
-          WHERE activity_id = $2
-          RETURNING activity_id, certificate_template_id
-          `,
-          [templateId, activityId]
-        );
+        if (existingBase && existingBase.length > 0) {
+          // ✅ มีอยู่แล้ว → UPDATE
+          const certificateBaseId = existingBase[0].certificate_base_id;
+          console.log("🔄 [CertificateDao] Updating existing certificate_base:", certificateBaseId);
+          
+          templateResult = await queryRunner.query(
+            `
+            UPDATE certificate_base
+            SET 
+              template_image_url = $1,
+              ocr_data = $2,
+              image_analysis = $3,
+              description = $4,
+              updated_at = NOW()
+            WHERE certificate_base_id = $5
+            RETURNING certificate_base_id, certificate_name, template_image_url, description
+            `,
+            [
+              data.template_url,
+              JSON.stringify(data.ocr_data),
+              JSON.stringify(data.image_analysis),
+              data.description,
+              certificateBaseId
+            ]
+          );
+          isUpdate = true;
+          console.log("✅ [CertificateDao] Certificate base updated successfully");
+        } else {
+          // ✅ ยังไม่มี → สร้างใหม่ใน certificate_base
+          console.log("🔄 [CertificateDao] Creating new certificate_base...");
+          
+          templateResult = await queryRunner.query(
+            `
+            INSERT INTO certificate_base (
+              activity_id,
+              certificate_name,
+              certificate_source,
+              template_image_url,
+              ocr_data,
+              image_analysis,
+              description,
+              is_active
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING certificate_base_id, certificate_name, template_image_url, description
+            `,
+            [
+              activityId,
+              `Certificate for Activity ${activityId}`,
+              'Activity Template',
+              data.template_url,
+              JSON.stringify(data.ocr_data),
+              JSON.stringify(data.image_analysis),
+              data.description,
+              true
+            ]
+          );
+          console.log("✅ [CertificateDao] Certificate base created successfully");
+        }
+
+        const resultId = templateResult[0].certificate_base_id;
 
         await queryRunner.commitTransaction();
         
-        console.log("✅ [CertificateDao] Activity certificate template created successfully:", { 
-          template_id: templateId,
-          activity_id: activityResult[0]?.activity_id,
-          certificate_template_id: activityResult[0]?.certificate_template_id
+        console.log(`✅ [CertificateDao] Activity certificate template ${isUpdate ? 'updated' : 'created'} successfully:`, { 
+          certificate_base_id: resultId,
+          activity_id: activityId
         });
         
         return {
-          ...templateResult[0],
-          activity_id: activityId
+          template_id: resultId,
+          template_name: templateResult[0].certificate_name,
+          template_url: templateResult[0].template_image_url,
+          description: templateResult[0].description,
+          activity_id: activityId,
+          is_update: isUpdate
         };
       } catch (error) {
         console.error("❌ [CertificateDao] Error during transaction:", error);
@@ -121,7 +156,7 @@ export class CertificateDao extends ErrorHandledDao {
     } catch (error) {
       console.error("❌ [CertificateDao] Database error:", error);
       this.logDbError("createActivityCertificateTemplate", error);
-      throw new Error("❌ Failed to create activity certificate template");
+      throw new Error("❌ Failed to create/update activity certificate template");
     }
   }
 
