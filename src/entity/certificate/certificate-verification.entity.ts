@@ -11,9 +11,9 @@ import { Certificate } from "./certificate.entity";
 import { CertificateTemplate } from "./certificate-template.entity";
 
 @Entity()
-@Index("IDX_CERTIFICATE_ID_VERIFICATION", ["certificate_id"])
-@Index("IDX_TEMPLATE_ID_VERIFICATION", ["template_id"])
-@Index("IDX_VERIFIED_AT", ["verified_at"])
+@Index("idx_verification_certificate_id", ["certificate_id"])
+@Index("idx_verification_template_id", ["template_id"])
+@Index("idx_verification_verified_at", ["verified_at"])
 export class CertificateVerification {
   @PrimaryGeneratedColumn()
   verification_id!: number;

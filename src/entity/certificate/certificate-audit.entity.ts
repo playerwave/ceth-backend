@@ -10,10 +10,10 @@ import {
 import { Certificate } from "./certificate.entity";
 
 @Entity()
-@Index("IDX_CERTIFICATE_ID_AUDIT", ["certificate_id"])
-@Index("IDX_ACTION_AUDIT", ["action"])
-@Index("IDX_PERFORMED_AT", ["performed_at"])
-@Index("IDX_PERFORMED_BY", ["performed_by"])
+@Index("idx_audit_certificate_id", ["certificate_id"])
+@Index("idx_audit_action", ["action"])
+@Index("idx_audit_performed_at", ["performed_at"])
+@Index("idx_audit_performed_by", ["performed_by"])
 export class CertificateAudit {
   @PrimaryGeneratedColumn()
   audit_id!: number;

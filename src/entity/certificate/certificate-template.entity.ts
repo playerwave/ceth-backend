@@ -8,9 +8,9 @@ import {
 } from "typeorm";
 
 @Entity()
-@Index("IDX_TEMPLATE_NAME", ["template_name"])
-@Index("IDX_ISSUER_ORGANIZATION", ["issuer_organization"])
-@Index("IDX_CERTIFICATE_TYPE", ["certificate_type"])
+@Index("idx_template_name", ["template_name"])
+@Index("idx_issuer_organization", ["issuer_organization"])
+@Index("idx_certificate_type", ["certificate_type"])
 export class CertificateTemplate {
   @PrimaryGeneratedColumn()
   template_id!: number;
