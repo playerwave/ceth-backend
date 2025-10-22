@@ -71,13 +71,13 @@ router.post(
 
 // GET: ดึง Certificate โดย ID
 router.get(
-  "/:id",
+  "/get-certificate/:id",
   wrapAsync(certificateController.getCertificateById)
 );
 
 // PUT: อัปเดต Certificate
 router.put(
-  "/:id",
+  "/update-certificate/:id",
   validateDTO(Object), // TODO: สร้าง DTO สำหรับ Certificate Update
   wrapAsync(certificateController.updateCertificate)
 );
@@ -97,7 +97,7 @@ router.get(
 
 // GET: ดึง Certificate ทั้งหมดของนิสิต
 router.get(
-  "/student/:studentId",
+  "/get-all-student-certificates/:studentId",
   wrapAsync(certificateController.getCertificatesByStudentId)
 );
 
@@ -113,14 +113,14 @@ router.get(
 
 // POST: สร้าง Certificate Base ใหม่
 router.post(
-  "/base/create",
+  "/create-certificate-base",
   validateDTO(Object), // TODO: สร้าง DTO สำหรับ Certificate Base
   wrapAsync(certificateController.createCertificateBase)
 );
 
 // GET: ดึง Certificate Base โดย Activity ID
 router.get(
-  "/base/activity/:activityId",
+  "/get-certificate-base-by-activity-id/:activityId",
   wrapAsync(certificateController.getCertificateBaseByActivityId)
 );
 
@@ -134,7 +134,7 @@ router.get(
 
 // GET: ดึง Certificate ที่รอการตรวจสอบ
 router.get(
-  "/pending/list",
+  "/get-pending-certificates/list",
   wrapAsync(certificateController.getPendingCertificates)
 );
 
