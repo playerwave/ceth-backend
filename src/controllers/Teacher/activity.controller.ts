@@ -16,17 +16,34 @@ export class ActivityController extends ErrorHandledController {
 
   public async create(req: Request, res: Response): Promise<void> {
     try {
+      console.log("🔍 [ActivityController] Creating activity with body:", req.body);
+      console.log("🔍 [ActivityController] Certificate fields in request:", {
+        certificate_template_url: req.body.certificate_template_url,
+        certificate_ocr_data: req.body.certificate_ocr_data,
+        certificate_image_analysis: req.body.certificate_image_analysis,
+        upload_certificate_description: req.body.upload_certificate_description
+      });
+
       const data = this.parseActivityPayload(req.body);
 
       // ✅ รองรับ selectedFoods หรือ foodIds
       const foodIds: number[] =
         req.body.selectedFoods || req.body.foodIds || [];
 
+      console.log("🔍 [ActivityController] Parsed data:", data);
+      console.log("🔍 [ActivityController] Certificate fields in parsed data:", {
+        certificate_template_url: data.certificate_template_url,
+        certificate_ocr_data: data.certificate_ocr_data,
+        certificate_image_analysis: data.certificate_image_analysis,
+        upload_certificate_description: data.upload_certificate_description
+      });
+
       const result = await this.activityService.createActivity({
         ...data,
         foodIds, // ✅ ส่งต่อชื่อเดียวกันไป service
       });
 
+      console.log("✅ [ActivityController] Activity created successfully:", result);
       res.status(201).json(result);
     } catch (error) {
       this.handleError("ActivityController.create", error, res);
@@ -146,7 +163,9 @@ export class ActivityController extends ErrorHandledController {
       if (forceDelete) {
         result = await this.activityService.hardDeleteActivity(id);
       } else {
-        result = await this.activityService.softDeleteActivity(id);
+        // ✅ ใช้ hard delete เป็น default เพื่อหลีกเลี่ยง TypeORM relationship issues
+        console.log("🗑️ [ActivityController] Using hard delete to avoid relationship issues");
+        result = await this.activityService.hardDeleteActivity(id);
       }
 
       if (!result) {
@@ -155,12 +174,64 @@ export class ActivityController extends ErrorHandledController {
       }
 
       res.status(200).json({
-        message: forceDelete
-          ? "Activity hard deleted successfully"
-          : "Activity soft deleted successfully",
+        message: "Activity deleted successfully",
       });
     } catch (error) {
       this.handleError("ActivityController.delete", error, res);
+    }
+  }
+
+  // ✅ เพิ่ม endpoint เพื่อตรวจสอบข้อมูล certificate template
+  public async debugCertificateTemplate(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.id);
+      
+      // ตรวจสอบข้อมูลในฐานข้อมูลโดยตรง
+      const { ActivityDao } = await import("../../daos/Teacher/activity.dao");
+      const { CertificateDao } = await import("../../daos/Teacher/certificate.dao");
+      
+      const activityDao = new ActivityDao();
+      const certificateDao = new CertificateDao();
+      
+      // 1. ตรวจสอบ activity
+      const activity = await activityDao.findById(id);
+      console.log("🔍 [Debug] Activity from DB:", {
+        activity_id: activity?.activity_id,
+        certificate_base_id: activity?.certificate_base_id
+      });
+      
+      // 2. ตรวจสอบ certificate base
+      if (activity?.certificate_base_id) {
+        const dataSource = await import("../../db/database");
+        const { CertificateBase } = await import("../../entity/certificate/certificate-base.entity");
+        const conn = await dataSource.connectDatabase();
+        const certificateBaseRepo = conn.getRepository(CertificateBase);
+        const certificateBase = await certificateBaseRepo.findOne({
+          where: { activity_id: id }
+        });
+        console.log("🔍 [Debug] Certificate base:", certificateBase);
+      } else {
+        console.log("⚠️ [Debug] No certificate_base_id found");
+      }
+      
+      // 3. ตรวจสอบตาราง certificate_base ทั้งหมด
+      const dataSource = await import("../../db/database");
+      const { CertificateBase } = await import("../../entity/certificate/certificate-base.entity");
+      const conn = await dataSource.connectDatabase();
+      const certificateBaseRepo = conn.getRepository(CertificateBase);
+      const allCertificateBases = await certificateBaseRepo.find();
+      console.log("🔍 [Debug] All certificate bases:", allCertificateBases);
+      
+      res.status(200).json({
+        activity: {
+          activity_id: activity?.activity_id,
+          certificate_base_id: activity?.certificate_base_id
+        },
+        hasTemplate: !!activity?.certificate_base_id,
+        allTemplates: allCertificateBases
+      });
+    } catch (error) {
+      this.handleError("ActivityController.debugCertificateTemplate", error, res);
     }
   }
 
@@ -233,6 +304,11 @@ export class ActivityController extends ErrorHandledController {
       url: body.url || "ไม่ระบุ",
       assessment_id: this.parseOptionalInt(body.assessment_id, null),
       room_id: this.parseOptionalInt(body.room_id, null),
+      // ✅ เพิ่ม certificate fields
+      certificate_template_url: body.certificate_template_url || null,
+      certificate_ocr_data: body.certificate_ocr_data || null,
+      certificate_image_analysis: body.certificate_image_analysis || null,
+      upload_certificate_description: body.upload_certificate_description || null,
     };
   }
 
@@ -263,6 +339,11 @@ export class ActivityController extends ErrorHandledController {
       url: body.url || "ไม่ระบุ",
       assessment_id: this.parseOptionalInt(body.assessment_id, null),
       room_id: this.parseOptionalInt(body.room_id, null),
+      // ✅ เพิ่ม certificate fields สำหรับ update
+      certificate_template_url: body.certificate_template_url || null,
+      certificate_ocr_data: body.certificate_ocr_data || null,
+      certificate_image_analysis: body.certificate_image_analysis || null,
+      upload_certificate_description: body.upload_certificate_description || null,
     };
   }
 
@@ -819,6 +900,7 @@ export const activityController = {
   getSearch: controller.getSearch.bind(controller),
   // getById: controller.getById.bind(controller),
   search: controller.search.bind(controller), // ✅ เพิ่ม search method
+  debugCertificateTemplate: controller.debugCertificateTemplate.bind(controller), // ✅ เพิ่ม debug method
   getEnrolledStudentsForActivity: controller.getEnrolledStudentsForActivity.bind(controller),
   // ActivityDetail methods
   getAllActivityDetails: controller.getAllActivityDetails.bind(controller),

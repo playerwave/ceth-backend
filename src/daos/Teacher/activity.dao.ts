@@ -264,6 +264,9 @@ export class ActivityDao extends ErrorHandledDao {
       console.log("⏰ recieve_hours:", data.recieve_hours);
       console.log("🏢 room_id:", data.room_id);
       console.log("📊 assessment_id:", data.assessment_id);
+      console.log("🔍 Certificate base ID in DAO:", {
+        certificate_base_id: data.certificate_base_id
+      });
 
       // 🛡️ Logging sanitized dates
       console.log("🛡️ Final sanitized dates:", {
@@ -284,12 +287,14 @@ export class ActivityDao extends ErrorHandledDao {
           start_register_date, end_register_date, start_activity_date, end_activity_date,
           start_assessment, end_assessment,
           image_url, activity_status, activity_state, status, url, room_id, assessment_id,
-          last_update_activity_date
+          last_update_activity_date,
+          certificate_base_id
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8,
           $9,
           $10, $11, $12, $13, $14, $15,
-          $16, $17, $18, $19, $20, $21, $22, $23
+          $16, $17, $18, $19, $20, $21, $22, $23,
+          $24
         ) RETURNING *
         `,
         [
@@ -301,13 +306,13 @@ export class ActivityDao extends ErrorHandledDao {
           data.recieve_hours ?? 0,
           data.event_format || "Online",
           new Date(), // create_activity_date
-          this.sanitizeDate(data.special_start_register_date) || null, // 🟩 เพิ่มตรงนี้
+          this.sanitizeDate(data.special_start_register_date) || null,
           this.sanitizeDate(data.start_register_date) || null,
           this.sanitizeDate(data.end_register_date) || null,
           this.sanitizeDate(data.start_activity_date) || null,
           this.sanitizeDate(data.end_activity_date) || null,
-          this.sanitizeDate(data.start_assessment) || null, // 🟩 เพิ่ม start_assessment
-          this.sanitizeDate(data.end_assessment) || null, // 🟩 เพิ่ม end_assessment
+          this.sanitizeDate(data.start_assessment) || null,
+          this.sanitizeDate(data.end_assessment) || null,
           data.image_url || "ไม่ระบุ",
           data.activity_status || "Private",
           data.activity_state || "Not Start",
@@ -315,7 +320,8 @@ export class ActivityDao extends ErrorHandledDao {
           data.url || "ไม่ระบุ",
           data.room_id ?? null,
           data.assessment_id ?? null,
-          new Date(),
+          new Date(), // last_update_activity_date
+          data.certificate_base_id ?? null, // ✅ ใช้ certificate_base_id
         ]
       );
 
@@ -632,36 +638,43 @@ export class ActivityDao extends ErrorHandledDao {
     await this.checkConnection();
 
     // ✅ ดึงข้อมูลด้วยรูปแบบเวลาเป็น string ไม่ทำให้ timezone ขยับ
+    // ✅ JOIN กับ activity_certificate_template เพื่อดึงข้อมูล certificate template
     const rows: any[] = await this.dataSource!.query(
       `
         SELECT 
-          activity_id,
-          activity_name,
-          presenter_company_name,
-          type,
-          description,
-          seat,
-          recieve_hours,
-          event_format,
-          to_char(create_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as create_activity_date,
-          to_char(special_start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as special_start_register_date,
-          to_char(start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_register_date,
-          to_char(end_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_register_date,
-          to_char(start_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_activity_date,
-          to_char(end_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_activity_date,
-          to_char(start_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_assessment,
-          to_char(end_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_assessment,
-          image_url,
-          activity_status,
-          activity_state,
-          status,
-          to_char(last_update_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as last_update_activity_date,
-          url,
-          room_id,
-          assessment_id,
-          COALESCE(registered_count, 0) as registered_count
-        FROM activity
-        WHERE activity_id = $1
+          a.activity_id,
+          a.activity_name,
+          a.presenter_company_name,
+          a.type,
+          a.description,
+          a.seat,
+          a.recieve_hours,
+          a.event_format,
+          to_char(a.create_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as create_activity_date,
+          to_char(a.special_start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as special_start_register_date,
+          to_char(a.start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_register_date,
+          to_char(a.end_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_register_date,
+          to_char(a.start_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_activity_date,
+          to_char(a.end_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_activity_date,
+          to_char(a.start_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_assessment,
+          to_char(a.end_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_assessment,
+          a.image_url,
+          a.activity_status,
+          a.activity_state,
+          a.status,
+          to_char(a.last_update_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as last_update_activity_date,
+          a.url,
+          a.room_id,
+          a.assessment_id,
+          COALESCE(a.registered_count, 0) as registered_count,
+          a.certificate_base_id,
+          cb.template_image_url as certificate_template_url,
+          cb.ocr_data as certificate_ocr_data,
+          cb.image_analysis as certificate_image_analysis,
+          cb.description as upload_certificate_description
+        FROM activity a
+        LEFT JOIN certificate_base cb ON a.certificate_base_id = cb.certificate_base_id
+        WHERE a.activity_id = $1
       `,
       [id]
     );
@@ -669,8 +682,57 @@ export class ActivityDao extends ErrorHandledDao {
     const row = rows?.[0];
     if (!row) return null;
 
+    // ✅ Debug: ตรวจสอบ certificate fields
+    console.log("🔍 [ActivityDAO] Certificate fields from DB:", {
+      activity_id: row.activity_id,
+      activity_name: row.activity_name,
+      event_format: row.event_format,
+      certificate_base_id: row.certificate_base_id,
+      certificateBase_template_url: row.certificate_template_url,
+      certificateBase_description: row.upload_certificate_description,
+      // Backward compatibility
+      certificate_template_url: row.certificate_template_url,
+      upload_certificate_description: row.upload_certificate_description,
+      certificate_ocr_data: row.certificate_ocr_data,
+      certificate_image_analysis: row.certificate_image_analysis
+    });
+
+    // Log detailed certificate base information
+    if (row.certificate_base_id) {
+      console.log("📄 [ActivityDAO] Certificate base found in database:", {
+        activity_id: row.activity_id,
+        certificate_base_id: row.certificate_base_id,
+        template_image_url: row.certificate_template_url,
+        description: row.upload_certificate_description,
+        has_ocr_data: !!row.certificate_ocr_data,
+        has_image_analysis: !!row.certificate_image_analysis,
+        ocr_data_keys: row.certificate_ocr_data ? Object.keys(row.certificate_ocr_data) : [],
+        image_analysis_keys: row.certificate_image_analysis ? Object.keys(row.certificate_image_analysis) : []
+      });
+    } else {
+      console.log("⚠️ [ActivityDAO] No certificate base found for activity:", row.activity_id);
+    }
+
+    // ✅ สร้าง certificateBase object
+    const certificateBase = row.certificate_base_id ? {
+      certificate_base_id: row.certificate_base_id,
+      activity_id: row.activity_id,
+      certificate_name: `Certificate for ${row.activity_name}`,
+      certificate_source: "Course Activity",
+      template_image_url: row.certificate_template_url,
+      ocr_data: row.certificate_ocr_data,
+      image_analysis: row.certificate_image_analysis,
+      description: row.upload_certificate_description,
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    } : null;
+
+    console.log("🔍 [ActivityDAO] Constructed certificateBase object:", certificateBase);
+
     // เติม field ที่ frontend คาดหวัง
     (row as any).activityFood = (row as any).activityFood ?? [];
+    (row as any).certificateBase = certificateBase;
 
     return row as unknown as Activity;
   }
@@ -2751,6 +2813,77 @@ export class ActivityDao extends ErrorHandledDao {
     } catch (error) {
       console.error("❌ Error resetting assessment for activity:", error);
       this.logDbError("resetAssessmentForActivity", error);
+      throw error;
+    }
+  }
+
+  // ✅ เพิ่ม methods สำหรับลบ related records
+  public async deleteActivityFoods(activityId: number): Promise<void> {
+    await this.checkConnection();
+    try {
+      console.log("🗑️ [ActivityDao] Deleting activity_food records for activity:", activityId);
+      await this.dataSource!.query(
+        "DELETE FROM activity_food WHERE activity_id = $1",
+        [activityId]
+      );
+      console.log("✅ [ActivityDao] Deleted activity_food records");
+    } catch (error) {
+      console.error("❌ [ActivityDao] Error deleting activity_food records:", error);
+      throw error;
+    }
+  }
+
+  public async deleteActivityDetails(activityId: number): Promise<void> {
+    await this.checkConnection();
+    try {
+      console.log("🗑️ [ActivityDao] Deleting activity_detail records for activity:", activityId);
+      await this.dataSource!.query(
+        "DELETE FROM activity_detail WHERE activity_id = $1",
+        [activityId]
+      );
+      console.log("✅ [ActivityDao] Deleted activity_detail records");
+    } catch (error) {
+      console.error("❌ [ActivityDao] Error deleting activity_detail records:", error);
+      throw error;
+    }
+  }
+
+  public async deleteCertificateTemplate(activityId: number): Promise<void> {
+    await this.checkConnection();
+    try {
+      console.log("🗑️ [ActivityDao] Deleting certificate base for activity:", activityId);
+      
+      // ✅ ลบโดยใช้ activity_id โดยตรง (เพราะ certificate_base มี FK ไปหา activity)
+      const result = await this.dataSource!.query(
+        "DELETE FROM certificate_base WHERE activity_id = $1 RETURNING certificate_base_id",
+        [activityId]
+      );
+      
+      if (result.length > 0) {
+        console.log("✅ [ActivityDao] Deleted certificate base:", result[0].certificate_base_id);
+      } else {
+        console.log("ℹ️ [ActivityDao] No certificate base found for activity:", activityId);
+      }
+    } catch (error) {
+      console.error("❌ [ActivityDao] Error deleting certificate template:", error);
+      throw error;
+    }
+  }
+
+  public async deleteQrCodes(activityId: number): Promise<void> {
+    await this.checkConnection();
+    try {
+      console.log("🗑️ [ActivityDao] Deleting qr_code records for activity:", activityId);
+      
+      // ลบ qr_code records ที่อ้างอิง activity_id
+      const result = await this.dataSource!.query(
+        "DELETE FROM qr_code WHERE activity_id = $1",
+        [activityId]
+      );
+      
+      console.log("✅ [ActivityDao] Deleted qr_code records for activity:", activityId);
+    } catch (error) {
+      console.error("❌ [ActivityDao] Error deleting qr_code records:", error);
       throw error;
     }
   }

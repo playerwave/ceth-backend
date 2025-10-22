@@ -80,7 +80,15 @@ router.put(
 );
 
 // DELETE METHOD
-router.delete("/delete-activity/:id", wrapAsync(activityController.delete));
+// ✅ ไม่ใช้ body-parser สำหรับ DELETE request
+router.delete("/delete-activity/:id", 
+  (req, res, next) => {
+    // ✅ Skip body parsing สำหรับ DELETE request
+    console.log("🗑️ [DELETE] Activity delete request for ID:", req.params.id);
+    next();
+  },
+  wrapAsync(activityController.delete)
+);
 
 // // GET METHOD
 
@@ -91,6 +99,9 @@ router.get("/get-activities", wrapAsync(activityController.getAll));
 router.get("/get-activities-history", wrapAsync(activityController.getActivityByHistory));
 
 router.get("/get-activity/:id", wrapAsync(activityController.getActivity));
+
+// ✅ เพิ่ม debug route สำหรับตรวจสอบ certificate template
+router.get("/debug-certificate/:id", wrapAsync(activityController.debugCertificateTemplate));
 
 // ✅ เพิ่ม search route
 router.get("/search", (activityController.search));

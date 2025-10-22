@@ -1098,29 +1098,29 @@ export class ActivityDao extends ErrorHandledDao {
   public async checkAssessmentStatus(activityId: number, studentId: number): Promise<{ hasSubmitted: boolean; assessmentName?: string; submittedDate?: Date }> {
     await this.checkConnection();
     try {
-      const sql = `
-        SELECT 
-          CASE 
-            WHEN a.answer_id IS NOT NULL 
-            THEN true 
-            ELSE false 
-          END as has_submitted,
-          asm.assessment_name,
-          j.join_date as submitted_date,
-          j.status as join_status,
-          a.answer_id,
-          j.join_id
-        FROM activity ac
-        INNER JOIN assessment asm ON ac.assessment_id = asm.assessment_id
-        LEFT JOIN "join" j ON j.students_id = $2 AND j.activity_detail_id IN (
-          SELECT ad.activity_detail_id 
-          FROM activity_detail ad 
-          WHERE ad.activity_id = $1
-        )
-        LEFT JOIN answer a ON a.join_id = j.join_id AND a.assessment_id = asm.assessment_id
-        WHERE ac.activity_id = $1
-        LIMIT 1
-      `;
+           const sql = `
+             SELECT 
+               CASE 
+                 WHEN a.answer_id IS NOT NULL 
+                 THEN true 
+                 ELSE false 
+               END as has_submitted,
+               asm.assessment_name,
+               j.submitted_date,
+               j.status as join_status,
+               a.answer_id,
+               j.join_id
+             FROM activity ac
+             INNER JOIN assessment asm ON ac.assessment_id = asm.assessment_id
+             LEFT JOIN "join" j ON j.students_id = $2 AND j.activity_detail_id IN (
+               SELECT ad.activity_detail_id 
+               FROM activity_detail ad 
+               WHERE ad.activity_id = $1
+             )
+             LEFT JOIN answer a ON a.join_id = j.join_id AND a.assessment_id = asm.assessment_id
+             WHERE ac.activity_id = $1
+             LIMIT 1
+           `;
       
       const result = await this.dataSource?.query(sql, [activityId, studentId]);
       

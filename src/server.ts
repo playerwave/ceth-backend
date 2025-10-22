@@ -29,6 +29,8 @@ import teacherActivityReportRoute from "./routes/Teacher/activity-report.route";
 import teacherUserManagementRoute from "./routes/Teacher/user-management.route";
 import teacherUltraOptimizedUserManagementRoute from "./routes/Teacher/ultra-optimized-user-management.route";
 import teacherEventCoopRoute from "./routes/Teacher/event-coop.route";
+import teacherCertificateRoute from "./routes/Teacher/certificate.route";
+import certificateTemplateRoute from "./routes/Teacher/certificate-template.route";
 
 import studentActivityRoute from "./routes/Student/activity.route";
 import studentAssessmentRoute from "./routes/Student/assessment.route";
@@ -136,9 +138,14 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // ✅ เก็บ bodyParser.urlencoded เอาไว้เผื่อ route เก่าใช้
+// ✅ แก้ไข: ไม่ parse body สำหรับ DELETE request
 app.use((req, res, next) => {
   if (["POST", "PUT", "PATCH"].includes(req.method)) {
     bodyParser.urlencoded({ limit: "10mb", extended: true })(req, res, next);
+  } else if (req.method === "DELETE") {
+    // ✅ Skip body parsing สำหรับ DELETE request
+    console.log("🗑️ [BodyParser] Skipping body parsing for DELETE request:", req.url);
+    next();
   } else {
     next();
   }
@@ -178,6 +185,8 @@ app.use("/api/teacher/activity-report", teacherActivityReportRoute);
 app.use("/api/teacher/user-management", teacherUserManagementRoute);
 app.use("/api/teacher/ultra-optimized", teacherUltraOptimizedUserManagementRoute);
 app.use("/api/teacher/event-coop", teacherEventCoopRoute);
+app.use("/api/teacher/certificate", teacherCertificateRoute);
+app.use("/api/teacher/certificate-template", certificateTemplateRoute);
 
 // student
 app.use("/api/student/activity", studentActivityRoute);

@@ -2,9 +2,13 @@ import { ActivityDao } from "../../daos/Teacher/activity.dao";
 import { AssessmentDao } from "../../daos/Teacher/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
 import { Assessment } from "../../entity/assessment/assessment.entity";
+import { CertificateBase } from "../../entity/certificate/certificate-base.entity";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 import { RoomService } from "./room.service";
+import { smartCache } from "../../utils/smart-cache";
+import { cacheInvalidator } from "../../utils/cache-invalidator";
+import { connectDatabase } from "../../db/database";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
@@ -15,6 +19,8 @@ export class ActivityService extends ErrorHandledService {
     input: Activity & { foodIds?: number[]; floor?: string }
   ): Promise<Activity> {
     try {
+      console.log("🔍 [ActivityService] Creating activity with input:", input);
+
       const { foodIds, floor, ...activityData } = input;
 
       // ดึงข้อมูล Assessment ถ้ามี assessment_id
@@ -30,6 +36,12 @@ export class ActivityService extends ErrorHandledService {
           console.error("❌ Error fetching assessment:", error);
         }
       }
+
+      // ✅ Extract certificate data from input
+      const certificate_template_url = (input as any).certificate_template_url;
+      const certificate_ocr_data = (input as any).certificate_ocr_data;
+      const certificate_image_analysis = (input as any).certificate_image_analysis;
+      const upload_certificate_description = (input as any).upload_certificate_description || null;
 
       const sanitizedData: Partial<Activity> = {
         ...activityData,
@@ -57,6 +69,31 @@ export class ActivityService extends ErrorHandledService {
         sanitizedData,
         foodIds ?? []
       );
+
+      // ✅ Create CertificateBase if certificate_template_url exists
+      if (certificate_template_url && created.activity_id) {
+        console.log("📄 [ActivityService] Creating CertificateBase for activity:", created.activity_id);
+        const connection = await connectDatabase();
+        const certificateBaseRepo = connection.getRepository(CertificateBase);
+
+        const certificateBase = certificateBaseRepo.create({
+          activity_id: created.activity_id,
+          certificate_name: `Certificate for ${created.activity_name}`,
+          certificate_source: "Course Activity",
+          template_image_url: certificate_template_url,
+          ocr_data: certificate_ocr_data || null,
+          image_analysis: certificate_image_analysis || null,
+          description: upload_certificate_description,
+          is_active: true,
+        });
+
+        const savedCertificateBase = await certificateBaseRepo.save(certificateBase);
+        console.log("✅ [ActivityService] CertificateBase created:", savedCertificateBase.certificate_base_id);
+
+        // ✅ Update activity with certificate_base_id
+        created.certificate_base_id = savedCertificateBase.certificate_base_id;
+        await connection.getRepository(Activity).save(created);
+      }
 
       await redis.del("activity:all");
 
@@ -126,7 +163,9 @@ export class ActivityService extends ErrorHandledService {
 
     while (retries > 0) {
       try {
-        // ✅ ลองดึงจาก cache ก่อน
+        // 🔧 ปิด cache ชั่วคราวเพื่อแก้ปัญหาทันที
+        // TODO: เปิดใช้ cache ใหม่หลังจากแก้ไข smart cache system
+        /*
         try {
           const cached = await redis.get(cacheKey);
           if (cached) {
@@ -136,6 +175,7 @@ export class ActivityService extends ErrorHandledService {
         } catch (cacheError) {
           console.warn("⚠️ Cache read error, proceeding to database:", cacheError);
         }
+        */
 
         // ✅ ดึงจาก database
         const activities = await this.activityDao.getAllActivitiesDao();
@@ -151,12 +191,15 @@ export class ActivityService extends ErrorHandledService {
           return [];
         }
 
-        // ✅ เก็บลง cache เฉพาะเมื่อได้ข้อมูลสำเร็จ
+        // 🔧 ปิด cache ชั่วคราว
+        // TODO: เปิดใช้ cache ใหม่หลังจากแก้ไข smart cache system
+        /*
         try {
           await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
         } catch (cacheError) {
           console.warn("⚠️ Cache write error, but data retrieved successfully:", cacheError);
         }
+        */
 
         this.logInfo("📤 Activity data retrieved and cached", {
           count: activities.length,
@@ -205,7 +248,37 @@ export class ActivityService extends ErrorHandledService {
 
       // ✅ ดึงจาก DAO
       const activity = await this.activityDao.findById(activity_id);
-      if (!activity) return null;
+      if (!activity) {
+        this.logInfo("Activity not found", { activity_id });
+        return null;
+      }
+
+      // ✅ Fetch certificate base if it exists
+      if (activity.certificate_base_id) {
+        console.log("🚀 [ActivityService] Fetching certificate base for activity_id:", activity_id);
+        const connection = await connectDatabase();
+        const certificateBaseRepo = connection.getRepository(CertificateBase);
+        const certificateBase = await certificateBaseRepo.findOne({
+          where: { activity_id: activity_id }
+        });
+
+        if (certificateBase) {
+          console.log("📄 [ActivityService] Certificate base found:", {
+            certificate_base_id: certificateBase.certificate_base_id,
+            template_image_url: certificateBase.template_image_url
+          });
+
+          // Map the certificate base data to the activity object
+          (activity as any).certificateBase = certificateBase;
+          // For backward compatibility with old frontend fields
+          (activity as any).certificate_template_url = certificateBase.template_image_url;
+          (activity as any).certificate_ocr_data = certificateBase.ocr_data;
+          (activity as any).certificate_image_analysis = certificateBase.image_analysis;
+          (activity as any).upload_certificate_description = certificateBase.description;
+        } else {
+          console.log("⚠️ [ActivityService] No certificate base found for activity:", activity_id);
+        }
+      }
 
       // ✅ เก็บลง cache
       await redis.set(cacheKey, JSON.stringify(activity), "EX", 60);
@@ -243,7 +316,9 @@ export class ActivityService extends ErrorHandledService {
     }
 
     if (input.activity_status === "Public") {
+      // ✅ Skip registration date validation สำหรับ Course activities
       if (
+        input.event_format !== "Course" &&
         input.special_start_register_date &&
         input.special_start_register_date >= input.start_activity_date!
       ) {
@@ -252,12 +327,15 @@ export class ActivityService extends ErrorHandledService {
         );
       }
       if (
+        input.event_format !== "Course" &&
         input.start_register_date &&
         input.start_register_date >= input.start_activity_date!
       ) {
         throw new Error("start_register_date ต้องน้อยกว่า start_activity_date");
       }
+      // ✅ Skip registration date validation สำหรับ Course activities
       if (
+        input.event_format !== "Course" &&
         input.end_register_date &&
         input.start_register_date &&
         input.end_register_date <= input.start_register_date
@@ -326,6 +404,61 @@ export class ActivityService extends ErrorHandledService {
     this.logInfo("✅ Activity updated in DB", { activity_id, updated });
     this.logInfo("🍽️ Food assignment", { foods });
 
+    // ✅ Update or Create CertificateBase if certificate_template_url exists
+    const certificate_template_url = (input as any).certificate_template_url;
+    const certificate_ocr_data = (input as any).certificate_ocr_data;
+    const certificate_image_analysis = (input as any).certificate_image_analysis;
+    const upload_certificate_description = (input as any).upload_certificate_description || null;
+    
+    console.log("🔍 [ActivityService] Certificate fields in update:", {
+      certificate_template_url,
+      certificate_ocr_data,
+      certificate_image_analysis,
+      upload_certificate_description
+    });
+
+    if (certificate_template_url) {
+      console.log("📄 [ActivityService] Updating CertificateBase for activity:", activity_id);
+      const connection = await connectDatabase();
+      const certificateBaseRepo = connection.getRepository(CertificateBase);
+
+      // Check if CertificateBase exists
+      const existingCertificateBase = await certificateBaseRepo.findOne({
+        where: { activity_id }
+      });
+
+      if (existingCertificateBase) {
+        // Update existing
+        existingCertificateBase.template_image_url = certificate_template_url;
+        existingCertificateBase.ocr_data = certificate_ocr_data || existingCertificateBase.ocr_data;
+        existingCertificateBase.image_analysis = certificate_image_analysis || existingCertificateBase.image_analysis;
+        existingCertificateBase.description = upload_certificate_description || existingCertificateBase.description;
+        existingCertificateBase.updated_at = new Date();
+
+        await certificateBaseRepo.save(existingCertificateBase);
+        console.log("✅ [ActivityService] CertificateBase updated");
+      } else {
+        // Create new
+        const certificateBase = certificateBaseRepo.create({
+          activity_id,
+          certificate_name: `Certificate for ${updated.activity_name}`,
+          certificate_source: "Course Activity",
+          template_image_url: certificate_template_url,
+          ocr_data: certificate_ocr_data || null,
+          image_analysis: certificate_image_analysis || null,
+          description: upload_certificate_description,
+          is_active: true,
+        });
+
+        const savedCertificateBase = await certificateBaseRepo.save(certificateBase);
+        console.log("✅ [ActivityService] CertificateBase created:", savedCertificateBase.certificate_base_id);
+
+        // ✅ Update activity with certificate_base_id
+        updated.certificate_base_id = savedCertificateBase.certificate_base_id;
+        await connection.getRepository(Activity).save(updated);
+      }
+    }
+
     if (input.event_format === "Onsite" && input.room_id && input.floor) {
       await this.roomService.updateRoomFloor(input.room_id, input.floor.trim());
     }
@@ -381,7 +514,29 @@ export class ActivityService extends ErrorHandledService {
       const activity = await this.activityDao.findById(activity_id);
       if (!activity) return false;
 
+      // ✅ ลบ related records ก่อน (activity_food, activity_detail, etc.)
+      console.log("🗑️ [ActivityService] Deleting related records for activity:", activity_id);
+      
+      // 1. ลบ activity_food records
+      await this.activityDao.deleteActivityFoods(activity_id);
+      console.log("✅ [ActivityService] Deleted activity_food records");
+      
+      // 2. ลบ activity_detail records
+      await this.activityDao.deleteActivityDetails(activity_id);
+      console.log("✅ [ActivityService] Deleted activity_detail records");
+      
+      // 3. ลบ certificate template (ถ้ามี)
+      await this.activityDao.deleteCertificateTemplate(activity_id);
+      console.log("✅ [ActivityService] Deleted certificate template");
+      
+      // 4. ลบ qr_code records (ถ้ามี)
+      await this.activityDao.deleteQrCodes(activity_id);
+      console.log("✅ [ActivityService] Deleted qr_code records");
+      
+      // 5. ลบ activity หลัก
       await this.activityDao.delete(activity_id);
+      console.log("✅ [ActivityService] Deleted main activity");
+      
       await redis.del("activity:all");
 
       this.logInfo("🗑️ Activity hard deleted", { activity_id });

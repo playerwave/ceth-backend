@@ -52,20 +52,20 @@ export class CreateActivityDto {
   @IsInt()
   recieve_hours: number = 0;
 
-  @ValidateIf((o) => o.activity_status === "Public")
+  @ValidateIf((o) => o.activity_status === "Public" && o.event_format !== "Course")
   @IsDate()
   @Type(() => Date)
-  special_start_register_date!: Date;
+  special_start_register_date?: Date;
 
-  @ValidateIf((o) => o.activity_status === "Public")
+  @ValidateIf((o) => o.activity_status === "Public" && o.event_format !== "Course")
   @IsDate()
   @Type(() => Date)
-  start_register_date!: Date;
+  start_register_date?: Date;
 
-  @ValidateIf((o) => o.activity_status === "Public")
+  @ValidateIf((o) => o.activity_status === "Public" && o.event_format !== "Course")
   @IsDate()
   @Type(() => Date)
-  end_register_date!: Date;
+  end_register_date?: Date;
 
   @ValidateIf((o) => o.activity_status === "Public")
   @IsDate()
@@ -113,9 +113,9 @@ export class CreateActivityDto {
   @IsUrl({}, { message: "url ต้องเป็นลิงก์ที่ถูกต้อง" })
   url?: string;
 
-  @ValidateIf((o) => o.activity_status === "Public")
+  @ValidateIf((o) => o.activity_status === "Public" && o.event_format !== "Course")
   @IsInt()
-  assessment_id!: number;
+  assessment_id?: number;
 
   @ValidateIf(
     (o) => o.event_format === "Onsite" && o.activity_status === "Public"
@@ -129,4 +129,23 @@ export class CreateActivityDto {
   @IsOptional()
   @IsArray()
   foodIds?: number[];
+
+  // ✅ Certificate fields สำหรับ Course
+  @ValidateIf((o) => o.event_format === "Course")
+  @IsOptional()
+  @IsString()
+  upload_certificate_description?: string;
+
+  @ValidateIf((o) => o.event_format === "Course")
+  @IsOptional()
+  @IsString()
+  certificate_template_url?: string;
+
+  @ValidateIf((o) => o.event_format === "Course")
+  @IsOptional()
+  certificate_ocr_data?: any;
+
+  @ValidateIf((o) => o.event_format === "Course")
+  @IsOptional()
+  certificate_image_analysis?: any;
 }

@@ -46,6 +46,7 @@
     "pg": "^8.13.3",
     "redis": "^4.7.1",
     "reflect-metadata": "^0.2.2",
+    "sharp": "^0.34.4",
     "streamifier": "^0.1.1",
     "typeorm": "^0.3.25",
     "uuid": "^9.0.1",

@@ -41,6 +41,16 @@ export class Join {
   )
   join_date?: Date;
 
+  @Column({ type: "timestamp", nullable: true })
+  @Transform(({ value }) =>
+    value
+      ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
+          timeZone: "Asia/Bangkok",
+        })
+      : null
+  )
+  submitted_date?: Date;
+
   @Column({
     type: "enum",
     enum: ["Pending", "Completed", "Cancelled"],

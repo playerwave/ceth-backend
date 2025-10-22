@@ -72,4 +72,40 @@ export const uploadExcel = multer({
   }
 });
 
+// ✅ Upload สำหรับรูปภาพ (Certificate Template, Activity Images)
+export const uploadImage = multer({
+  storage: memoryStorage, // ✅ เปลี่ยนเป็น memoryStorage เพื่อให้มี buffer
+  fileFilter: (req, file, cb) => {
+    console.log("🔍 [Multer] File filter - File info:", {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      encoding: file.encoding
+    });
+    // รองรับไฟล์รูปภาพ
+    const allowedMimes = [
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ];
+    
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
+      console.log("✅ [Multer] File accepted:", file.originalname);
+      cb(null, true);
+    } else {
+      console.log("❌ [Multer] File rejected:", file.originalname, "MIME:", file.mimetype);
+      const error = new Error('รองรับเฉพาะไฟล์รูปภาพ (.jpg, .jpeg, .png, .gif, .webp) เท่านั้น');
+      cb(error as any, false);
+    }
+  },
+  limits: {
+    fileSize: 20 * 1024 * 1024 // 20MB
+  }
+});
+
 export default upload;

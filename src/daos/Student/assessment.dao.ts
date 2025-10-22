@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { connectDatabase } from "../../db/database";
+import { cacheInvalidator } from "../../utils/cache-invalidator";
 
 export class AssessmentDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;
@@ -597,7 +598,7 @@ export class AssessmentDao extends ErrorHandledDao {
     }
   }
 
-  // ✅ เมธอดใหม่: อัพเดท join_status เป็น 'Completed'
+  // ✅ เมธอดใหม่: อัพเดท join_status เป็น 'Completed' และ submitted_date
   public async updateJoinStatusToCompleted(join_id: number): Promise<void> {
     await this.checkConnection();
     try {
@@ -605,12 +606,21 @@ export class AssessmentDao extends ErrorHandledDao {
       
       const query = `
         UPDATE "join" 
-        SET status = 'Completed' 
+        SET status = 'Completed', submitted_date = NOW() 
         WHERE join_id = $1
       `;
       
       const result = await this.dataSource!.query(query, [join_id]);
-      console.log(`✅ [AssessmentDao] Join status updated to Completed for join_id: ${join_id}`);
+      console.log(`✅ [AssessmentDao] Join status updated to Completed and submitted_date set for join_id: ${join_id}`);
+      
+      // ลบ cache ที่เกี่ยวข้อง
+      try {
+        // TODO: ต้องหา activityId และ studentId เพื่อลบ cache
+        await cacheInvalidator.invalidateActivityCache();
+        console.log(`✅ [AssessmentDao] Cache invalidated after status update`);
+      } catch (cacheError) {
+        console.warn(`⚠️ [AssessmentDao] Cache invalidation failed:`, cacheError);
+      }
     } catch (error) {
       this.logDbError("updateJoinStatusToCompleted", error);
       throw new Error("❌ Failed to update join status to Completed");
