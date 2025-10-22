@@ -16,6 +16,10 @@ import { Choice } from "../entity/assessment/choice.entity";
 import { Answer } from "../entity/assessment/answer.entity";
 import { Assessment } from "../entity/assessment/assessment.entity";
 import { Certificate } from "../entity/certificate/certificate.entity";
+import { CertificateBase } from "../entity/certificate/certificate-base.entity";
+import { CertificateAudit } from "../entity/certificate/certificate-audit.entity";
+import { CertificateVerification } from "../entity/certificate/certificate-verification.entity";
+import { CertificateTemplate } from "../entity/certificate/certificate-template.entity";
 import { Activity } from "../entity/activity.entity";
 import { ActivityDetail } from "../entity/activitydetail.entity";
 import { Join } from "../entity/join.entity";
@@ -116,6 +120,10 @@ class DatabaseManager {
           Answer,
           Assessment,
           Certificate,
+          CertificateBase,
+          CertificateAudit,
+          CertificateVerification,
+          CertificateTemplate,
           Activity,
           ActivityDetail,
           Join,
