@@ -201,10 +201,17 @@ export class ActivityDao extends ErrorHandledDao {
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
           AND (
-            (a.activity_state IN ('Special Open Register', 'Open Register')
-             AND COALESCE(a.registered_count, 0) < a.seat)
+            (
+              (a.event_format = 'Onsite' OR a.event_format = 'Online') 
+              AND a.activity_state IN ('Start Activity', 'End Activity')
+              AND a.activity_state IN ('Special Open Register', 'Open Register')
+              AND COALESCE(a.registered_count, 0) < a.seat
+            )
             OR
-            (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
+            (
+              a.event_format = 'Course' 
+              AND a.activity_state = 'Start Activity'
+            )
           )
           AND NOT EXISTS (
             SELECT 1
@@ -224,10 +231,17 @@ export class ActivityDao extends ErrorHandledDao {
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
           AND (
-            (a.activity_state = 'Open Register'
-             AND COALESCE(a.registered_count, 0) < a.seat)
+            (
+              (a.event_format = 'Onsite' OR a.event_format = 'Online') 
+              AND a.activity_state IN ('Start Activity', 'End Activity')
+              AND a.activity_state = 'Open Register'
+              AND COALESCE(a.registered_count, 0) < a.seat
+            )
             OR
-            (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
+            (
+              a.event_format = 'Course' 
+              AND a.activity_state = 'Start Activity'
+            )
           )
           AND NOT EXISTS (
             SELECT 1
@@ -265,8 +279,16 @@ export class ActivityDao extends ErrorHandledDao {
       WHERE a.activity_status = 'Public'
         AND a.status = 'Active'
         AND (
-          a.activity_state IN ('Special Open Register', 'Open Register')
-          OR (a.event_format = 'Course' AND a.activity_state = 'Start Activity')
+          (
+            (a.event_format = 'Onsite' OR a.event_format = 'Online') 
+            AND a.activity_state IN ('Start Activity', 'End Activity')
+            AND a.activity_state IN ('Special Open Register', 'Open Register')
+          )
+          OR
+          (
+            a.event_format = 'Course' 
+            AND a.activity_state = 'Start Activity'
+          )
         )
       ORDER BY a.create_activity_date DESC
     `;
@@ -338,12 +360,22 @@ export class ActivityDao extends ErrorHandledDao {
       WHERE j.students_id = $1
         AND ad.status = 'Registered'
         AND j.status = 'Pending'
-        AND a.activity_state IN ('Start Activity', 'End Activity', 'Start Assessment', 'End Assessment')
+        AND (
+          (
+            (a.event_format = 'Onsite' OR a.event_format = 'Online') 
+            AND a.activity_state IN ('Start Activity', 'End Activity')
+          )
+          OR
+          (
+            a.event_format = 'Course' 
+            AND a.activity_state = 'Start Activity'
+          )
+        )
       ORDER BY a.start_activity_date DESC
     `;
 
     const result = await this.dataSource!.query(query, [studentId]);
-    console.log(`📊 Found ${result.length} ongoing activities for student ${studentId} (Start Activity, End Activity, Start Assessment, or End Assessment state)`);
+    console.log(`📊 Found ${result.length} ongoing activities for student ${studentId} (Start Activity or End Activity state)`);
     
     if (result.length > 0) {
       console.log(`🔍 [DEBUG] Ongoing activities details:`, result.map((r: any) => ({
