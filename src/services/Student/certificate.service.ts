@@ -94,4 +94,19 @@ export class CertificateService {
       throw error;
     }
   }
+
+  //--------------------- Create Certificate -------------------------
+  async createCertificate(data: any): Promise<any> {
+    console.log("🔍 [Certificate Service] Creating certificate:", data);
+    
+    try {
+      const certificate = await this.certificateDAO.createCertificate(data);
+      
+      console.log("✅ [Certificate Service] Certificate created:", certificate.certificate_id);
+      return certificate;
+    } catch (error) {
+      console.error("❌ [Certificate Service] Create error:", error);
+      throw error;
+    }
+  }
 }

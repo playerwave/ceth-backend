@@ -41,7 +41,7 @@ export const verifyToken: RequestHandler = (req, res, next) => {
     // (req as any).userId = payload.id;
 
     (req as any).user = {
-      users_id: payload.id,
+      id: payload.id,        // ✅ เปลี่ยนจาก users_id เป็น id
       roles_id: payload.roles_id,
     };
 

@@ -50,6 +50,16 @@ export class CertificateBase {
   // ✅ เพิ่มฟิลด์สำหรับ Certificate Template (Course activities)
   @Column({ type: "json", nullable: true })
   ocr_data?: {
+    // ✅ ข้อมูลที่เก็บจริงจาก OCR
+    natural_text?: string;
+    extracted_fields?: {
+      natural_text?: string;
+    };
+    processing_time?: number;
+    total_pages?: number;
+    raw_response?: any;
+    // ✅ ข้อมูลที่คาดหวังสำหรับการเปรียบเทียบ
+    student_name?: string;
     course_name?: string;
     instructor_name?: string;
     university_name?: string;

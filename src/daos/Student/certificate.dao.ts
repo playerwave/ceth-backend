@@ -17,7 +17,6 @@ export class CertificateDAO {
       const certificate = await certificateRepository
         .createQueryBuilder("certificate")
         .leftJoinAndSelect("certificate.students", "student")
-        .leftJoinAndSelect("certificate.teacher", "teacher")
         .leftJoinAndSelect("certificate.activity", "activity")
         .where("certificate.certificate_id = :certificateId", { certificateId })
         .andWhere("certificate.students_id = :userId", { userId })
@@ -46,7 +45,6 @@ export class CertificateDAO {
       const certificates = await certificateRepository
         .createQueryBuilder("certificate")
         .leftJoinAndSelect("certificate.students", "student")
-        .leftJoinAndSelect("certificate.teacher", "teacher")
         .leftJoinAndSelect("certificate.activity", "activity")
         .where("certificate.students_id = :studentId", { studentId })
         .orderBy("certificate.date", "DESC")

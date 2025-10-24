@@ -5,7 +5,7 @@ import { wrapAsync } from "../../utils/wrapAsync";
 import { verifyToken } from "../../middleware/verifyToken";
 import { Admin } from "../../middleware/CheckRole";
 import { validateDTO } from "../../middleware/validateDTO.validator";
-import { QuestionController } from "../../controllers/Teacher/question.controller copy";
+import { QuestionController } from "../../controllers/Teacher/question.controller";
 
 const router = Router();
 

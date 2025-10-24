@@ -294,6 +294,20 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
+  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate
+  public async getAvailableCourseActivities(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔍 [StudentController] Getting available course activities for certificate submission");
+      
+      const activities = await this.activityService.getAvailableCourseActivitiesService();
+      
+      console.log(`✅ [StudentController] Found ${activities.length} available course activities`);
+      res.status(200).json(activities);
+    } catch (error) {
+      this.handleError("StudentActivityController.getAvailableCourseActivities", error, res);
+    }
+  }
+
   // 🔧 Utility Parsing Methods
   private parseId(value: any): number {
     const id = parseInt(value, 10);
@@ -338,4 +352,5 @@ export const activityController = {
   checkInOutActivity: controller.checkInOutActivity.bind(controller),
   debugActivityData: controller.debugActivityData.bind(controller),
   checkAssessmentStatus: controller.checkAssessmentStatus.bind(controller),
+  getAvailableCourseActivities: controller.getAvailableCourseActivities.bind(controller),
 };

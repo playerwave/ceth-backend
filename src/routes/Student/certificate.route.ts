@@ -2,9 +2,8 @@
 import { Router } from "express";
 import { CertificateController } from "../../controllers/Student/certificate.controller";
 import { verifyToken } from "../../middleware/verifyToken";
-import { CheckRole } from "../../middleware/CheckRole";
-import upload from "../../middleware/multer";
-
+import certificateVerificationRouter from "./certificate-verification.route";
+import { wrapAsync } from "../../utils/wrapAsync";
 const router = Router();
 const certificateController = new CertificateController();
 
@@ -12,25 +11,25 @@ const certificateController = new CertificateController();
 router.post(
   "/upload",
   verifyToken,
-  CheckRole(["Student"]),
-  upload.single("certificate"),
-  certificateController.uploadCertificate.bind(certificateController)
+  wrapAsync(certificateController.uploadCertificate.bind(certificateController))
 );
 
 // GET /api/student/certificate/get-certificate/:id
 router.get(
   "/get-certificate/:id",
   verifyToken,
-  CheckRole(["Student"]),
-  certificateController.getCertificateById.bind(certificateController)
+  wrapAsync(certificateController.getCertificateById.bind(certificateController))
 );
 
 // GET /api/student/certificate/get-certificates
 router.get(
   "/get-certificates",
   verifyToken,
-  CheckRole(["Student"]),
-  certificateController.getCertificatesByStudentId.bind(certificateController)
+  
+  wrapAsync(certificateController.getCertificatesByStudentId.bind(certificateController))
 );
+
+// ✅ เพิ่ม Certificate Verification Routes
+router.use("/", certificateVerificationRouter);
 
 export default router;

@@ -55,6 +55,26 @@ export class UsersController extends ErrorHandledController {
     }
   }
 
+  // ✅ เพิ่ม getUserById method
+  public async getUserById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = this.parseId(req.params.id);
+      const user = await this.usersService.getUsersById(id);
+
+      if (!user || user.length === 0) {
+        res.status(404).json({ message: "ไม่พบผู้ใช้นี้ในระบบ!" });
+        return;
+      }
+
+      const safeUser = { ...user[0] };
+      if ("password" in safeUser) delete safeUser.password;
+
+      res.status(200).json({ user: safeUser });
+    } catch (error) {
+      this.handleError("UsersController.getUserById", error, res);
+    }
+  }
+
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseUserPayload(req.body);
@@ -217,6 +237,7 @@ export const usersController = {
   count: controller.count.bind(controller),
   getAll: controller.getAll.bind(controller),
   getOne: controller.getOne.bind(controller),
+  getUserById: controller.getUserById.bind(controller), // ✅ เพิ่ม getUserById
   create: controller.create.bind(controller),
   register: controller.register.bind(controller),
   update: controller.update.bind(controller),

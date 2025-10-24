@@ -8,7 +8,6 @@ import {
 } from "typeorm";
 import { Users } from "./users.entity";
 import { Faculty } from "./faculty.entity";
-import { Certificate } from "./certificate/certificate.entity";
 
 @Entity()
 export class Teacher {
@@ -34,7 +33,4 @@ export class Teacher {
 
   @Column({ type: "int" })
   faculty_id!: number;
-
-  @OneToMany(() => Certificate, (certificate) => certificate.teacher)
-  certificate?: Certificate[];
 }

@@ -77,7 +77,7 @@ router.post(
 
           const token = jwt.sign(
             {
-              users_id: user.users_id,
+              id: user.users_id,        // ✅ เปลี่ยนจาก users_id เป็น id
               roles_id: user.roles_id,
             },
             process.env.JWT_SECRET || "secret",
@@ -122,6 +122,13 @@ router.post(
 router.get(
   "/get-users",
   wrapAsync(usersController.getAll.bind(usersController))
+);
+
+// ✅ GET: Get user by ID
+router.get(
+  "/get-user/:id",
+  verifyToken,
+  wrapAsync(usersController.getUserById.bind(usersController))
 );
 
 // 🎭 GET: Roles

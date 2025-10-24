@@ -82,16 +82,17 @@ export const uploadImage = multer({
       mimetype: file.mimetype,
       encoding: file.encoding
     });
-    // รองรับไฟล์รูปภาพ
+    // รองรับไฟล์รูปภาพและ PDF
     const allowedMimes = [
       'image/jpeg',
       'image/jpg', 
       'image/png',
       'image/gif',
-      'image/webp'
+      'image/webp',
+      'application/pdf' // ✅ เพิ่ม PDF support
     ];
     
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']; // ✅ เพิ่ม PDF
     const fileExtension = path.extname(file.originalname).toLowerCase();
     
     if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
@@ -99,7 +100,7 @@ export const uploadImage = multer({
       cb(null, true);
     } else {
       console.log("❌ [Multer] File rejected:", file.originalname, "MIME:", file.mimetype);
-      const error = new Error('รองรับเฉพาะไฟล์รูปภาพ (.jpg, .jpeg, .png, .gif, .webp) เท่านั้น');
+      const error = new Error('รองรับเฉพาะไฟล์รูปภาพและ PDF (.jpg, .jpeg, .png, .gif, .webp, .pdf) เท่านั้น');
       cb(error as any, false);
     }
   },

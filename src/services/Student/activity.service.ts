@@ -3,12 +3,14 @@ import { AssessmentDao } from "../../daos/Student/assessment.dao";
 import { Activity } from "../../entity/activity.entity";
 import { Assessment } from "../../entity/assessment/assessment.entity";
 import { Join } from "../../entity/join.entity";
+import { CertificateService } from "./certificate.service";
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
   private readonly assessmentDao = new AssessmentDao();
+  private readonly certificateService = new CertificateService();
 
   public async getStudentActivitiesService(
     studentId: number
@@ -312,23 +314,92 @@ export class ActivityService extends ErrorHandledService {
   }
 
   public async getActivityHistoryByStudentsID(students_id: number): Promise<Activity[]> {
-    const cacheKey = "activity:all";
+    const cacheKey = `activity:history:${students_id}`;
 
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
-        this.logInfo("📦 Returning cached activity data");
+        this.logInfo("📦 Returning cached activity history data");
         return JSON.parse(cached);
       }
 
-      const activities = await this.activityDao.getActivityHistoryByStudentsID(students_id);
-      await redis.set(cacheKey, JSON.stringify(activities), "EX", 60);
+      // ✅ 1. ดึง Regular Activities
+      const regularActivities = await this.activityDao.getActivityHistoryByStudentsID(students_id);
+      this.logInfo("📤 Regular activities retrieved", { count: regularActivities.length });
 
-      this.logInfo("📤 Activity data retrieved and cached", {
-        count: activities.length,
+      // ✅ 2. ดึง Certificate Activities
+      const certificates = await this.certificateService.getCertificatesByStudentId(students_id);
+      this.logInfo("📤 Certificates retrieved", { count: certificates.length });
+
+      // ✅ 3. แปลง Certificate เป็น Activity format
+      const certificateActivities = certificates
+        .filter(cert => cert.status === 'Pass' && (cert.verification_metadata?.confidenceScore || 0) >= 80)
+        .map(cert => ({
+          activity_id: cert.activity_id,
+          activity_name: cert.activity?.activity_name || 'Certificate Activity',
+          presenter_company_name: cert.activity?.presenter_company_name || 'Certificate Issuer',
+          type: cert.activity?.type || 'Soft', // ✅ ใช้ type จาก activity จริง (Soft/Hard เท่านั้น)
+          description: cert.activity?.description || 'Certificate completion',
+          seat: cert.activity?.seat || 0,
+          recieve_hours: cert.activity?.recieve_hours || 0,
+          event_format: cert.activity?.event_format || 'Course', // ✅ ใช้ event_format จาก activity จริง
+          start_activity_date: cert.activity?.start_activity_date || cert.submitted_date,
+          end_activity_date: cert.activity?.end_activity_date || cert.submitted_date,
+          image_url: cert.activity?.image_url || null,
+          activity_state: cert.activity?.activity_state, // ✅ ใช้ activity_state จาก activity จริง (ไม่เปลี่ยน)
+          room_name: null, // ✅ Certificate ไม่ต้องมีห้อง
+          assessment_name: null, // ✅ Course ไม่ต้องมี Assessment
+          start_assessment: null, // ✅ Course ไม่ต้องมี Assessment
+          end_assessment: null, // ✅ Course ไม่ต้องมี Assessment
+          registered_count: 0,
+          // ✅ ลบ display_state เพราะไม่มีใน Activity Entity
+          // ✅ เพิ่ม certificate-specific fields
+          certificate_id: cert.certificate_id,
+          verification_status: cert.status, // ✅ ใช้ status field
+          confidence_score: cert.verification_metadata?.confidenceScore || 0, // ✅ ใช้ verification_metadata
+          submitted_date: cert.uploaded_at, // ✅ ใช้ uploaded_at field
+          ocr_extracted_data: cert.ocr_extracted_data
+        }));
+
+      this.logInfo("📤 Certificate activities converted", { count: certificateActivities.length });
+
+      // ✅ 4. รวมและเรียงลำดับ
+      const allActivities = [...regularActivities, ...certificateActivities]
+        .sort((a, b) => {
+          const dateA = new Date((a as any).submitted_date || a.start_activity_date || 0).getTime();
+          const dateB = new Date((b as any).submitted_date || b.start_activity_date || 0).getTime();
+          return dateB - dateA; // เรียงจากใหม่ไปเก่า
+        });
+
+      // ✅ Log กิจกรรมที่ถูกเพิ่มในประวัติ
+      if (certificateActivities.length > 0) {
+        console.log("🎉 [ActivityService] Certificate activities added to student history:", {
+          studentId: students_id,
+          certificateActivities: certificateActivities.map(cert => ({
+            activity_id: cert.activity_id,
+            activity_name: cert.activity_name,
+            certificate_id: cert.certificate_id,
+            verification_status: cert.verification_status,
+            confidence_score: cert.confidence_score,
+            submitted_date: cert.submitted_date,
+            event_format: cert.event_format,
+            activity_state: cert.activity_state
+          }))
+        });
+        
+        console.log("📚 [ActivityService] Student activity history now includes certificate completions!");
+      }
+
+      // ✅ 5. Cache ผลลัพธ์
+      await redis.set(cacheKey, JSON.stringify(allActivities), "EX", 60);
+
+      this.logInfo("📤 Activity history data retrieved and cached", {
+        regularCount: regularActivities.length,
+        certificateCount: certificateActivities.length,
+        totalCount: allActivities.length,
       });
 
-      return activities;
+      return allActivities as Activity[];
     } catch (error) {
       this.logError("❌ Error in getActivityHistoryByStudentsID", error);
       throw error;
@@ -752,6 +823,24 @@ export class ActivityService extends ErrorHandledService {
       return status;
     } catch (error) {
       this.logError("❌ Error in checkAssessmentStatusService", error);
+      throw error;
+    }
+  }
+
+  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate
+  public async getAvailableCourseActivitiesService(): Promise<Activity[]> {
+    try {
+      console.log("🔍 [ActivityService] Getting available course activities for certificate submission");
+      
+      const activities = await this.activityDao.getAvailableCourseActivities();
+      
+      this.logInfo("📄 Retrieved available course activities", {
+        count: activities.length,
+      });
+      
+      return activities;
+    } catch (error) {
+      this.logError("❌ Error in getAvailableCourseActivitiesService", error);
       throw error;
     }
   }

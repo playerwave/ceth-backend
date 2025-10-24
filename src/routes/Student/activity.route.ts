@@ -107,4 +107,10 @@ router.post(
   wrapAsync(activityController.checkInOutActivity)
 );
 
+// ✅ GET METHOD สำหรับดึงกิจกรรม Course ที่พร้อมส่ง Certificate
+router.get(
+  "/available-course-activities",
+  wrapAsync(activityController.getAvailableCourseActivities)
+);
+
 export default router;

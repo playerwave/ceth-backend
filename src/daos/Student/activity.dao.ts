@@ -1151,6 +1151,74 @@ export class ActivityDao extends ErrorHandledDao {
       throw new Error("❌ Failed to check assessment status");
     }
   }
+
+  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate
+  public async getAvailableCourseActivities(): Promise<Activity[]> {
+    await this.checkConnection();
+    try {
+      console.log("🔍 [ActivityDao] Getting available course activities for certificate submission");
+      
+      // ✅ เพิ่ม retry logic สำหรับ database connection
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const sql = `
+            SELECT 
+              a.activity_id,
+              a.activity_name,
+              a.presenter_company_name,
+              a.description,
+              a.type,
+              a.recieve_hours,
+              a.event_format,
+              a.activity_status,
+              a.activity_state,
+              a.start_activity_date,
+              a.end_activity_date,
+              a.image_url,
+              a.url,
+              a.create_activity_date,
+              a.last_update_activity_date
+            FROM activity a
+            WHERE a.event_format = 'Course' 
+              AND a.activity_state = 'Start Activity'
+              AND a.activity_status = 'Public'
+              AND a.status = 'Active'
+            ORDER BY a.start_activity_date DESC
+          `;
+          
+          const result = await this.dataSource!.query(sql);
+          console.log(`✅ [ActivityDao] Found ${result.length} available course activities`);
+          
+          return result;
+        } catch (dbError) {
+          retryCount++;
+          console.log(`⚠️ [ActivityDao] Database error (attempt ${retryCount}/${maxRetries}):`, dbError);
+          
+          if (retryCount >= maxRetries) {
+            throw dbError;
+          }
+          
+          // ✅ รอ 1 วินาทีก่อนลองใหม่
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // ✅ ลอง reconnect
+          try {
+            await this.checkConnection();
+          } catch (reconnectError) {
+            console.log("❌ [ActivityDao] Failed to reconnect:", reconnectError);
+          }
+        }
+      }
+      
+      throw new Error("❌ Failed to get available course activities after retries");
+    } catch (error) {
+      this.logDbError("getAvailableCourseActivities", error);
+      throw new Error("❌ Failed to get available course activities");
+    }
+  }
 }
 
 

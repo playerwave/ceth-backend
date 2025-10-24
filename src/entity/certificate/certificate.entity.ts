@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { Students } from "../students.entity";
-import { Teacher } from "../teacher.entity";
 import { Activity } from "../activity.entity";
 
 import { Transform } from "class-transformer";
@@ -18,7 +17,6 @@ import { format } from "date-fns-tz";
 
 @Entity()
 @Index("IDX_STUDENTS_ID_CERTIFICATE", ["students_id"])
-@Index("IDX_TEACHER_ID_CERTIFICATE", ["teacher_id"])
 @Index("IDX_ACTIVITY_ID_CERTIFICATE", ["activity_id"])
 @Index("IDX_DATE_CERTIFICATE", ["date"])
 @Index("IDX_HOURS_CERTIFICATE", ["hours"])
@@ -35,13 +33,6 @@ export class Certificate {
 
   @Column({ type: "int" })
   students_id!: number;
-
-  @ManyToOne(() => Teacher, (teacher) => teacher.certificate)
-  @JoinColumn({ name: "teacher_id" })
-  teacher?: Teacher;
-
-  @Column({ type: "int" })
-  teacher_id?: number;
 
   @ManyToOne(() => Activity, (activity) => activity.certificate)
   @JoinColumn({ name: "activity_id" })

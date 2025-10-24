@@ -62,8 +62,33 @@ async function callTyphoonOCRWithTimeout(
     model: params.model || "typhoon-ocr-preview"
   };
   
+  // ✅ Default structured prompt สำหรับ Certificate OCR
+  const defaultPrompt = `You are a certificate OCR specialist. Extract the following information from this certificate image and return ONLY a valid JSON object with these exact keys:
+
+{
+  "student_name": "Full name of the student (extract ONLY the name, not phrases like 'THIS CERTIFICATE IS AWARDED TO')",
+  "course_name": "Complete name of the course or program (include any additional information like hours in parentheses)",
+  "instructor_name": "Name of the instructor, teacher, university, or awarding institution (if available, otherwise use '-')",
+  "certificate_id": "Certificate ID or serial number (if available, otherwise use '-')",
+  "completion_date": "Date of completion (extract in format DD Month YYYY or similar)",
+  "raw_text": "All visible text from the certificate"
+}
+
+EXTRACTION RULES:
+1. For student_name: Look for phrases like "THIS CERTIFICATE IS AWARDED TO", "PRESENTED TO", "AWARDED TO" and extract ONLY the name that follows (e.g., "Napatsakorn Kultangwattana")
+2. For course_name: Look for phrases like "for the completion of", "completion of the course", "online course" and extract the COMPLETE course name including any additional information (e.g., "English for Communication (10 Hours)")
+3. For instructor_name: Look for names below signatures, titles like "Professor", "Director", "Associate Professor", OR university names like "Chiang Mai University", "Awarded by [University Name]"
+4. For completion_date: Look for dates near "Awarded by", "Date", "on [date]" (e.g., "24 June 2025")
+5. For certificate_id: Look for ID numbers, serial numbers, or codes (if not found, use "-")
+6. If any information is not found, use "-" as the value
+7. Return ONLY the JSON object, no additional text or explanations
+
+IMPORTANT: Return ONLY valid JSON, no markdown formatting or additional text.`;
+  
   if (params.prompt) {
     ocrParams.prompt = params.prompt;
+  } else {
+    ocrParams.prompt = defaultPrompt;
   }
   
   formData.append("params", JSON.stringify(ocrParams));

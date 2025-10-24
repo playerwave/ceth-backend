@@ -13,7 +13,7 @@ export class CertificateController {
   //--------------------- Upload Certificate -------------------------
   uploadCertificate = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.users_id;
+      const userId = (req as any).user?.id; // ✅ เปลี่ยนจาก users_id เป็น id
       const file = req.file;
       const { activity_id, hours, date } = req.body;
 
@@ -103,7 +103,7 @@ export class CertificateController {
   getCertificateById = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const userId = (req as any).user?.users_id; // Get user ID from token
+      const userId = (req as any).user?.id; // ✅ เปลี่ยนจาก users_id เป็น id // Get user ID from token
 
       console.log("🔍 [Certificate Controller] Getting certificate:", { id, userId });
 
@@ -133,7 +133,7 @@ export class CertificateController {
   //--------------------- Get Certificates By Student ID -------------------------
   getCertificatesByStudentId = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.users_id; // Get user ID from token
+      const userId = (req as any).user?.id; // ✅ เปลี่ยนจาก users_id เป็น id
 
       console.log("🔍 [Certificate Controller] Getting certificates for student:", { userId });
 
