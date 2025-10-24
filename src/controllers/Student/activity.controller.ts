@@ -13,13 +13,13 @@ export class ActivityController extends ErrorHandledController {
     res: Response
   ): Promise<void> {
     try {
-      const userId = this.parseId(req.params.id);
+      const studentId = this.parseId(req.params.id);
       const result = await this.activityService.getStudentActivitiesService(
-        userId
+        studentId
       );
 
       console.log(
-        `📊 Returning ${result.length} activities for student ${userId}`
+        `📊 Returning ${result.length} activities for student ${studentId}`
       );
       res.status(200).json(result);
     } catch (error) {

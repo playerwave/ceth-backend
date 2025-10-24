@@ -177,15 +177,24 @@ export class ActivityDao extends ErrorHandledDao {
 
   public async getAvailableActivities(studentId: number): Promise<Activity[]> {
     await this.checkConnection();
+    
+    // ✅ Clear Redis cache ก่อน query
+    try {
+      const redis = require('../../config/redis');
+      await redis.del(`student_activities_${studentId}`);
+      console.log(`🧹 [CACHE] Cleared cache for student ${studentId}`);
+    } catch (error) {
+      console.log(`⚠️ [CACHE] Failed to clear cache:`, error);
+    }
 
     // ✅ ดึงข้อมูล risk_status ของนิสิต
     const studentQuery = `
       SELECT s.risk_status
       FROM students s
-      WHERE s.users_id = $1
+      WHERE s.students_id = $1
     `;
     const studentResult = await this.dataSource!.query(studentQuery, [
-      studentId,
+      studentId, // ✅ ใช้ students_id
     ]);
     const riskStatus = studentResult[0]?.risk_status || "Normal";
 
@@ -200,6 +209,12 @@ export class ActivityDao extends ErrorHandledDao {
         FROM activity a
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM certificate c
+            WHERE c.activity_id = a.activity_id
+              AND c.students_id = $1
+          )
           AND (
             (
               (a.event_format = 'Onsite' OR a.event_format = 'Online') 
@@ -230,6 +245,12 @@ export class ActivityDao extends ErrorHandledDao {
         FROM activity a
         WHERE a.activity_status = 'Public'
           AND a.status = 'Active'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM certificate c
+            WHERE c.activity_id = a.activity_id
+              AND c.students_id = $1
+          )
           AND (
             (
               (a.event_format = 'Onsite' OR a.event_format = 'Online') 
@@ -273,8 +294,31 @@ export class ActivityDao extends ErrorHandledDao {
                FROM activity_detail ad
                JOIN "join" j ON ad.activity_detail_id = j.activity_detail_id
                WHERE ad.activity_id = a.activity_id
-                 AND j.students_id = $1
-             ) as already_enrolled
+                 AND j.students_id = (
+                   SELECT s.students_id FROM students s WHERE s.users_id = $1
+                 )
+             ) as already_enrolled,
+             EXISTS (
+               SELECT 1
+               FROM certificate c
+               WHERE c.activity_id = a.activity_id
+                 AND c.students_id = (
+                   SELECT s.students_id FROM students s WHERE s.users_id = $1
+                 )
+             ) as already_claimed,
+             (
+               SELECT s.students_id FROM students s WHERE s.users_id = $1
+             ) as student_id_from_users_id,
+             (
+               SELECT COUNT(*) FROM certificate c WHERE c.activity_id = a.activity_id
+             ) as total_certificates_for_activity,
+             (
+               SELECT COUNT(*) FROM certificate c 
+               WHERE c.activity_id = a.activity_id 
+                 AND c.students_id = (
+                   SELECT s.students_id FROM students s WHERE s.users_id = $1
+                 )
+             ) as user_certificates_for_activity
       FROM activity a
       WHERE a.activity_status = 'Public'
         AND a.status = 'Active'
@@ -294,6 +338,42 @@ export class ActivityDao extends ErrorHandledDao {
     `;
     const debugResult = await this.dataSource!.query(debugQuery, [studentId]);
     console.log(`🔍 [DEBUG] All matching activities for student ${studentId}:`, debugResult);
+    
+    // ✅ Debug: ตรวจสอบ students table
+    const studentsCheckQuery = `
+      SELECT s.students_id, s.users_id, s.first_name_eng, s.last_name_eng
+      FROM students s
+      WHERE s.students_id = $1
+    `;
+    const studentsResult = await this.dataSource!.query(studentsCheckQuery, [studentId]);
+    console.log(`🔍 [DEBUG] Students check for student ${studentId}:`, studentsResult);
+    
+    // ✅ Debug: ตรวจสอบ certificate โดยตรง
+    const certificateCheckQuery = `
+      SELECT c.certificate_id, c.students_id, c.activity_id, c.status
+      FROM certificate c
+      WHERE c.activity_id = 194 AND c.students_id = $1
+    `;
+    const certificateResult = await this.dataSource!.query(certificateCheckQuery, [studentId]);
+    console.log(`🔍 [DEBUG] Certificate check for student ${studentId}:`, certificateResult);
+    
+    // ✅ Debug: ตรวจสอบ certificate ทั้งหมดสำหรับ activity 194 และ students_id 104
+    const certificateForStudent104Query = `
+      SELECT c.certificate_id, c.students_id, c.activity_id, c.status
+      FROM certificate c
+      WHERE c.activity_id = 194 AND c.students_id = 104
+    `;
+    const certificateForStudent104Result = await this.dataSource!.query(certificateForStudent104Query);
+    console.log(`🔍 [DEBUG] Certificate for student 104:`, certificateForStudent104Result);
+    
+    // ✅ Debug: ตรวจสอบ certificate ทั้งหมดสำหรับ activity 194
+    const allCertificatesQuery = `
+      SELECT c.certificate_id, c.students_id, c.activity_id, c.status
+      FROM certificate c
+      WHERE c.activity_id = 194
+    `;
+    const allCertificatesResult = await this.dataSource!.query(allCertificatesQuery);
+    console.log(`🔍 [DEBUG] All certificates for activity 194:`, allCertificatesResult);
 
     // ✅ Debug: แสดงเวลาปัจจุบันที่ใช้ใน query
     const timeQuery = `SELECT NOW() as current_db_time, CURRENT_TIMESTAMP as current_timestamp, NOW() + INTERVAL '7 hours' as thai_time`;

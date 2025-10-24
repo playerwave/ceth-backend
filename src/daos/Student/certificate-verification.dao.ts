@@ -218,7 +218,7 @@ export class CertificateVerificationDAO extends ErrorHandledDao {
       
       // ✅ JOIN ระหว่าง users และ students tables
       const query = `
-        SELECT u.users_id as id, s.first_name_eng, s.last_name_eng 
+        SELECT s.students_id as id, s.first_name_eng, s.last_name_eng 
         FROM users u
         INNER JOIN students s ON u.users_id = s.users_id
         WHERE u.users_id = $1 AND u.roles_id = 3
