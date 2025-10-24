@@ -20,14 +20,11 @@ export class SetNumber {
     @OneToMany(() => Question, (question) => question.setNumber)
     question?: Question[];
 
-    // @OneToMany(() => Assessment, (assessment) => assessment.setNumber)
-    // assessment?: Assessment[];
-
     @ManyToOne(() => Assessment, (assessment) => assessment.setNumber)
     @JoinColumn({ name: "assessment_id" })
     assessment?: Assessment[];
 
-    @Column({ type: "int" })
+    @Column({ type: "int", nullable: true })
     assessment_id?: number;
 
     @OneToMany(() => Answer, (answer) => answer.setNumber)

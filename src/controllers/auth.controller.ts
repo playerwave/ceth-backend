@@ -157,7 +157,7 @@ export class AuthController extends ErrorHandledController {
       console.log("👤 [getMe] User from token:", req.user);
       console.log("🌍 [getMe] NODE_ENV:", process.env.NODE_ENV);
 
-      const user = req.user as { users_id: number; roles_id: number };
+      const user = req.user;
       
       if (!user) {
         console.log("❌ [getMe] No user found in request");

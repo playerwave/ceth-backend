@@ -2,8 +2,11 @@
 import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import logger from "../utils/logger";
+import { UsersService } from "../services/user.service";
 
-export const verifyToken: RequestHandler = (req, res, next) => {
+const usersService = new UsersService();
+
+export const verifyToken: RequestHandler = async (req, res, next) => {
   // ✅ Debug logging
   console.log("🔍 [verifyToken] Starting token verification...");
   console.log("🍪 [verifyToken] Cookies:", req.cookies);
@@ -33,6 +36,13 @@ export const verifyToken: RequestHandler = (req, res, next) => {
       exp: number;
     };
 
+    const user = await usersService.getUsersById(payload.id);
+    if (!user || user.length === 0) {
+      console.log("❌ [verifyToken] User not found");
+      res.status(401).json({ message: "User not found" });
+      return;
+    }
+    payload.roles_id = user[0].roles_id;
     console.log("✅ [verifyToken] Token verified successfully");
     console.log("👤 [verifyToken] User ID:", payload.id);
     console.log("🎭 [verifyToken] Role ID:", payload.roles_id);

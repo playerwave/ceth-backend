@@ -9,9 +9,11 @@ export function CheckRole(
   allowedRoles: string[]
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const users = req.user as Users;
+    console.log("🔍 [CheckRole] req.user:", req.user);
+    const user = req.user;
     
-    if (!users || !users.roles_id) {
+    if (!user || !user.roles_id) {
+      console.log("❌ [CheckRole] No user or roles_id");
       res.status(401).json({
         user: null,
         notification: `Unauthorized access. Please log in.`,
@@ -26,7 +28,7 @@ export function CheckRole(
       3: 'Student'
     };
 
-    const userRoleName = roleMap[users.roles_id];
+    const userRoleName = roleMap[user.roles_id];
     
     if (!userRoleName) {
       res.status(403).json({
@@ -54,8 +56,8 @@ export async function Admin(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const users = req.user as Users;
-  if (!users || !users.roles_id) {
+  const user = req.user;
+  if (!user || !user.roles_id) {
     res.status(401).json({
       user: null,
       notification: `Unauthorized access. Please log in.`,
@@ -73,7 +75,7 @@ export async function Admin(
     return;
   }
 
-  const RolesUsers = users.roles_id;
+  const RolesUsers = user.roles_id;
   const Roles = isAdmin[0].roles_id;
 
   if (RolesUsers === Roles) {

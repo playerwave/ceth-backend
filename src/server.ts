@@ -80,20 +80,25 @@ if (shouldEnableCors) {
   const defaultDev = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:4173",
-    "http://127.0.0.1:4173",
     // Cloudflare Pages domains
     "https://cooperative-system-buu.pages.dev",
-    "https://*.cooperative-system-buu.pages.dev",
+    "https://ceth-frontend.pages.dev",
+    "https://ceth-api.theapds.org",
+    // Local development ports
+    "http://localhost:5090",
+    "http://127.0.0.1:5090",
   ];
   const allowList = envAllowed.length > 0 ? envAllowed : defaultDev;
 
   const corsMw = cors({
     origin(origin, cb) {
+      console.log("🌍 [CORS] Request origin:", origin);
       if (!origin) return cb(null, true); // Postman/mobile apps
-      if (allowList.includes(origin)) return cb(null, true);
+      if (allowList.includes(origin)) {
+        console.log("✅ [CORS] Origin allowed:", origin);
+        return cb(null, true);
+      }
+      console.log("❌ [CORS] Origin not allowed:", origin);
       return cb(new Error("Not allowed by CORS"));
     },
     credentials: true, // ✅ สำคัญมากสำหรับ cookies
