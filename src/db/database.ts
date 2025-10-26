@@ -139,12 +139,9 @@ class DatabaseManager {
         extra: {
           max: 20,        // ✅ เพิ่มจาก 3 เป็น 20
           min: 5,         // ✅ เพิ่มจาก 1 เป็น 5
-          idle: 600000,   // ✅ เพิ่มจาก 60 วินาที เป็น 10 นาที
-          acquire: 60000, // ✅ เพิ่มจาก 60 วินาที เป็น 1 นาที
-          evict: 300000,  // ✅ เพิ่มจาก 60 วินาที เป็น 5 นาที
+          idleTimeoutMillis: 600000,   // ✅ เพิ่มจาก 60 วินาที เป็น 10 นาที
+          connectionTimeoutMillis: 60000, // ✅ เพิ่ม timeout เป็น 1 นาที
         },
-        // ✅ เพิ่ม timeout settings
-        connectTimeoutMS: 60000,    // 1 นาที
         // ✅ เพิ่ม logging
         logging: ['error', 'warn'],  // ลบ schema และ migration ออก
         dropSchema: false,

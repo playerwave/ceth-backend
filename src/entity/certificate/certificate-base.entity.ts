@@ -27,14 +27,20 @@ export class CertificateBase {
   @Column({ type: "varchar", length: 255 })
   certificate_source!: string;
 
+  @Column({ type: "varchar", nullable: true })
+  certificate_type!: "THAI MOOC" | "BUU MOOC" | "Other";
+
+  @Column({ type: "timestamp", nullable: true })
+  get_certificate_date?: Date | null;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  organization_name?: string;
+
   @Column({ type: "varchar", length: 255, nullable: true })
   supervisor_name1?: string | null;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   supervisor_name2?: string | null;
-
-  @Column({ type: "timestamp", nullable: true })
-  claim_expiration_date?: Date | null;
 
   // ✅ เพิ่มฟิลด์ใหม่สำหรับระบบตรวจสอบ
   @Column({ type: "varchar", length: 500, nullable: true })
@@ -57,7 +63,7 @@ export class CertificateBase {
     };
     processing_time?: number;
     total_pages?: number;
-    raw_response?: any;
+    raw_response?: Record<string, unknown>;
     // ✅ ข้อมูลที่คาดหวังสำหรับการเปรียบเทียบ
     student_name?: string;
     course_name?: string;

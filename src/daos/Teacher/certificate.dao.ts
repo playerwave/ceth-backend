@@ -6,6 +6,7 @@ import { CertificateAudit } from "../../entity/certificate/certificate-audit.ent
 import { CertificateBase } from "../../entity/certificate/certificate-base.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
+import { parseThaiMoocData } from "../../utils/natural-text-parser";
 
 export class CertificateDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;
@@ -55,6 +56,13 @@ export class CertificateDao extends ErrorHandledDao {
         description: data.description
       });
 
+      // ✅ Parse THAI MOOC data from OCR natural_text
+      let parsedThaiMoocData: ReturnType<typeof parseThaiMoocData> | null = null;
+      if (data.ocr_data?.natural_text) {
+        parsedThaiMoocData = parseThaiMoocData(data.ocr_data.natural_text);
+        console.log("🔍 [CertificateDao] Parsed THAI MOOC data:", parsedThaiMoocData);
+      }
+
       const queryRunner = this.dataSource!.createQueryRunner();
       await queryRunner.connect();
       await queryRunner.startTransaction();
@@ -75,6 +83,22 @@ export class CertificateDao extends ErrorHandledDao {
           const certificateBaseId = existingBase[0].certificate_base_id;
           console.log("🔄 [CertificateDao] Updating existing certificate_base:", certificateBaseId);
           
+          // ✅ Prepare fields for THAI MOOC
+          const certificateName = parsedThaiMoocData?.certificate_name || `Certificate for Activity ${activityId}`;
+          const certificateType = parsedThaiMoocData?.certificate_type || "Other";
+          const organizationName = parsedThaiMoocData?.organization_name || null;
+          const getCertificateDate = parsedThaiMoocData?.get_certificate_date || null;
+          const supervisorName1 = parsedThaiMoocData?.supervisor_name1 || null;
+
+          // ✅ Log parsed fields (UPDATE)
+          console.log("📝 [CertificateDao] Prepared fields from THAI MOOC parsing (UPDATE):", {
+            certificate_name: certificateName,
+            certificate_type: certificateType,
+            organization_name: organizationName,
+            get_certificate_date: getCertificateDate,
+            supervisor_name1: supervisorName1
+          });
+
           templateResult = await queryRunner.query(
             `
             UPDATE certificate_base
@@ -83,8 +107,13 @@ export class CertificateDao extends ErrorHandledDao {
               ocr_data = $2,
               image_analysis = $3,
               description = $4,
+              certificate_name = $5,
+              certificate_type = $6,
+              organization_name = $7,
+              get_certificate_date = $8,
+              supervisor_name1 = $9,
               updated_at = NOW()
-            WHERE certificate_base_id = $5
+            WHERE certificate_base_id = $10
             RETURNING certificate_base_id, certificate_name, template_image_url, description
             `,
             [
@@ -92,6 +121,11 @@ export class CertificateDao extends ErrorHandledDao {
               JSON.stringify(data.ocr_data),
               JSON.stringify(data.image_analysis),
               data.description,
+              certificateName,
+              certificateType,
+              organizationName,
+              getCertificateDate,
+              supervisorName1,
               certificateBaseId
             ]
           );
@@ -101,24 +135,48 @@ export class CertificateDao extends ErrorHandledDao {
           // ✅ ยังไม่มี → สร้างใหม่ใน certificate_base
           console.log("🔄 [CertificateDao] Creating new certificate_base...");
           
+          // ✅ Prepare fields for THAI MOOC
+          const certificateName = parsedThaiMoocData?.certificate_name || `Certificate for Activity ${activityId}`;
+          const certificateType = parsedThaiMoocData?.certificate_type || "Other";
+          const organizationName = parsedThaiMoocData?.organization_name || null;
+          const getCertificateDate = parsedThaiMoocData?.get_certificate_date || null;
+          const supervisorName1 = parsedThaiMoocData?.supervisor_name1 || null;
+
+          // ✅ Log parsed fields (INSERT)
+          console.log("📝 [CertificateDao] Prepared fields from THAI MOOC parsing (INSERT):", {
+            certificate_name: certificateName,
+            certificate_type: certificateType,
+            organization_name: organizationName,
+            get_certificate_date: getCertificateDate,
+            supervisor_name1: supervisorName1
+          });
+
           templateResult = await queryRunner.query(
             `
             INSERT INTO certificate_base (
               activity_id,
               certificate_name,
               certificate_source,
+              certificate_type,
+              organization_name,
+              get_certificate_date,
+              supervisor_name1,
               template_image_url,
               ocr_data,
               image_analysis,
               description,
               is_active
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING certificate_base_id, certificate_name, template_image_url, description
             `,
             [
               activityId,
-              `Certificate for Activity ${activityId}`,
+              certificateName,
               'Activity Template',
+              certificateType,
+              organizationName,
+              getCertificateDate,
+              supervisorName1,
               data.template_url,
               JSON.stringify(data.ocr_data),
               JSON.stringify(data.image_analysis),
@@ -157,6 +215,99 @@ export class CertificateDao extends ErrorHandledDao {
       console.error("❌ [CertificateDao] Database error:", error);
       this.logDbError("createActivityCertificateTemplate", error);
       throw new Error("❌ Failed to create/update activity certificate template");
+    }
+  }
+
+  /**
+   * Re-parse THAI MOOC data from existing certificate_base
+   */
+  public async reparseCertificateBase(certificateBaseId: number): Promise<any> {
+    await this.checkConnection();
+    try {
+      console.log("🔄 [CertificateDao] Re-parsing certificate_base:", certificateBaseId);
+
+      // 1. ดึงข้อมูล certificate_base ที่มีอยู่
+      const certificateBase = await this.dataSource!.query(
+        `SELECT * FROM certificate_base WHERE certificate_base_id = $1`,
+        [certificateBaseId]
+      );
+
+      if (!certificateBase || certificateBase.length === 0) {
+        throw new Error(`Certificate base not found: ${certificateBaseId}`);
+      }
+
+      const ocrData = certificateBase[0].ocr_data;
+      
+      // 2. Parse THAI MOOC data from OCR natural_text
+      let parsedThaiMoocData: ReturnType<typeof parseThaiMoocData> | null = null;
+      if (ocrData?.natural_text) {
+        parsedThaiMoocData = parseThaiMoocData(ocrData.natural_text);
+        console.log("🔍 [CertificateDao] Re-parsed THAI MOOC data:", parsedThaiMoocData);
+      } else {
+        console.log("⚠️ [CertificateDao] No natural_text found in OCR data");
+        throw new Error("No natural_text found in OCR data");
+      }
+
+      // 3. Prepare fields for THAI MOOC
+      const certificateName = parsedThaiMoocData?.certificate_name || certificateBase[0].certificate_name;
+      const certificateType = parsedThaiMoocData?.certificate_type || "Other";
+      const organizationName = parsedThaiMoocData?.organization_name || null;
+      const getCertificateDate = parsedThaiMoocData?.get_certificate_date || null;
+      const supervisorName1 = parsedThaiMoocData?.supervisor_name1 || null;
+
+      // ✅ Log parsed fields (REPARSE)
+      console.log("📝 [CertificateDao] Prepared fields from THAI MOOC parsing (REPARSE):", {
+        certificate_name: certificateName,
+        certificate_type: certificateType,
+        organization_name: organizationName,
+        get_certificate_date: getCertificateDate,
+        supervisor_name1: supervisorName1
+      });
+
+      // 4. Update certificate_base with parsed data
+      const queryRunner = this.dataSource!.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        const result = await queryRunner.query(
+          `
+          UPDATE certificate_base
+          SET 
+            certificate_name = $1,
+            certificate_type = $2,
+            organization_name = $3,
+            get_certificate_date = $4,
+            supervisor_name1 = $5,
+            updated_at = NOW()
+          WHERE certificate_base_id = $6
+          RETURNING *
+          `,
+          [
+            certificateName,
+            certificateType,
+            organizationName,
+            getCertificateDate,
+            supervisorName1,
+            certificateBaseId
+          ]
+        );
+
+        await queryRunner.commitTransaction();
+        
+        console.log("✅ [CertificateDao] Certificate base re-parsed successfully");
+        return result[0];
+      } catch (error) {
+        console.error("❌ [CertificateDao] Error during re-parse transaction:", error);
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
+    } catch (error) {
+      console.error("❌ [CertificateDao] Database error during re-parse:", error);
+      this.logDbError("reparseCertificateBase", error);
+      throw new Error("❌ Failed to re-parse certificate base");
     }
   }
 

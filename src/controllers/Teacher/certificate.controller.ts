@@ -83,6 +83,34 @@ export class CertificateController extends ErrorHandledController {
   }
 
   /**
+   * Re-parse THAI MOOC data from existing certificate_base
+   */
+  public async reparseCertificateBase(req: Request, res: Response): Promise<void> {
+    try {
+      const certificateBaseId = this.parseId(req.params.certificateBaseId);
+      
+      console.log("🔄 [CertificateController] Re-parsing certificate base:", certificateBaseId);
+      
+      const result = await this.certificateService.reparseCertificateBase(certificateBaseId);
+      
+      console.log("✅ [CertificateController] Certificate base re-parsed successfully:", {
+        certificate_base_id: certificateBaseId,
+        certificate_type: result?.certificate_type,
+        organization_name: result?.organization_name
+      });
+      
+      res.status(200).json({
+        success: true,
+        message: "Certificate base re-parsed successfully",
+        data: result
+      });
+    } catch (error) {
+      console.error("❌ [CertificateController] Error re-parsing certificate base:", error);
+      this.handleError("CertificateController.reparseCertificateBase", error, res);
+    }
+  }
+
+  /**
    * สร้าง Certificate Template ใหม่
    */
   public async createCertificateTemplate(req: Request, res: Response): Promise<void> {
@@ -493,6 +521,7 @@ export const certificateController = {
   createCertificateTemplate: controller.createCertificateTemplate.bind(controller),
   getAllCertificateTemplates: controller.getAllCertificateTemplates.bind(controller),
   getCertificateTemplateById: controller.getCertificateTemplateById.bind(controller),
+  reparseCertificateBase: controller.reparseCertificateBase.bind(controller),
   
   // Certificate methods
   createCertificate: controller.createCertificate.bind(controller),

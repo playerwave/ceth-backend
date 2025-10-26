@@ -5,7 +5,6 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
-  OneToOne,
   Index,
 } from "typeorm";
 import { Assessment } from "./assessment/assessment.entity";
@@ -171,14 +170,6 @@ export class Activity {
   @Column({ type: "int", nullable: true, default: 0 })
   registered_count?: number | null;
 
-  // ✅ Certificate Base Relationship (One-to-One)
-  @OneToOne(() => CertificateBase, { nullable: true, eager: false })
-  @JoinColumn({ name: "certificate_base_id" })
-  certificateBase?: CertificateBase;
-
-  @Column({ type: "int", nullable: true })
-  certificate_base_id?: number | null;
-
   @OneToMany(() => ActivityFood, (activityFood) => activityFood.activity)
   activityFood?: ActivityFood[];
 
@@ -190,4 +181,7 @@ export class Activity {
 
   @OneToMany(() => QRCode, (qrCode) => qrCode.activity)
   qrCodes?: QRCode[];
+
+  @OneToMany(() => CertificateBase, (certificateBase) => certificateBase.activity)
+  certificateBases?: CertificateBase[];
 }

@@ -6,9 +6,8 @@ import { CertificateBase } from "../../entity/certificate/certificate-base.entit
 import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 import { RoomService } from "./room.service";
-import { smartCache } from "../../utils/smart-cache";
-import { cacheInvalidator } from "../../utils/cache-invalidator";
 import { connectDatabase } from "../../db/database";
+import { parseThaiMoocData } from "../../utils/natural-text-parser";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
@@ -76,10 +75,39 @@ export class ActivityService extends ErrorHandledService {
         const connection = await connectDatabase();
         const certificateBaseRepo = connection.getRepository(CertificateBase);
 
+        // ✅ Parse certificate data from OCR natural_text
+        let parsedCertificateData: ReturnType<typeof parseThaiMoocData> | null = null;
+        if (certificate_ocr_data?.natural_text) {
+          parsedCertificateData = parseThaiMoocData(certificate_ocr_data.natural_text);
+          const certType = parsedCertificateData.certificate_type;
+          console.log(`🔍 [ActivityService] Parsed ${certType} data:`, parsedCertificateData);
+        }
+
+        // ✅ Prepare fields for certificate
+        const certificateName = parsedCertificateData?.certificate_name || `Certificate for ${created.activity_name}`;
+        const certificateType = parsedCertificateData?.certificate_type || "Other";
+        const organizationName = parsedCertificateData?.organization_name || null;
+        const getCertificateDate = parsedCertificateData?.get_certificate_date || null;
+        const supervisorName1 = parsedCertificateData?.supervisor_name1 || null;
+
+        // ✅ Log parsed fields (CREATE)
+        const certType = certificateType || "Unknown";
+        console.log(`📝 [ActivityService] Prepared fields from ${certType} parsing (CREATE):`, {
+          certificate_name: certificateName,
+          certificate_type: certificateType,
+          organization_name: organizationName,
+          get_certificate_date: getCertificateDate,
+          supervisor_name1: supervisorName1
+        });
+
         const certificateBase = certificateBaseRepo.create({
           activity_id: created.activity_id,
-          certificate_name: `Certificate for ${created.activity_name}`,
+          certificate_name: certificateName,
           certificate_source: "Course Activity",
+          certificate_type: certificateType as "THAI MOOC" | "BUU MOOC" | "Other",
+          organization_name: organizationName,
+          get_certificate_date: getCertificateDate,
+          supervisor_name1: supervisorName1,
           template_image_url: certificate_template_url,
           ocr_data: certificate_ocr_data || null,
           image_analysis: certificate_image_analysis || null,
@@ -90,9 +118,8 @@ export class ActivityService extends ErrorHandledService {
         const savedCertificateBase = await certificateBaseRepo.save(certificateBase);
         console.log("✅ [ActivityService] CertificateBase created:", savedCertificateBase.certificate_base_id);
 
-        // ✅ Update activity with certificate_base_id
-        created.certificate_base_id = savedCertificateBase.certificate_base_id;
-        await connection.getRepository(Activity).save(created);
+        // ✅ Update local object for return (no need to update activity table since relationship is via certificate_base.activity_id)
+        Object.assign(created, { certificate_base_id: savedCertificateBase.certificate_base_id });
       }
 
       await redis.del("activity:all");
@@ -254,30 +281,28 @@ export class ActivityService extends ErrorHandledService {
       }
 
       // ✅ Fetch certificate base if it exists
-      if (activity.certificate_base_id) {
-        console.log("🚀 [ActivityService] Fetching certificate base for activity_id:", activity_id);
-        const connection = await connectDatabase();
-        const certificateBaseRepo = connection.getRepository(CertificateBase);
-        const certificateBase = await certificateBaseRepo.findOne({
-          where: { activity_id: activity_id }
+      console.log("🚀 [ActivityService] Fetching certificate base for activity_id:", activity_id);
+      const connection = await connectDatabase();
+      const certificateBaseRepo = connection.getRepository(CertificateBase);
+      const certificateBase = await certificateBaseRepo.findOne({
+        where: { activity_id: activity_id }
+      });
+
+      if (certificateBase) {
+        console.log("📄 [ActivityService] Certificate base found:", {
+          certificate_base_id: certificateBase.certificate_base_id,
+          template_image_url: certificateBase.template_image_url
         });
 
-        if (certificateBase) {
-          console.log("📄 [ActivityService] Certificate base found:", {
-            certificate_base_id: certificateBase.certificate_base_id,
-            template_image_url: certificateBase.template_image_url
-          });
-
-          // Map the certificate base data to the activity object
-          (activity as any).certificateBase = certificateBase;
-          // For backward compatibility with old frontend fields
-          (activity as any).certificate_template_url = certificateBase.template_image_url;
-          (activity as any).certificate_ocr_data = certificateBase.ocr_data;
-          (activity as any).certificate_image_analysis = certificateBase.image_analysis;
-          (activity as any).upload_certificate_description = certificateBase.description;
-        } else {
-          console.log("⚠️ [ActivityService] No certificate base found for activity:", activity_id);
-        }
+        // Map the certificate base data to the activity object
+        Object.assign(activity, { certificateBase: certificateBase });
+        // For backward compatibility with old frontend fields
+        Object.assign(activity, { certificate_template_url: certificateBase.template_image_url });
+        Object.assign(activity, { certificate_ocr_data: certificateBase.ocr_data });
+        Object.assign(activity, { certificate_image_analysis: certificateBase.image_analysis });
+        Object.assign(activity, { upload_certificate_description: certificateBase.description });
+      } else {
+        console.log("⚠️ [ActivityService] No certificate base found for activity:", activity_id);
       }
 
       // ✅ เก็บลง cache
@@ -378,11 +403,10 @@ export class ActivityService extends ErrorHandledService {
       create_activity_date: input.create_activity_date ?? new Date(),
       recieve_hours: hrs ?? undefined,
       seat: input.seat ?? 0,
-      assessment_id: input.assessment_id ?? null, // ✅ ใช้ null แทน undefined
-      // Set assessment dates from input (do not shift timezone)
+      assessment_id: input.assessment_id ?? null, 
       start_assessment: input.start_assessment ?? null,
       end_assessment: input.end_assessment ?? null,
-      room_id: input.event_format === "Onsite" ? input.room_id ?? null : null, // ✅ ใช้ null แทน undefined
+      room_id: input.event_format === "Onsite" ? input.room_id ?? null : null,
       url: input.url ?? undefined,
     };
 
@@ -427,22 +451,84 @@ export class ActivityService extends ErrorHandledService {
         where: { activity_id }
       });
 
+      // ✅ Check if certificate template image has changed
+      const imageChanged = existingCertificateBase && 
+        existingCertificateBase.template_image_url !== certificate_template_url;
+
+      if (imageChanged) {
+        console.log("🔄 [ActivityService] Certificate template image changed, re-parsing...");
+      }
+
+      // ✅ Parse certificate data from OCR natural_text ONLY if:
+      // 1. Creating new certificate base, OR
+      // 2. Certificate template image has changed
+      let parsedCertificateData: ReturnType<typeof parseThaiMoocData> | null = null;
+      if (certificate_ocr_data?.natural_text && (!existingCertificateBase || imageChanged)) {
+        parsedCertificateData = parseThaiMoocData(certificate_ocr_data.natural_text);
+        const certType = parsedCertificateData.certificate_type;
+        console.log(`🔍 [ActivityService] Parsed ${certType} data:`, parsedCertificateData);
+      }
+
+      // ✅ Prepare fields for certificate
+      const certificateName = parsedCertificateData?.certificate_name || 
+        (existingCertificateBase?.certificate_name) || 
+        `Certificate for ${updated.activity_name}`;
+      const certificateType = parsedCertificateData?.certificate_type || 
+        (existingCertificateBase?.certificate_type) || 
+        "Other";
+      const organizationName = parsedCertificateData?.organization_name || 
+        existingCertificateBase?.organization_name || 
+        null;
+      const getCertificateDate = parsedCertificateData?.get_certificate_date || 
+        existingCertificateBase?.get_certificate_date || 
+        null;
+      const supervisorName1 = parsedCertificateData?.supervisor_name1 || 
+        existingCertificateBase?.supervisor_name1 || 
+        null;
+
       if (existingCertificateBase) {
-        // Update existing
+        // ✅ Update existing
         existingCertificateBase.template_image_url = certificate_template_url;
         existingCertificateBase.ocr_data = certificate_ocr_data || existingCertificateBase.ocr_data;
         existingCertificateBase.image_analysis = certificate_image_analysis || existingCertificateBase.image_analysis;
         existingCertificateBase.description = upload_certificate_description || existingCertificateBase.description;
-        existingCertificateBase.updated_at = new Date();
+        
+        // ✅ Only update parsed fields if image changed or new data available
+        if (imageChanged || parsedCertificateData) {
+          existingCertificateBase.certificate_name = certificateName;
+          existingCertificateBase.certificate_type = certificateType as "THAI MOOC" | "BUU MOOC" | "Other";
+          existingCertificateBase.organization_name = organizationName;
+          existingCertificateBase.get_certificate_date = getCertificateDate;
+          existingCertificateBase.supervisor_name1 = supervisorName1;
 
+          // ✅ Log parsed fields (UPDATE)
+          const certType = certificateType || "Unknown";
+          console.log(`📝 [ActivityService] Prepared fields from ${certType} parsing (UPDATE):`, {
+            certificate_name: certificateName,
+            certificate_type: certificateType,
+            organization_name: organizationName,
+            get_certificate_date: getCertificateDate,
+            supervisor_name1: supervisorName1,
+            image_changed: imageChanged
+          });
+        } else {
+          console.log("⏭️ [ActivityService] Skipping parse - no image change and no new OCR data");
+        }
+
+        existingCertificateBase.updated_at = new Date();
         await certificateBaseRepo.save(existingCertificateBase);
         console.log("✅ [ActivityService] CertificateBase updated");
       } else {
-        // Create new
+        // ✅ Create new with parsed data
         const certificateBase = certificateBaseRepo.create({
           activity_id,
-          certificate_name: `Certificate for ${updated.activity_name}`,
+          certificate_name: certificateName,
           certificate_source: "Course Activity",
+          certificate_type: certificateType === "BUU MOOC" ? "BUU MOOC" : 
+                            certificateType === "THAI MOOC" ? "THAI MOOC" : "Other",
+          organization_name: organizationName,
+          get_certificate_date: getCertificateDate,
+          supervisor_name1: supervisorName1,
           template_image_url: certificate_template_url,
           ocr_data: certificate_ocr_data || null,
           image_analysis: certificate_image_analysis || null,
@@ -450,12 +536,26 @@ export class ActivityService extends ErrorHandledService {
           is_active: true,
         });
 
-        const savedCertificateBase = await certificateBaseRepo.save(certificateBase);
-        console.log("✅ [ActivityService] CertificateBase created:", savedCertificateBase.certificate_base_id);
+        // ✅ Log parsed fields (CREATE)
+        const certTypeForLog = certificateType || "Unknown";
+        console.log(`📝 [ActivityService] Prepared fields from ${certTypeForLog} parsing (CREATE):`, {
+          certificate_name: certificateName,
+          certificate_type: certificateType,
+          organization_name: organizationName,
+          get_certificate_date: getCertificateDate,
+          supervisor_name1: supervisorName1
+        });
 
-        // ✅ Update activity with certificate_base_id
-        updated.certificate_base_id = savedCertificateBase.certificate_base_id;
-        await connection.getRepository(Activity).save(updated);
+        const savedCertificateBase = await certificateBaseRepo.save(certificateBase);
+        
+        // ✅ Type guard to ensure we have a single CertificateBase
+        if (Array.isArray(savedCertificateBase)) {
+          console.log("✅ [ActivityService] CertificateBase created:", savedCertificateBase[0].certificate_base_id);
+          Object.assign(updated, { certificate_base_id: savedCertificateBase[0].certificate_base_id });
+        } else {
+          console.log("✅ [ActivityService] CertificateBase created:", savedCertificateBase.certificate_base_id);
+          Object.assign(updated, { certificate_base_id: savedCertificateBase.certificate_base_id });
+        }
       }
     }
 
@@ -514,26 +614,22 @@ export class ActivityService extends ErrorHandledService {
       const activity = await this.activityDao.findById(activity_id);
       if (!activity) return false;
 
-      // ✅ ลบ related records ก่อน (activity_food, activity_detail, etc.)
       console.log("🗑️ [ActivityService] Deleting related records for activity:", activity_id);
-      
-      // 1. ลบ activity_food records
+
       await this.activityDao.deleteActivityFoods(activity_id);
       console.log("✅ [ActivityService] Deleted activity_food records");
-      
-      // 2. ลบ activity_detail records
+
       await this.activityDao.deleteActivityDetails(activity_id);
       console.log("✅ [ActivityService] Deleted activity_detail records");
-      
-      // 3. ลบ certificate template (ถ้ามี)
-      await this.activityDao.deleteCertificateTemplate(activity_id);
-      console.log("✅ [ActivityService] Deleted certificate template");
-      
-      // 4. ลบ qr_code records (ถ้ามี)
+
       await this.activityDao.deleteQrCodes(activity_id);
       console.log("✅ [ActivityService] Deleted qr_code records");
       
-      // 5. ลบ activity หลัก
+      await this.activityDao.deleteCertificateTemplate(activity_id);
+      console.log("✅ [ActivityService] Deleted certificate template");
+
+      await this.activityDao.deleteActivityFoods(activity_id);
+
       await this.activityDao.delete(activity_id);
       console.log("✅ [ActivityService] Deleted main activity");
       
@@ -547,7 +643,6 @@ export class ActivityService extends ErrorHandledService {
     }
   }
 
-  // ✅ เพิ่ม search method
   public async searchActivities(searchTerm: string): Promise<Activity[]> {
     try {
       return await this.activityDao.searchActivities(searchTerm);

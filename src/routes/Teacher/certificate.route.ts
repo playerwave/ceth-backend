@@ -11,7 +11,6 @@ import { certificateController } from "../../controllers/Teacher/certificate.con
 
 // import validate function & middleware
 import { validateDTO } from "../../middleware/validateDTO.validator";
-import { requestValidator } from "../../middleware/requestValidator";
 import upload, { uploadImage } from "../../middleware/multer";
 
 // import utils
@@ -46,6 +45,12 @@ router.post(
     next();
   },
   wrapAsync(certificateController.createActivityCertificateTemplate)
+);
+
+// POST: Re-parse THAI MOOC data from existing certificate_base
+router.post(
+  "/reparse/:certificateBaseId",
+  wrapAsync(certificateController.reparseCertificateBase)
 );
 
 // GET: ดึง Certificate Template ทั้งหมด

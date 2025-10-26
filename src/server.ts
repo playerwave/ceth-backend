@@ -93,7 +93,12 @@ if (shouldEnableCors) {
   const corsMw = cors({
     origin(origin, cb) {
       console.log("🌍 [CORS] Request origin:", origin);
-      if (!origin) return cb(null, true); // Postman/mobile apps
+      
+      if (!origin) {
+        console.log("✅ [CORS] No origin - allowing (server-to-server request)");
+        return cb(null, true); // Postman/mobile apps
+      }
+      
       if (allowList.includes(origin)) {
         console.log("✅ [CORS] Origin allowed:", origin);
         return cb(null, true);
@@ -210,6 +215,15 @@ app.use("/api/visitor", activityVisitorRoute);
 app.use("/api/email", emailRoute);
 
 /* ------------ Fallback / Error ------------ */
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
 app.use("*", (req, res) => {
   res.status(404).json({
     error: "API endpoint not found",

@@ -105,6 +105,26 @@ export class CertificateService extends ErrorHandledService {
   }
 
   /**
+   * Re-parse THAI MOOC data from existing certificate_base
+   */
+  public async reparseCertificateBase(certificateBaseId: number): Promise<any> {
+    try {
+      console.log("🔄 [CertificateService] Re-parsing certificate base:", certificateBaseId);
+      
+      const result = await this.certificateDao.reparseCertificateBase(certificateBaseId);
+      
+      this.logInfo("✅ [CertificateService] Certificate base re-parsed", { 
+        certificate_base_id: certificateBaseId 
+      });
+      
+      return result;
+    } catch (error) {
+      this.logError("❌ Error re-parsing certificate base", error);
+      throw error;
+    }
+  }
+
+  /**
    * สร้าง Certificate Template ใหม่
    */
   public async createCertificateTemplate(data: Partial<CertificateTemplate>): Promise<CertificateTemplate> {

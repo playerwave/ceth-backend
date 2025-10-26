@@ -153,9 +153,11 @@ export class CertificateVerificationController extends ErrorHandledController {
 
       // ✅ ถ้าผ่านการตรวจสอบ ให้เพิ่ม hours และ activity
       let hoursAdded = null;
-      // ✅ เปลี่ยนเงื่อนไข: ใช้เฉพาะ nameVerificationResult.isValid
-      if (nameVerificationResult.isValid) {
-        console.log("🔍 [CertificateVerificationController] Certificate passed, adding hours and activity...");
+      // ✅ เงื่อนไข: ชื่อต้องตรง และ confidence score ต้อง >= 70%
+      const passedVerification = nameVerificationResult.isValid && verificationResult.confidenceScore >= 70;
+      
+      if (passedVerification) {
+        console.log("🔍 [CertificateVerificationController] Certificate passed verification, adding hours and activity...");
         
         try {
           hoursAdded = await this.addStudentHoursAndActivity(
@@ -241,6 +243,8 @@ export class CertificateVerificationController extends ErrorHandledController {
       // ✅ ส่ง certificate type ไปยัง frontend
       const responseWithType = {
         ...verificationResult,
+        verified: passedVerification, // ✅ verified ตามเงื่อนไขใหม่ (ชื่อตรง + confidence >= 70)
+        warning: nameVerificationResult.isValid && verificationResult.confidenceScore < 70, // ✅ เตือนถ้าชื่อตรงแต่ confidence ต่ำ
         certificateType: certificateType,
         nameVerification: {
           isValid: nameVerificationResult.isValid,
@@ -820,18 +824,12 @@ export class CertificateVerificationController extends ErrorHandledController {
 
       // ✅ Find date - Generic patterns ที่รองรับทุกรูปแบบวันที่
       const datePatterns = [
+        /On\s+([A-Z][a-z]+\s+\d{1,2},\s+\d{4})/i, // ✅ Pattern สำหรับ "On June 29, 2025"
         /วันที่[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
         /Date[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        /Awarded by[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        /on\s*(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Generic pattern สำหรับ "on DD Month YYYY"
-        /(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Generic pattern สำหรับ "DD Month YYYY"
-        /Awarded by[:\s]*(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Generic pattern สำหรับ "Awarded by DD Month YYYY"
-        /(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Generic pattern สำหรับรูปแบบวันที่ "DD Month YYYY"
-        /Awarded by\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+on\s*(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Generic pattern สำหรับ "Awarded by [University] on DD Month YYYY"
-        /(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Generic pattern สำหรับรูปแบบวันที่ "DD Month YYYY"
-        /(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Generic pattern สำหรับรูปแบบวันที่ "DD Month YYYY"
-        /(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i // ✅ Generic pattern สำหรับรูปแบบวันที่ "DD Month YYYY"
+        /on\s*(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Pattern สำหรับ "on DD Month YYYY"
+        /(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Pattern สำหรับ "DD Month YYYY"
+        /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i // ✅ Pattern สำหรับ "DD/MM/YYYY" or "DD-MM-YYYY"
       ];
       
       for (const pattern of datePatterns) {

@@ -195,39 +195,31 @@ export class ActivityController extends ErrorHandledController {
       
       // 1. ตรวจสอบ activity
       const activity = await activityDao.findById(id);
-      console.log("🔍 [Debug] Activity from DB:", {
-        activity_id: activity?.activity_id,
-        certificate_base_id: activity?.certificate_base_id
-      });
       
-      // 2. ตรวจสอบ certificate base
-      if (activity?.certificate_base_id) {
-        const dataSource = await import("../../db/database");
-        const { CertificateBase } = await import("../../entity/certificate/certificate-base.entity");
-        const conn = await dataSource.connectDatabase();
-        const certificateBaseRepo = conn.getRepository(CertificateBase);
-        const certificateBase = await certificateBaseRepo.findOne({
-          where: { activity_id: id }
-        });
-        console.log("🔍 [Debug] Certificate base:", certificateBase);
-      } else {
-        console.log("⚠️ [Debug] No certificate_base_id found");
-      }
-      
-      // 3. ตรวจสอบตาราง certificate_base ทั้งหมด
+      // 2. ดึง certificate bases จาก database
       const dataSource = await import("../../db/database");
       const { CertificateBase } = await import("../../entity/certificate/certificate-base.entity");
       const conn = await dataSource.connectDatabase();
       const certificateBaseRepo = conn.getRepository(CertificateBase);
+      const certificateBases = await certificateBaseRepo.find({
+        where: { activity_id: id }
+      });
+      
+      console.log("🔍 [Debug] Activity from DB:", {
+        activity_id: activity?.activity_id,
+        certificateBases: certificateBases
+      });
+      
+      // 3. ตรวจสอบตาราง certificate_base ทั้งหมด
       const allCertificateBases = await certificateBaseRepo.find();
       console.log("🔍 [Debug] All certificate bases:", allCertificateBases);
       
       res.status(200).json({
         activity: {
           activity_id: activity?.activity_id,
-          certificate_base_id: activity?.certificate_base_id
+          certificateBases: certificateBases
         },
-        hasTemplate: !!activity?.certificate_base_id,
+        hasTemplate: certificateBases.length > 0,
         allTemplates: allCertificateBases
       });
     } catch (error) {
