@@ -50,35 +50,6 @@ export class StudentsController extends ErrorHandledController {
     }
   }
 
-  // public async create(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const data = this.parseStudentPayload(req.body);
-  //     const created = await this.studentsService.addStudents(...data);
-  //     if (!created) {
-  //       res.status(409).json({ message: "มีข้อมูลนิสิตนี้อยู่ในระบบแล้ว!" });
-  //       return;
-  //     }
-  //     res.status(201).json({ message: "เพิ่มข้อมูลนิสิตสำเร็จ!" });
-  //   } catch (error) {
-  //     this.handleError("StudentsController.create", error, res);
-  //   }
-  // }
-
-  // public async update(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = this.parseId(req.params.students_id);
-  //     const data = this.parseStudentPayload(req.body);
-  //     const updated = await this.studentsService.updatedStudents(id, ...data);
-  //     if (!updated) {
-  //       res.status(404).json({ message: "แก้ไขข้อมูลไม่สำเร็จ!" });
-  //       return;
-  //     }
-  //     res.status(200).json({ message: "แก้ไขข้อมูลนิสิตสำเร็จ!" });
-  //   } catch (error) {
-  //     this.handleError("StudentsController.update", error, res);
-  //   }
-  // }
-
   public async create(req: Request, res: Response): Promise<void> {
     try {
       const data = this.parseStudentPayload(req.body);
