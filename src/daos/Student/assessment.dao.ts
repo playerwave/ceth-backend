@@ -1,7 +1,7 @@
 import { DataSource } from "typeorm";
 import { ErrorHandledDao } from "../error.handled.dao";
 import { connectDatabase } from "../../db/database";
-import { cacheInvalidator } from "../../utils/cache-invalidator";
+import { cacheInvalidator } from "../../utils/cacheInvalidator";
 
 export class AssessmentDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;

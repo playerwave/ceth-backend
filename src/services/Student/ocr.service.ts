@@ -1,7 +1,12 @@
 // src/services/Student/ocr.service.ts
+import { getCertificatePrompt } from '../../utils/validateCertificatePrompt';
+import { correctOCRText, correctExtractedData } from '../../utils/postOcrCorrection';
+
 export interface OcrParams {
   model?: string;
   prompt?: string;
+  certificateType?: string;
+  enableCorrection?: boolean;
 }
 
 /**
@@ -59,36 +64,22 @@ async function callTyphoonOCRWithTimeout(
   
   // ✅ เพิ่ม structured prompt
   const ocrParams: any = { 
-    model: params.model || "typhoon-ocr-preview"
+    model: params.model || "typhoon-ocr-preview",
+    language: "th", // ✅ เพิ่มการระบุภาษาไทย
+    certificateType: params.certificateType || "BUU MOOC"
   };
   
-  // ✅ Default structured prompt สำหรับ Certificate OCR
-  const defaultPrompt = `You are a certificate OCR specialist. Extract the following information from this certificate image and return ONLY a valid JSON object with these exact keys:
-
-{
-  "student_name": "Full name of the student (extract ONLY the name, not phrases like 'THIS CERTIFICATE IS AWARDED TO')",
-  "course_name": "Complete name of the course or program (include any additional information like hours in parentheses)",
-  "instructor_name": "Name of the instructor, teacher, university, or awarding institution (if available, otherwise use '-')",
-  "certificate_id": "Certificate ID or serial number (if available, otherwise use '-')",
-  "completion_date": "Date of completion (extract in format DD Month YYYY or similar)",
-  "raw_text": "All visible text from the certificate"
-}
-
-EXTRACTION RULES:
-1. For student_name: Look for phrases like "THIS CERTIFICATE IS AWARDED TO", "PRESENTED TO", "AWARDED TO" and extract ONLY the name that follows (e.g., "Napatsakorn Kultangwattana")
-2. For course_name: Look for phrases like "for the completion of", "completion of the course", "online course" and extract the COMPLETE course name including any additional information (e.g., "English for Communication (10 Hours)")
-3. For instructor_name: Look for names below signatures, titles like "Professor", "Director", "Associate Professor", OR university names like "Chiang Mai University", "Awarded by [University Name]"
-4. For completion_date: Look for dates near "Awarded by", "Date", "on [date]" (e.g., "24 June 2025")
-5. For certificate_id: Look for ID numbers, serial numbers, or codes (if not found, use "-")
-6. If any information is not found, use "-" as the value
-7. Return ONLY the JSON object, no additional text or explanations
-
-IMPORTANT: Return ONLY valid JSON, no markdown formatting or additional text.`;
-  
+  // ✅ ใช้ prompt เฉพาะตามประเภท certificate
   if (params.prompt) {
     ocrParams.prompt = params.prompt;
   } else {
-    ocrParams.prompt = defaultPrompt;
+    ocrParams.prompt = getCertificatePrompt(params.certificateType);
+    console.log(`🔍 [OCR Service] Using prompt for certificate type: ${params.certificateType || 'BUU MOOC'}`);
+    
+    // ✅ เพิ่มการเน้น Certificate ID สำหรับ BUU MOOC
+    if (params.certificateType === 'BUU MOOC' || params.certificateType === 'BUU_MOOC') {
+      ocrParams.prompt += '\n\nIMPORTANT: Pay special attention to finding "Certificate ID Number :" at the bottom of the certificate. This is a critical field for verification.';
+    }
   }
   
   formData.append("params", JSON.stringify(ocrParams));
@@ -131,6 +122,15 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting or additional text.`;
     console.log("✅ [OCR Service] Typhoon API success, parsing JSON...");
     const result = await r.json();
     console.log("✅ [OCR Service] JSON parsed successfully");
+    
+    // ✅ เพิ่ม Post-OCR Correction
+    if (params.enableCorrection !== false) {
+      console.log("🔧 [OCR Service] Applying post-OCR correction...");
+      const correctedResult = applyPostOCRCorrection(result, params.certificateType);
+      console.log("✅ [OCR Service] Post-OCR correction completed");
+      return correctedResult;
+    }
+    
     return result;
   } catch (error) {
     clearTimeout(timeoutId);
@@ -195,4 +195,47 @@ export async function callTyphoonOCR(
   // ✅ ถ้า retry ครบทุกครั้งแล้วยังไม่สำเร็จ
   console.error(`❌ [OCR Service] All ${maxRetries} attempts failed`);
   throw new Error(`OCR failed after ${maxRetries} attempts: ${lastError?.message}`);
+}
+
+/**
+ * ใช้ Post-OCR Correction กับผลลัพธ์
+ */
+function applyPostOCRCorrection(result: any, certificateType?: string): any {
+  try {
+    console.log("🔧 [OCR Service] Starting post-OCR correction...");
+    
+    // ✅ แก้ไข natural_text ถ้ามี
+    if (result?.results?.[0]?.message?.choices?.[0]?.message?.content) {
+      const content = result.results[0].message.choices[0].message.content;
+      
+      // ✅ ลอง parse JSON ก่อน
+      try {
+        const parsed = JSON.parse(content);
+        
+        // ✅ แก้ไข raw_text
+        if (parsed.raw_text) {
+          parsed.raw_text = correctOCRText(parsed.raw_text);
+        }
+        
+        // ✅ แก้ไขข้อมูลที่ extract
+        const correctedData = correctExtractedData(parsed);
+        
+        // ✅ อัปเดต content กลับ
+        result.results[0].message.choices[0].message.content = JSON.stringify(correctedData);
+        
+        console.log("✅ [OCR Service] Applied corrections to structured data");
+      } catch {
+        // ✅ ถ้าไม่ใช่ JSON ให้แก้ไขเป็น plain text
+        const correctedContent = correctOCRText(content);
+        result.results[0].message.choices[0].message.content = correctedContent;
+        
+        console.log("✅ [OCR Service] Applied corrections to plain text");
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("❌ [OCR Service] Error in post-OCR correction:", error);
+    return result; // Return original result if correction fails
+  }
 }

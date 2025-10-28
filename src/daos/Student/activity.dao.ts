@@ -180,9 +180,13 @@ export class ActivityDao extends ErrorHandledDao {
     
     // ✅ Clear Redis cache ก่อน query
     try {
-      const redis = require('../../config/redis');
-      await redis.del(`student_activities_${studentId}`);
-      console.log(`🧹 [CACHE] Cleared cache for student ${studentId}`);
+      const redis = require('../../config/redis').default;
+      if (redis && typeof redis.del === 'function') {
+        await redis.del(`student_activities_${studentId}`);
+        console.log(`🧹 [CACHE] Cleared cache for student ${studentId}`);
+      } else {
+        console.warn('⚠️ [CACHE] Redis del function not available');
+      }
     } catch (error) {
       console.log(`⚠️ [CACHE] Failed to clear cache:`, error);
     }
@@ -1264,11 +1268,11 @@ export class ActivityDao extends ErrorHandledDao {
     }
   }
 
-  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate
-  public async getAvailableCourseActivities(): Promise<Activity[]> {
+  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate (กรองกิจกรรมที่ claim แล้ว)
+  public async getAvailableCourseActivities(studentId: number): Promise<Activity[]> {
     await this.checkConnection();
     try {
-      console.log("🔍 [ActivityDao] Getting available course activities for certificate submission");
+      console.log("🔍 [ActivityDao] Getting available course activities for certificate submission for student:", studentId);
       
       // ✅ เพิ่ม retry logic สำหรับ database connection
       let retryCount = 0;
@@ -1292,16 +1296,32 @@ export class ActivityDao extends ErrorHandledDao {
               a.image_url,
               a.url,
               a.create_activity_date,
-              a.last_update_activity_date
+              a.last_update_activity_date,
+              cb.description as template_description
             FROM activity a
+            LEFT JOIN certificate_base cb ON a.activity_id = cb.activity_id
             WHERE a.event_format = 'Course' 
               AND a.activity_state = 'Start Activity'
               AND a.activity_status = 'Public'
               AND a.status = 'Active'
+              -- ✅ กรองกิจกรรมที่ claim certificate แล้ว
+              AND a.activity_id NOT IN (
+                SELECT DISTINCT c.activity_id 
+                FROM certificate c 
+                WHERE c.students_id = $1
+              )
+              -- ✅ กรองกิจกรรมที่ทำเสร็จแล้ว
+              AND a.activity_id NOT IN (
+                SELECT DISTINCT ad.activity_id 
+                FROM "join" j
+                INNER JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
+                WHERE j.students_id = $1 
+                AND j.status = 'Completed'
+              )
             ORDER BY a.start_activity_date DESC
           `;
           
-          const result = await this.dataSource!.query(sql);
+          const result = await this.dataSource!.query(sql, [studentId]);
           console.log(`✅ [ActivityDao] Found ${result.length} available course activities`);
           
           return result;

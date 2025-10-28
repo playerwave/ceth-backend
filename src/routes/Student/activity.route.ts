@@ -38,6 +38,7 @@
 
 import { Router } from "express";
 import { activityController } from "../../controllers/Student/activity.controller";
+import { verifyToken } from "../../middleware/verifyToken";
 import { wrapAsync } from "../../utils/wrapAsync";
 
 const router = Router();
@@ -61,7 +62,8 @@ router.post(
 );
 
 router.get(
-  "/history/:studentId",
+  "/history/:student_id",
+  verifyToken,
   wrapAsync(activityController.getActivityHistoryByStudentsID)
 );
 
@@ -73,33 +75,36 @@ router.get(
 // ✅ GET METHODS
 router.get(
   "/get-student-activities/:id",
+  verifyToken,
   wrapAsync(activityController.getStudentActivities.bind(activityController))
 );
 
 router.get(
   "/get-enrolled-activities/:id",
+  verifyToken,
   wrapAsync(activityController.getEnrolledActivities)
 );
 
 router.get(
   "/get-ongoing-activities/:id",
+  verifyToken,
   wrapAsync(activityController.getOngoingActivities)
 );
 
-router.get("/get-activity/:id", wrapAsync(activityController.getActivityById));
+router.get("/get-activity/:id", verifyToken, wrapAsync(activityController.getActivityById));
 
-router.get("/assessment/:activityId", wrapAsync(activityController.getAssessmentByActivityId));
+router.get("/assessment/:activityId", verifyToken, wrapAsync(activityController.getAssessmentByActivityId));
 
 // ✅ GET METHOD สำหรับดึง join_id
-router.get("/:activityId/join-id/:studentId", wrapAsync(activityController.getJoinIdByStudentAndActivity));
+router.get("/:activityId/join-id/:studentId", verifyToken, wrapAsync(activityController.getJoinIdByStudentAndActivity));
 
 // Debug endpoint
-router.get("/debug/:activityId", wrapAsync(activityController.debugActivityData));
+router.get("/debug/:activityId", verifyToken, wrapAsync(activityController.debugActivityData));
 
 // ✅ เมธอดใหม่: เช็คสถานะการทำแบบประเมิน
-router.get("/assessment-status/:activityId/:studentId", wrapAsync(activityController.checkAssessmentStatus));
+router.get("/assessment-status/:activityId/:studentId", verifyToken, wrapAsync(activityController.checkAssessmentStatus));
 
-router.get("/searchActivity", wrapAsync(activityController.searchActivity));
+router.get("/searchActivity", verifyToken, wrapAsync(activityController.searchActivity));
 
 // ✅ POST METHOD สำหรับ Check-in/Check-out
 router.post(
@@ -110,6 +115,7 @@ router.post(
 // ✅ GET METHOD สำหรับดึงกิจกรรม Course ที่พร้อมส่ง Certificate
 router.get(
   "/available-course-activities",
+  verifyToken,
   wrapAsync(activityController.getAvailableCourseActivities)
 );
 

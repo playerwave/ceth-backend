@@ -1,9 +1,11 @@
 import { AssessmentDao } from "../../daos/Student/assessment.dao";
+import { StudentsDao } from "../../daos/Student/student.dao";
 import { StudentsService } from "./student.service";
 import { ErrorHandledService } from "../error.handdled.service";
 
 export class AssessmentService extends ErrorHandledService {
   private assessmentDao = new AssessmentDao();
+  private studentsDao = new StudentsDao();
   private studentsService = new StudentsService();
 
   /**
@@ -182,6 +184,49 @@ export class AssessmentService extends ErrorHandledService {
       return assessment;
     } catch (error) {
       this.logError("❌ Error getting assessment by activity ID", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ดึง student_id จาก user_id
+   * @param userId - ID ของ user
+   */
+  public async getStudentIdFromUserId(userId: number): Promise<number | null> {
+    try {
+      const student = await this.studentsDao.getStudentByUserId(userId);
+      return student?.students_id || null;
+    } catch (error) {
+      this.logError("❌ Error getting student ID from user ID", error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear activity cache สำหรับ student
+   * @param studentId - ID ของ student
+   */
+  public async clearActivityCache(studentId: number): Promise<void> {
+    try {
+      const redis = require("../../config/redis").default;
+      
+      if (!redis || typeof redis.del !== 'function') {
+        console.warn("⚠️ [AssessmentService] Redis del function not available");
+        return;
+      }
+
+      const cacheKeys = [
+        `activity:history:${studentId}`,
+        `activity:enrolled:${studentId}`,
+        `activity:ongoing:${studentId}`,
+        `activity:available:${studentId}`,
+        `certificate:list:${studentId}` // ✅ เพิ่ม cache key สำหรับ certificate list
+      ];
+
+      await Promise.all(cacheKeys.map(key => redis.del(key)));
+      console.log("🗑️ [AssessmentService] Activity cache cleared for student:", studentId);
+    } catch (error) {
+      this.logError("❌ Error clearing activity cache", error);
       throw error;
     }
   }

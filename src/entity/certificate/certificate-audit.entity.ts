@@ -29,10 +29,10 @@ export class CertificateAudit {
   action!: string; // "UPLOAD", "VERIFY", "APPROVE", "REJECT", "UPDATE"
 
   @Column({ type: "json", nullable: true })
-  old_values?: any;
+  old_values?: string;
 
   @Column({ type: "json", nullable: true })
-  new_values?: any;
+  new_values?: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   reason?: string;

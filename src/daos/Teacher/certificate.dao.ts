@@ -6,7 +6,7 @@ import { CertificateAudit } from "../../entity/certificate/certificate-audit.ent
 import { CertificateBase } from "../../entity/certificate/certificate-base.entity";
 import { connectDatabase } from "../../db/database";
 import { ErrorHandledDao } from "../error.handled.dao";
-import { parseThaiMoocData } from "../../utils/natural-text-parser";
+import { parseThaiMoocData } from "../../utils/naturalTextParser";
 
 export class CertificateDao extends ErrorHandledDao {
   private dataSource: DataSource | null = null;
@@ -86,7 +86,7 @@ export class CertificateDao extends ErrorHandledDao {
           // ✅ Prepare fields for THAI MOOC
           const certificateName = parsedThaiMoocData?.certificate_name || `Certificate for Activity ${activityId}`;
           const certificateType = parsedThaiMoocData?.certificate_type || "Other";
-          const organizationName = parsedThaiMoocData?.organization_name || null;
+          const organizationName = parsedThaiMoocData?.organize_base_name || null;
           const getCertificateDate = parsedThaiMoocData?.get_certificate_date || null;
           const supervisorName1 = parsedThaiMoocData?.supervisor_name1 || null;
 
@@ -94,7 +94,7 @@ export class CertificateDao extends ErrorHandledDao {
           console.log("📝 [CertificateDao] Prepared fields from THAI MOOC parsing (UPDATE):", {
             certificate_name: certificateName,
             certificate_type: certificateType,
-            organization_name: organizationName,
+            organize_base_name: organizationName,
             get_certificate_date: getCertificateDate,
             supervisor_name1: supervisorName1
           });
@@ -109,7 +109,7 @@ export class CertificateDao extends ErrorHandledDao {
               description = $4,
               certificate_name = $5,
               certificate_type = $6,
-              organization_name = $7,
+              organize_base_name = $7,
               get_certificate_date = $8,
               supervisor_name1 = $9,
               updated_at = NOW()
@@ -138,7 +138,7 @@ export class CertificateDao extends ErrorHandledDao {
           // ✅ Prepare fields for THAI MOOC
           const certificateName = parsedThaiMoocData?.certificate_name || `Certificate for Activity ${activityId}`;
           const certificateType = parsedThaiMoocData?.certificate_type || "Other";
-          const organizationName = parsedThaiMoocData?.organization_name || null;
+          const organizationName = parsedThaiMoocData?.organize_base_name || null;
           const getCertificateDate = parsedThaiMoocData?.get_certificate_date || null;
           const supervisorName1 = parsedThaiMoocData?.supervisor_name1 || null;
 
@@ -146,7 +146,7 @@ export class CertificateDao extends ErrorHandledDao {
           console.log("📝 [CertificateDao] Prepared fields from THAI MOOC parsing (INSERT):", {
             certificate_name: certificateName,
             certificate_type: certificateType,
-            organization_name: organizationName,
+            organize_base_name: organizationName,
             get_certificate_date: getCertificateDate,
             supervisor_name1: supervisorName1
           });
@@ -158,7 +158,7 @@ export class CertificateDao extends ErrorHandledDao {
               certificate_name,
               certificate_source,
               certificate_type,
-              organization_name,
+              organize_base_name,
               get_certificate_date,
               supervisor_name1,
               template_image_url,
@@ -251,7 +251,7 @@ export class CertificateDao extends ErrorHandledDao {
       // 3. Prepare fields for THAI MOOC
       const certificateName = parsedThaiMoocData?.certificate_name || certificateBase[0].certificate_name;
       const certificateType = parsedThaiMoocData?.certificate_type || "Other";
-      const organizationName = parsedThaiMoocData?.organization_name || null;
+      const organizationName = parsedThaiMoocData?.organize_base_name || null;
       const getCertificateDate = parsedThaiMoocData?.get_certificate_date || null;
       const supervisorName1 = parsedThaiMoocData?.supervisor_name1 || null;
 
@@ -276,7 +276,7 @@ export class CertificateDao extends ErrorHandledDao {
           SET 
             certificate_name = $1,
             certificate_type = $2,
-            organization_name = $3,
+            organize_base_name = $3,
             get_certificate_date = $4,
             supervisor_name1 = $5,
             updated_at = NOW()

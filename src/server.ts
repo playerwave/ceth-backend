@@ -37,6 +37,7 @@ import studentAssessmentRoute from "./routes/Student/assessment.route";
 import studentRoute from "./routes/Student/students.route";
 import studentGradeRoute from "./routes/Student/grade.route";
 import studentCertificateRoute from "./routes/Student/certificate.route";
+import studentCertificateLinkRoute from "./routes/Student/certificate-link.route";
 import ocrRoute from "./routes/Student/orc.route";
 
 import authRoute from "./routes/auth.route";
@@ -204,6 +205,7 @@ app.use("/api/student/assessment", studentAssessmentRoute);
 app.use("/api/student", studentRoute);
 app.use("/api/student/grade", studentGradeRoute);
 app.use("/api/student/certificate", studentCertificateRoute);
+app.use("/api/student/certificate", studentCertificateLinkRoute);
 app.use("/api/ocr", ocrRoute);
 
 // auth / common

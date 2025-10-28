@@ -2,6 +2,8 @@
 import { CertificateVerificationDAO } from "../../daos/Student/certificate-verification.dao";
 import { CertificateBase } from "../../entity/certificate/certificate-base.entity";
 import { ErrorHandledService } from "../error.handdled.service";
+import { parseThaiMoocData } from "../../utils/naturalTextParser";
+import { correctCertificateBaseData } from "../../utils/postOcrCorrection";
 
 // ✅ Interface สำหรับผลการตรวจสอบ
 export interface CertificateVerificationResult {
@@ -22,9 +24,11 @@ export interface CertificateVerificationResult {
   verificationDetails: {
     courseNameMatch: number;
     instructorMatch: number;
+    organizationMatch: number; // ✅ เพิ่ม organizationMatch
     visualMatch: number;
     formatMatch: number;
   };
+  organize_name?: string; // ✅ เพิ่ม organize_name
 }
 
 // ✅ Interface สำหรับข้อมูล OCR
@@ -35,15 +39,18 @@ export interface OcrResult {
   certificateId: string;
   date: string;
   rawText: string;
+  organize_name?: string; // ✅ เพิ่ม organize_name
 }
 
 // ✅ Interface สำหรับการเปรียบเทียบ
 export interface ComparisonResult {
   courseNameMatch: number;
   instructorMatch: number;
+  organizationMatch: number; // ✅ เพิ่ม organizationMatch
   visualMatch: number;
   formatMatch: number;
   overallConfidence: number;
+  organize_name?: string; // ✅ เพิ่ม organize_name
 }
 
 export class CertificateVerificationService extends ErrorHandledService {
@@ -120,9 +127,11 @@ export class CertificateVerificationService extends ErrorHandledService {
         verificationDetails: {
           courseNameMatch: comparisonResult.courseNameMatch,
           instructorMatch: comparisonResult.instructorMatch,
+          organizationMatch: comparisonResult.organizationMatch, // ✅ เพิ่ม organizationMatch
           visualMatch: comparisonResult.visualMatch,
           formatMatch: comparisonResult.formatMatch
-        }
+        },
+        organize_name: comparisonResult.organize_name // ✅ เพิ่ม organize_name
       };
       
       console.log("✅ [CertificateVerificationService] Verification completed:", {
@@ -176,12 +185,36 @@ export class CertificateVerificationService extends ErrorHandledService {
     return match ? match[1].trim() : "";
   }
 
+  // ✅ เพิ่ม method สำหรับแยกชื่อหน่วยงานจาก template
+  private extractOrganizationNameFromTemplate(naturalText: string): string {
+    if (!naturalText) return "";
+    
+    const organizationPatterns = [
+      /สำนักคอมพิวเตอร์\s+มหาวิทยาลัยบูรพา/i,
+      /มหาวิทยาลัยบูรพา/i,
+      /สำนักคอมพิวเตอร์/i
+    ];
+    
+    for (const pattern of organizationPatterns) {
+      const match = naturalText.match(pattern);
+      if (match) {
+        return match[0].trim();
+      }
+    }
+    
+    return "";
+  }
+
   // ✅ เปรียบเทียบข้อมูล
   private async performComparison(
     ocrResult: OcrResult,
     certificateBase: CertificateBase
   ): Promise<ComparisonResult> {
-    const templateData = certificateBase.ocr_data;
+    
+    // ✅ แก้ไขข้อมูลใน Certificate Base ก่อนเปรียบเทียบ
+    const correctedCertificateBase = correctCertificateBaseData(certificateBase);
+    console.log("🔧 [CertificateVerificationService] Applied corrections to certificate base data");
+    const templateData = correctedCertificateBase.ocr_data;
     
     console.log("🔍 [CertificateVerificationService] Starting field-by-field comparison...");
     console.log("📋 [CertificateVerificationService] OCR Result Data:", {
@@ -194,6 +227,7 @@ export class CertificateVerificationService extends ErrorHandledService {
     });
     
     console.log("📋 [CertificateVerificationService] Template Data:", {
+      certificate_type: certificateBase.certificate_type,
       student_name: templateData?.student_name,
       course_name: templateData?.course_name,
       instructor_name: templateData?.instructor_name,
@@ -206,11 +240,25 @@ export class CertificateVerificationService extends ErrorHandledService {
       total_pages: templateData?.total_pages
     });
     
+    // ✅ Parse natural_text ตาม certificate_type
+    let parsedTemplateData: any = null;
+    if (templateData?.natural_text) {
+      console.log("🔍 [CertificateVerificationService] Parsing template natural_text...");
+      parsedTemplateData = parseThaiMoocData(templateData.natural_text);
+      console.log("📊 [CertificateVerificationService] Parsed template data:", {
+        certificate_type: parsedTemplateData.certificate_type,
+        certificate_name: parsedTemplateData.certificate_name,
+        organize_base_name: correctedCertificateBase.organize_base_name || parsedTemplateData.organize_base_name,
+        get_certificate_date: parsedTemplateData.get_certificate_date,
+        supervisor_name1: parsedTemplateData.supervisor_name1
+      });
+    }
+    
     // ✅ เปรียบเทียบชื่อหลักสูตร
     console.log("🔍 [CertificateVerificationService] Comparing Course Name...");
     
-    // ✅ ใช้ natural_text จาก template แทน course_name
-    const templateCourseName = this.extractCourseNameFromTemplate(templateData?.natural_text || "");
+    // ✅ ใช้ parsed data จาก natural_text หรือข้อมูลที่แก้ไขแล้ว
+    const templateCourseName = correctedCertificateBase.certificate_name || parsedTemplateData?.certificate_name || this.extractCourseNameFromTemplate(templateData?.natural_text || "");
     
     console.log("📊 [CertificateVerificationService] Course Name Comparison:", {
       ocrCourseName: ocrResult.courseName,
@@ -229,8 +277,8 @@ export class CertificateVerificationService extends ErrorHandledService {
     // ✅ เปรียบเทียบชื่ออาจารย์
     console.log("🔍 [CertificateVerificationService] Comparing Instructor Name...");
     
-    // ✅ ใช้ natural_text จาก template แทน instructor_name
-    const templateInstructorName = this.extractInstructorNameFromTemplate(templateData?.natural_text || "");
+    // ✅ ใช้ parsed data จาก natural_text หรือข้อมูลที่แก้ไขแล้ว
+    const templateInstructorName = correctedCertificateBase.supervisor_name1 || parsedTemplateData?.supervisor_name1 || this.extractInstructorNameFromTemplate(templateData?.natural_text || "");
     
     console.log("📊 [CertificateVerificationService] Instructor Name Comparison:", {
       ocrTeacher: ocrResult.teacher,
@@ -246,31 +294,37 @@ export class CertificateVerificationService extends ErrorHandledService {
     
     console.log("✅ [CertificateVerificationService] Instructor Name Match Score:", instructorMatch);
     
-    // ✅ เปรียบเทียบชื่อนิสิต
-    console.log("🔍 [CertificateVerificationService] Comparing Student Name...");
+    // ✅ เปรียบเทียบหน่วยงาน
+    console.log("🔍 [CertificateVerificationService] Comparing Organization Name...");
     
-    // ✅ ใช้ natural_text จาก template แทน student_name
-    const templateStudentName = this.extractStudentNameFromTemplate(templateData?.natural_text || "");
+    // ✅ ใช้ parsed data จาก natural_text หรือข้อมูลที่แก้ไขแล้ว
+    const templateOrganizationName = correctedCertificateBase.organize_base_name || parsedTemplateData?.organize_base_name || this.extractOrganizationNameFromTemplate(templateData?.natural_text || "");
     
-    console.log("📊 [CertificateVerificationService] Student Name Comparison:", {
-      ocrFullName: ocrResult.fullName,
-      templateStudentName: templateStudentName,
-      ocrLength: ocrResult.fullName.length,
-      templateLength: templateStudentName.length
+    console.log("📊 [CertificateVerificationService] Organization Name Comparison:", {
+      ocrOrganization: ocrResult.organize_name || "-",
+      templateOrganization: templateOrganizationName,
+      ocrLength: (ocrResult.organize_name || "-").length,
+      templateLength: templateOrganizationName.length
     });
     
-    const studentNameMatch = this.calculateStringSimilarity(
-      ocrResult.fullName,
-      templateStudentName
+    const organizationMatch = this.calculateStringSimilarity(
+      ocrResult.organize_name || "-",
+      templateOrganizationName
     );
     
-    console.log("✅ [CertificateVerificationService] Student Name Match Score:", studentNameMatch);
+    console.log("✅ [CertificateVerificationService] Organization Name Match Score:", organizationMatch);
+    
+    // ✅ ไม่เปรียบเทียบชื่อนิสิต - ใช้ name verification แทน
+    console.log("🔍 [CertificateVerificationService] Skipping Student Name comparison - using name verification instead");
+    const studentNameMatch = 100; // ใช้ name verification แทน
     
     // ✅ เปรียบเทียบวันที่
     console.log("🔍 [CertificateVerificationService] Comparing Date...");
     
-    // ✅ ใช้ natural_text จาก template แทน completion_date
-    const templateDate = this.extractDateFromTemplate(templateData?.natural_text || "");
+    // ✅ ใช้ parsed data จาก natural_text
+    const templateDate = parsedTemplateData?.get_certificate_date 
+      ? parsedTemplateData.get_certificate_date.toLocaleDateString('en-GB')
+      : this.extractDateFromTemplate(templateData?.natural_text || "");
     
     console.log("📊 [CertificateVerificationService] Date Comparison:", {
       ocrDate: ocrResult.date,
@@ -314,33 +368,67 @@ export class CertificateVerificationService extends ErrorHandledService {
     console.log("✅ [CertificateVerificationService] Format Match Score:", formatMatch);
     
     const overallConfidence = (
-      courseNameMatch * 0.4 +
-      instructorMatch * 0.3 +
-      visualMatch * 0.2 +
-      formatMatch * 0.1
+      courseNameMatch * 0.25 +      // 25%
+      instructorMatch * 0.15 +       // 15%
+      organizationMatch * 0.15 +     // 15% - เพิ่มการเปรียบเทียบหน่วยงาน
+      visualMatch * 0.25 +           // 25%
+      formatMatch * 0.20 +           // 20%
+      studentNameMatch * 0.0         // 0% - ใช้ name verification แทน
     );
     
     console.log("📊 [CertificateVerificationService] Overall Confidence Calculation:", {
       courseNameMatch,
       instructorMatch,
+      organizationMatch,
       visualMatch,
       formatMatch,
+      studentNameMatch,
       overallConfidence,
       weights: {
-        courseName: 0.4,
-        instructor: 0.3,
-        visual: 0.2,
-        format: 0.1
+        courseName: 0.25,
+        instructor: 0.15,
+        organization: 0.15,
+        visual: 0.25,
+        format: 0.20,
+        studentName: 0.0
       }
     });
     
     return {
       courseNameMatch,
       instructorMatch,
+      organizationMatch, // ✅ เพิ่ม organizationMatch
       visualMatch,
       formatMatch,
-      overallConfidence
+      overallConfidence,
+      organize_name: parsedTemplateData?.organize_base_name || "-" // ✅ เพิ่ม organize_name
     };
+  }
+
+  // ✅ Clear activity cache สำหรับ student
+  async clearActivityCache(studentId: number): Promise<void> {
+    try {
+      const redis = require("../../config/redis").default;
+      
+      if (!redis || typeof redis.del !== 'function') {
+        console.warn("⚠️ [CertificateVerificationService] Redis del function not available");
+        return;
+      }
+
+      const cacheKeys = [
+        `activity:history:${studentId}`,
+        `activity:enrolled:${studentId}`,
+        `activity:ongoing:${studentId}`,
+        `activity:available:${studentId}`,
+        `certificate:list:${studentId}` // ✅ เพิ่ม cache key สำหรับ certificate list
+      ];
+
+      await Promise.all(cacheKeys.map(key => redis.del(key)));
+      console.log("🗑️ [CertificateVerificationService] Activity cache cleared for student:", studentId);
+    } catch (error) {
+      console.error("❌ [CertificateVerificationService] Error clearing activity cache:", error);
+      throw error;
+    }
   }
 
   // ✅ คำนวณความคล้ายคลึงของ string

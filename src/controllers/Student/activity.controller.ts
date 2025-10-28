@@ -94,7 +94,7 @@ export class ActivityController extends ErrorHandledController {
 
   public async getActivityHistoryByStudentsID(req: Request, res: Response): Promise<void> {
     try {
-      const studentId = this.parseId(req.params.studentId);
+      const studentId = this.parseId(req.params.student_id);
       const activities = await this.activityService.getActivityHistoryByStudentsID(studentId);
       res.status(200).json(activities);
     } catch (error) {
@@ -294,14 +294,31 @@ export class ActivityController extends ErrorHandledController {
     }
   }
 
-  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate
+  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate (กรองกิจกรรมที่ claim แล้ว)
   public async getAvailableCourseActivities(req: Request, res: Response): Promise<void> {
     try {
-      console.log("🔍 [StudentController] Getting available course activities for certificate submission");
+      const userId = (req as any).user?.id;
       
-      const activities = await this.activityService.getAvailableCourseActivitiesService();
+      console.log("🔍 [StudentController] Getting available course activities for certificate submission for user:", userId);
       
-      console.log(`✅ [StudentController] Found ${activities.length} available course activities`);
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" });
+        return;
+      }
+
+      // ✅ Convert user_id to student_id
+      const studentId = await this.activityService.getStudentIdFromUserId(userId);
+      
+      if (!studentId) {
+        res.status(404).json({ error: "Student not found" });
+        return;
+      }
+
+      console.log("🔍 [StudentController] Converted user_id to student_id:", { userId, studentId });
+      
+      const activities = await this.activityService.getAvailableCourseActivitiesService(studentId);
+      
+      console.log(`✅ [StudentController] Found ${activities.length} available course activities for student ${studentId}`);
       res.status(200).json(activities);
     } catch (error) {
       this.handleError("StudentActivityController.getAvailableCourseActivities", error, res);

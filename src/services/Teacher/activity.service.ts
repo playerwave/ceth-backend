@@ -7,7 +7,7 @@ import redis from "../../config/redis";
 import { ErrorHandledService } from "../error.handdled.service";
 import { RoomService } from "./room.service";
 import { connectDatabase } from "../../db/database";
-import { parseThaiMoocData } from "../../utils/natural-text-parser";
+import { parseThaiMoocData } from "../../utils/naturalTextParser";
 
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
@@ -86,7 +86,7 @@ export class ActivityService extends ErrorHandledService {
         // ✅ Prepare fields for certificate
         const certificateName = parsedCertificateData?.certificate_name || `Certificate for ${created.activity_name}`;
         const certificateType = parsedCertificateData?.certificate_type || "Other";
-        const organizationName = parsedCertificateData?.organization_name || null;
+        const organizeName = parsedCertificateData?.organize_base_name || null;
         const getCertificateDate = parsedCertificateData?.get_certificate_date || null;
         const supervisorName1 = parsedCertificateData?.supervisor_name1 || null;
 
@@ -95,7 +95,7 @@ export class ActivityService extends ErrorHandledService {
         console.log(`📝 [ActivityService] Prepared fields from ${certType} parsing (CREATE):`, {
           certificate_name: certificateName,
           certificate_type: certificateType,
-          organization_name: organizationName,
+          organize_base_name: organizeName,
           get_certificate_date: getCertificateDate,
           supervisor_name1: supervisorName1
         });
@@ -105,7 +105,7 @@ export class ActivityService extends ErrorHandledService {
           certificate_name: certificateName,
           certificate_source: "Course Activity",
           certificate_type: certificateType as "THAI MOOC" | "BUU MOOC" | "Other",
-          organization_name: organizationName,
+          organize_base_name: organizeName,
           get_certificate_date: getCertificateDate,
           supervisor_name1: supervisorName1,
           template_image_url: certificate_template_url,
@@ -476,8 +476,8 @@ export class ActivityService extends ErrorHandledService {
       const certificateType = parsedCertificateData?.certificate_type || 
         (existingCertificateBase?.certificate_type) || 
         "Other";
-      const organizationName = parsedCertificateData?.organization_name || 
-        existingCertificateBase?.organization_name || 
+      const organizationName = parsedCertificateData?.organize_base_name || 
+        existingCertificateBase?.organize_base_name || 
         null;
       const getCertificateDate = parsedCertificateData?.get_certificate_date || 
         existingCertificateBase?.get_certificate_date || 
@@ -497,7 +497,7 @@ export class ActivityService extends ErrorHandledService {
         if (imageChanged || parsedCertificateData) {
           existingCertificateBase.certificate_name = certificateName;
           existingCertificateBase.certificate_type = certificateType as "THAI MOOC" | "BUU MOOC" | "Other";
-          existingCertificateBase.organization_name = organizationName;
+          existingCertificateBase.organize_base_name = organizationName;
           existingCertificateBase.get_certificate_date = getCertificateDate;
           existingCertificateBase.supervisor_name1 = supervisorName1;
 
@@ -506,7 +506,7 @@ export class ActivityService extends ErrorHandledService {
           console.log(`📝 [ActivityService] Prepared fields from ${certType} parsing (UPDATE):`, {
             certificate_name: certificateName,
             certificate_type: certificateType,
-            organization_name: organizationName,
+            organize_base_name: organizationName,
             get_certificate_date: getCertificateDate,
             supervisor_name1: supervisorName1,
             image_changed: imageChanged
@@ -526,7 +526,7 @@ export class ActivityService extends ErrorHandledService {
           certificate_source: "Course Activity",
           certificate_type: certificateType === "BUU MOOC" ? "BUU MOOC" : 
                             certificateType === "THAI MOOC" ? "THAI MOOC" : "Other",
-          organization_name: organizationName,
+          organize_base_name: organizationName,
           get_certificate_date: getCertificateDate,
           supervisor_name1: supervisorName1,
           template_image_url: certificate_template_url,
@@ -541,7 +541,7 @@ export class ActivityService extends ErrorHandledService {
         console.log(`📝 [ActivityService] Prepared fields from ${certTypeForLog} parsing (CREATE):`, {
           certificate_name: certificateName,
           certificate_type: certificateType,
-          organization_name: organizationName,
+          organize_base_name: organizationName,
           get_certificate_date: getCertificateDate,
           supervisor_name1: supervisorName1
         });

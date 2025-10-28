@@ -34,7 +34,7 @@ export class CertificateBase {
   get_certificate_date?: Date | null;
 
   @Column({ type: "varchar", length: 255, nullable: true })
-  organization_name?: string;
+  organize_base_name?: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   supervisor_name1?: string | null;

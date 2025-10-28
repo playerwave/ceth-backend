@@ -1,6 +1,6 @@
 // Cache Management API - API สำหรับจัดการ cache
 import { Router } from "express";
-import { cacheInvalidator } from "../utils/cache-invalidator";
+import { cacheInvalidator } from "../utils/cacheInvalidator";
 import { smartCache } from "../utils/smart-cache";
 
 const router = Router();

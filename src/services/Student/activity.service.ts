@@ -1,5 +1,6 @@
 import { ActivityDao } from "../../daos/Student/activity.dao";
 import { AssessmentDao } from "../../daos/Student/assessment.dao";
+import { StudentsDao } from "../../daos/Student/student.dao";
 import { Activity } from "../../entity/activity.entity";
 import { Assessment } from "../../entity/assessment/assessment.entity";
 import { Join } from "../../entity/join.entity";
@@ -10,6 +11,7 @@ import { ErrorHandledService } from "../error.handdled.service";
 export class ActivityService extends ErrorHandledService {
   private readonly activityDao = new ActivityDao();
   private readonly assessmentDao = new AssessmentDao();
+  private readonly studentsDao = new StudentsDao();
   private readonly certificateService = new CertificateService();
 
   public async getStudentActivitiesService(
@@ -333,7 +335,7 @@ export class ActivityService extends ErrorHandledService {
 
       // ✅ 3. แปลง Certificate เป็น Activity format
       const certificateActivities = certificates
-        .filter(cert => cert.status === 'Pass' && (cert.verification_metadata?.confidenceScore || 0) >= 80)
+        .filter(cert => cert.status === 'Pass')
         .map(cert => ({
           activity_id: cert.activity_id,
           activity_name: cert.activity?.activity_name || 'Certificate Activity',
@@ -827,21 +829,35 @@ export class ActivityService extends ErrorHandledService {
     }
   }
 
-  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate
-  public async getAvailableCourseActivitiesService(): Promise<Activity[]> {
+  // ✅ เมธอดใหม่: ดึงกิจกรรม Course ที่พร้อมส่ง Certificate (กรองกิจกรรมที่ claim แล้ว)
+  public async getAvailableCourseActivitiesService(studentId: number): Promise<Activity[]> {
     try {
-      console.log("🔍 [ActivityService] Getting available course activities for certificate submission");
+      console.log("🔍 [ActivityService] Getting available course activities for certificate submission for student:", studentId);
       
-      const activities = await this.activityDao.getAvailableCourseActivities();
+      const activities = await this.activityDao.getAvailableCourseActivities(studentId);
       
       this.logInfo("📄 Retrieved available course activities", {
         count: activities.length,
+        studentId: studentId
       });
       
       return activities;
     } catch (error) {
       this.logError("❌ Error in getAvailableCourseActivitiesService", error);
       throw error;
+    }
+  }
+
+  //--------------------- Get Student ID From User ID -------------------------
+  public async getStudentIdFromUserId(userId: number): Promise<number | null> {
+    try {
+      console.log("🔍 [ActivityService] Getting student ID from user ID:", { userId });
+      
+      const student = await this.studentsDao.getStudentByUserId(userId);
+      return student?.students_id || null;
+    } catch (error) {
+      this.logError("❌ Error getting student ID from user ID", error);
+      return null;
     }
   }
 }

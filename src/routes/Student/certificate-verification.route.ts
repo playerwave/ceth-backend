@@ -17,4 +17,12 @@ router.post(
   wrapAsync(certificateVerificationController.uploadCertificateWithVerification.bind(certificateVerificationController))
 );
 
+// ✅ POST METHOD สำหรับอัปโหลดลิ้งก์ Certificate พร้อม Verification
+router.post(
+  "/upload-link-with-verification",
+  verifyToken,
+  CheckRole(["Student"]),
+  wrapAsync(certificateVerificationController.uploadLinkWithVerification.bind(certificateVerificationController))
+);
+
 export default router;

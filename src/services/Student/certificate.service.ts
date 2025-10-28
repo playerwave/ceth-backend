@@ -1,13 +1,16 @@
 // src/services/Student/certificate.service.ts
 import { CertificateDAO } from "../../daos/Student/certificate.dao";
+import { StudentsDao } from "../../daos/Student/student.dao";
 import * as fs from "fs";
 import * as path from "path";
 
 export class CertificateService {
   private certificateDAO: CertificateDAO;
+  private studentsDao: StudentsDao;
 
   constructor() {
     this.certificateDAO = new CertificateDAO();
+    this.studentsDao = new StudentsDao();
   }
 
   //--------------------- Upload Certificate -------------------------
@@ -107,6 +110,19 @@ export class CertificateService {
     } catch (error) {
       console.error("❌ [Certificate Service] Create error:", error);
       throw error;
+    }
+  }
+
+  //--------------------- Get Student ID From User ID -------------------------
+  async getStudentIdFromUserId(userId: number): Promise<number | null> {
+    console.log("🔍 [Certificate Service] Getting student ID from user ID:", { userId });
+    
+    try {
+      const student = await this.studentsDao.getStudentByUserId(userId);
+      return student?.students_id || null;
+    } catch (error) {
+      console.error("❌ [Certificate Service] Error getting student ID:", error);
+      return null;
     }
   }
 }

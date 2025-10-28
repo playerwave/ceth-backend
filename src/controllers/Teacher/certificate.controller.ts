@@ -96,7 +96,7 @@ export class CertificateController extends ErrorHandledController {
       console.log("✅ [CertificateController] Certificate base re-parsed successfully:", {
         certificate_base_id: certificateBaseId,
         certificate_type: result?.certificate_type,
-        organization_name: result?.organization_name
+        organize_base_name: result?.organize_base_name
       });
       
       res.status(200).json({

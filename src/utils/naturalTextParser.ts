@@ -5,7 +5,7 @@
 interface ThaiMoocParsedData {
   certificate_type: "THAI MOOC" | "BUU MOOC" | "Other";
   certificate_name?: string;
-  organization_name?: string;
+  organize_base_name?: string;
   get_certificate_date?: Date | null;
   supervisor_name1?: string;
   firstName?: string;
@@ -94,9 +94,9 @@ function parseBuuMoocData(naturalText: string): ThaiMoocParsedData {
       }
     }
     
-    // Extract organization_name (line 13 = index 12)
+    // Extract organize_base_name (line 13 = index 12)
     if (lines.length >= 13) {
-      result.organization_name = lines[12].trim();
+      result.organize_base_name = lines[12].trim();
     }
     
     // Extract supervisor_name1 (line 11 = index 10), remove parentheses
@@ -123,7 +123,7 @@ function parseBuuMoocData(naturalText: string): ThaiMoocParsedData {
     
     console.log("🔍 [parseBuuMoocData] Parsed fields:", {
       certificate_name: result.certificate_name,
-      organization_name: result.organization_name,
+      organize_base_name: result.organize_base_name,
       get_certificate_date: result.get_certificate_date,
       supervisor_name1: result.supervisor_name1
     });
@@ -148,13 +148,23 @@ function parseThaiMoocDataLogic(naturalText: string): ThaiMoocParsedData {
     
     // Rule 2: Extract certificate_name (line 11, which is index 10)
     if (lines.length >= 11) {
-      result.certificate_name = lines[10].trim(); // Line 11 (index 10)
+      let courseName = lines[10].trim(); // Line 11 (index 10)
+      
+      // ✅ แก้ไข: แยกวันที่ออกจากชื่อหลักสูตรสำหรับ BUU MOOC
+      // ตรวจสอบว่ามีรูปแบบ "On June" หรือ "On [Month]" อยู่ท้ายชื่อหลักสูตรหรือไม่
+      const datePattern = /\s+On\s+[A-Z][a-z]+\s+\d{1,2},?\s*\d{4}$/;
+      if (datePattern.test(courseName)) {
+        courseName = courseName.replace(datePattern, '').trim();
+        console.log("🔧 [NaturalTextParser] Removed date from course name:", courseName);
+      }
+      
+      result.certificate_name = courseName;
     }
     
-    // Rule 3: Extract organization_name (between "Awarded by" and "on")
+    // Rule 3: Extract organize_base_name (between "Awarded by" and "on")
     const awardedByMatch = naturalText.match(/Awarded by\s+(.+?)\s+on/);
     if (awardedByMatch && awardedByMatch[1]) {
-      result.organization_name = awardedByMatch[1].trim();
+      result.organize_base_name = awardedByMatch[1].trim();
     }
     
     // Rule 4: Extract get_certificate_date (after "on")

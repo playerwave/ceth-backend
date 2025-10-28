@@ -296,34 +296,9 @@ router.post(
       console.log("🚀 [OCR Route] Calling Typhoon OCR...");
       
       // ✅ สร้าง structured prompt ที่เฉพาะเจาะจงสำหรับใบรับรอง THAI MOOC
-      const certificatePrompt = `
-        You are an expert at extracting information from university certificates. Analyze this certificate image and extract ONLY the following information:
-
-        EXTRACTION RULES:
-        1. STUDENT_NAME: Find the name that appears after "THIS CERTIFICATE IS AWARDED TO" or "PRESENTED TO" - this is the recipient's full name
-        2. COURSE_NAME: Find the course title that appears after "for the completion and fulfillment of the online course" - this is the actual course name
-        3. INSTRUCTOR_NAME: Find the name that appears below the signature area, usually with titles like "Associate Professor", "Director", etc.
-        4. COMPLETION_DATE: Find the date that appears after "Awarded by" or similar phrases
-        5. CERTIFICATE_ID: Look for any alphanumeric ID, usually at the bottom or in a QR code area
-
-        RETURN FORMAT - Must be valid JSON:
-        {
-          "student_name": "actual student name here",
-          "course_name": "actual course name here",
-          "instructor_name": "actual instructor name here", 
-          "completion_date": "actual date here",
-          "certificate_id": "actual certificate ID here",
-          "raw_text": "complete OCR text for verification"
-        }
-
-        CRITICAL INSTRUCTIONS:
-        - Extract ONLY the actual names and titles, not labels or descriptions
-        - Do NOT extract phrases like "THIS CERTIFICATE IS AWARDED TO" as the student name
-        - Do NOT extract duration like "6 Hours" as the instructor name
-        - Look for the actual person names, not section headers
-        - If you cannot find a field, use "-" as the value
-        - Ensure the JSON is properly formatted and valid
-      `;
+      // ✅ ใช้ prompt เฉพาะสำหรับ BUU MOOC
+      const { getCertificatePrompt } = require('../../utils/buu-mooc-prompt');
+      const certificatePrompt = getCertificatePrompt("BUU MOOC");
       
       const rawData = await callTyphoonOCR(
         {
@@ -333,7 +308,9 @@ router.post(
         },
         { 
           model: "typhoon-ocr-preview",
-          prompt: certificatePrompt
+          prompt: certificatePrompt,
+          certificateType: "BUU MOOC",
+          enableCorrection: true
         }
       );
 

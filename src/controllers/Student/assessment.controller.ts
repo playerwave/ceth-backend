@@ -44,6 +44,18 @@ export class AssessmentController extends ErrorHandledController {
         answers
       );
 
+      // ✅ Clear activity cache หลังจาก submit assessment
+      try {
+        const studentId = await this.assessmentService.getStudentIdFromUserId((req.user as any)?.id);
+        if (studentId) {
+          await this.assessmentService.clearActivityCache(studentId);
+          console.log("🗑️ [AssessmentController] Activity cache cleared for student:", studentId);
+        }
+      } catch (cacheError) {
+        console.error("❌ [AssessmentController] Error clearing cache:", cacheError);
+        // ✅ ไม่ return error เพราะ assessment ยังถูก submit แล้ว
+      }
+
       res.status(200).json({
         success: true,
         message: "Assessment submitted successfully",

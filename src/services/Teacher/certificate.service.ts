@@ -6,8 +6,7 @@ import { CertificateAudit } from "../../entity/certificate/certificate-audit.ent
 import { CertificateBase } from "../../entity/certificate/certificate-base.entity";
 import { ErrorHandledService } from "../error.handdled.service";
 import { callTyphoonOCR } from "../Student/ocr.service";
-import { analyzeCertificate, calculateConfidenceScore as calcScore } from "../../utils/certificate-analyzer";
-import { imageAnalyzer } from "../../utils/image-analysis";
+import { imageAnalyzer } from "../../utils/imageAnalysis";
 import sharp from "sharp";
 import cloudinary from "../../utils/cloudinary";
 

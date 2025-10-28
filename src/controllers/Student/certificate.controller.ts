@@ -142,7 +142,17 @@ export class CertificateController {
         return;
       }
 
-      const certificates = await this.certificateService.getCertificatesByStudentId(userId);
+      // ✅ Convert user_id to student_id
+      const studentId = await this.certificateService.getStudentIdFromUserId(userId);
+      
+      if (!studentId) {
+        res.status(404).json({ error: "Student not found" });
+        return;
+      }
+
+      console.log("🔍 [Certificate Controller] Converted user_id to student_id:", { userId, studentId });
+
+      const certificates = await this.certificateService.getCertificatesByStudentId(studentId);
 
       console.log("✅ [Certificate Controller] Certificates found:", certificates.length);
       res.json(certificates);

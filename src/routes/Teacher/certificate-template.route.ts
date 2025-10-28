@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import { callTyphoonOCR } from "../../services/Student/ocr.service";
-import { imageAnalyzer } from "../../utils/image-analysis";
+import { imageAnalyzer } from "../../utils/imageAnalysis";
 import cloudinary from "../../utils/cloudinary";
+import { getCertificatePrompt } from "../../utils/validateCertificatePrompt";
 
 const upload = multer({ limits: { fileSize: 20 * 1024 * 1024 } });
 const router = Router();
@@ -31,34 +32,8 @@ router.post(
       console.log("🔍 [Certificate Template Route] Performing OCR...");
       let ocrData = null;
       try {
-        const certificatePrompt = `
-          You are an expert at extracting information from university certificates. Analyze this certificate image and extract ONLY the following information:
-
-          EXTRACTION RULES:
-          1. COURSE_NAME: Find the course title that appears after "for the completion and fulfillment of the online course" - this is the actual course name
-          2. INSTRUCTOR_NAME: Find the name that appears below the signature area, usually with titles like "Associate Professor", "Director", etc.
-          3. UNIVERSITY_NAME: Find the university name that appears after "Awarded by" or similar phrases
-          4. COMPLETION_DATE: Find the date that appears after "Awarded by" or similar phrases
-          5. CERTIFICATE_ID: Look for any alphanumeric ID, usually at the bottom or in a QR code area
-
-          RETURN FORMAT - Must be valid JSON:
-          {
-            "course_name": "actual course name here",
-            "instructor_name": "actual instructor name here", 
-            "university_name": "actual university name here",
-            "completion_date": "actual date here",
-            "certificate_id": "actual certificate ID here",
-            "raw_text": "complete OCR text for verification"
-          }
-
-          CRITICAL INSTRUCTIONS:
-          - Extract ONLY the actual names and titles, not labels or descriptions
-          - Do NOT extract phrases like "THIS CERTIFICATE IS AWARDED TO" as the course name
-          - Do NOT extract duration like "6 Hours" as the instructor name
-          - Look for the actual person names, not section headers
-          - If you cannot find a field, use "-" as the value
-          - Ensure the JSON is properly formatted and valid
-        `;
+        // ✅ ใช้ prompt เฉพาะสำหรับ BUU MOOC
+        const certificatePrompt = getCertificatePrompt("BUU MOOC");
         
         const rawData = await callTyphoonOCR(
           {
@@ -68,7 +43,9 @@ router.post(
           },
           { 
             model: "typhoon-ocr-preview",
-            prompt: certificatePrompt
+            prompt: certificatePrompt,
+            certificateType: "BUU MOOC",
+            enableCorrection: true
           }
         );
 
@@ -211,34 +188,8 @@ router.post(
       console.log("🔍 [Certificate Template Route] Performing OCR...");
       let ocrData = null;
       try {
-        const certificatePrompt = `
-          You are an expert at extracting information from university certificates. Analyze this certificate image and extract ONLY the following information:
-
-          EXTRACTION RULES:
-          1. COURSE_NAME: Find the course title that appears after "for the completion and fulfillment of the online course" - this is the actual course name
-          2. INSTRUCTOR_NAME: Find the name that appears below the signature area, usually with titles like "Associate Professor", "Director", etc.
-          3. UNIVERSITY_NAME: Find the university name that appears after "Awarded by" or similar phrases
-          4. COMPLETION_DATE: Find the date that appears after "Awarded by" or similar phrases
-          5. CERTIFICATE_ID: Look for any alphanumeric ID, usually at the bottom or in a QR code area
-
-          RETURN FORMAT - Must be valid JSON:
-          {
-            "course_name": "actual course name here",
-            "instructor_name": "actual instructor name here", 
-            "university_name": "actual university name here",
-            "completion_date": "actual date here",
-            "certificate_id": "actual certificate ID here",
-            "raw_text": "complete OCR text for verification"
-          }
-
-          CRITICAL INSTRUCTIONS:
-          - Extract ONLY the actual names and titles, not labels or descriptions
-          - Do NOT extract phrases like "THIS CERTIFICATE IS AWARDED TO" as the course name
-          - Do NOT extract duration like "6 Hours" as the instructor name
-          - Look for the actual person names, not section headers
-          - If you cannot find a field, use "-" as the value
-          - Ensure the JSON is properly formatted and valid
-        `;
+        // ✅ ใช้ prompt เฉพาะสำหรับ BUU MOOC
+        const certificatePrompt = getCertificatePrompt("BUU MOOC");
         
         const rawData = await callTyphoonOCR(
           {
@@ -248,7 +199,9 @@ router.post(
           },
           { 
             model: "typhoon-ocr-preview",
-            prompt: certificatePrompt
+            prompt: certificatePrompt,
+            certificateType: "BUU MOOC",
+            enableCorrection: true
           }
         );
 

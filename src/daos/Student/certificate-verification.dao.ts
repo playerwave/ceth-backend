@@ -149,8 +149,8 @@ export class CertificateVerificationDAO extends ErrorHandledDao {
       const audit = new CertificateAudit();
       audit.certificate_id = certificateId;
       audit.action = action;
-      audit.old_values = oldValues;
-      audit.new_values = newValues;
+      audit.old_values = oldValues ? JSON.stringify(oldValues) : null;
+      audit.new_values = newValues ? JSON.stringify(newValues) : null;
       audit.performed_by = performedBy;
       audit.reason = reason;
       
@@ -283,7 +283,7 @@ export class CertificateVerificationDAO extends ErrorHandledDao {
       const beforeQuery = `
         SELECT soft_hours, hard_hours, first_name_eng, last_name_eng 
         FROM students 
-        WHERE users_id = $1
+        WHERE students_id = $1
       `;
       const beforeResult = await this.dataSource!.query(beforeQuery, [studentId]);
       const beforeHours = beforeResult[0]?.soft_hours || 0;
@@ -300,7 +300,7 @@ export class CertificateVerificationDAO extends ErrorHandledDao {
       const query = `
         UPDATE students 
         SET soft_hours = COALESCE(soft_hours, 0) + $2 
-        WHERE users_id = $1
+        WHERE students_id = $1
       `;
       
       await this.dataSource!.query(query, [studentId, hours]);
@@ -335,7 +335,7 @@ export class CertificateVerificationDAO extends ErrorHandledDao {
       const beforeQuery = `
         SELECT soft_hours, hard_hours, first_name_eng, last_name_eng 
         FROM students 
-        WHERE users_id = $1
+        WHERE students_id = $1
       `;
       const beforeResult = await this.dataSource!.query(beforeQuery, [studentId]);
       const beforeHours = beforeResult[0]?.hard_hours || 0;
@@ -352,7 +352,7 @@ export class CertificateVerificationDAO extends ErrorHandledDao {
       const query = `
         UPDATE students 
         SET hard_hours = COALESCE(hard_hours, 0) + $2 
-        WHERE users_id = $1
+        WHERE students_id = $1
       `;
       
       await this.dataSource!.query(query, [studentId, hours]);

@@ -57,6 +57,18 @@ export class Certificate {
   @Column({ type: "varchar", length: 255, nullable: true })
   img?: string | null;
 
+  @Column({ type: "varchar", nullable: true })
+  certificate_type?: "THAI MOOC" | "BUU MOOC" | "Other";
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  organize_name?: string | null;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  supervisor_name1?: string | null;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  supervisor_name2?: string | null;
+
   @Column({
     type: "enum",
     enum: ["Pending", "Pass", "Fail"],
