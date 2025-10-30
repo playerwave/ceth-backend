@@ -80,4 +80,28 @@ router.put(
   })
 );
 
+// 🚀 POST /api/auth/forgot-password/send-code → ส่งรหัสยืนยันไปอีเมล
+router.post(
+  "/forgot-password/send-code",
+  wrapAsync(async (req, res) => {
+    await authController.sendForgotPasswordCode(req, res);
+  })
+);
+
+// 🚀 POST /api/auth/forgot-password/verify-code-only → ตรวจสอบรหัสเท่านั้น (ไม่รีเซตรหัสผ่าน)
+router.post(
+  "/forgot-password/verify-code-only",
+  wrapAsync(async (req, res) => {
+    await authController.verifyForgotPasswordCodeOnly(req, res);
+  })
+);
+
+// 🚀 POST /api/auth/forgot-password/verify-code → ตรวจสอบรหัสและรีเซตรหัสผ่าน
+router.post(
+  "/forgot-password/verify-code",
+  wrapAsync(async (req, res) => {
+    await authController.verifyForgotPasswordCode(req, res);
+  })
+);
+
 export default router;

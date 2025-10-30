@@ -148,4 +148,50 @@ export class AuthDao extends ErrorHandledDao {
       throw error;
     }
   }
+
+  /**
+   * ดึงข้อมูลผู้ใช้ตาม email
+   */
+  public async getUserByEmail(email: string): Promise<{ users_id: number; username: string } | null> {
+    await this.checkConnection();
+    try {
+      // ✅ Join กับตาราง students เพื่อหาผู้ใช้ตาม email
+      const result = await this.usersRepository!.query(
+        `SELECT u.users_id, u.username 
+         FROM users u 
+         INNER JOIN students s ON u.users_id = s.users_id 
+         WHERE s.email = $1`,
+        [email.trim()]
+      );
+      
+      if (result && result.length > 0) {
+        return result[0];
+      }
+      return null;
+    } catch (error) {
+      this.logDbError("getUserByEmail", error);
+      throw error;
+    }
+  }
+
+  /**
+   * อัปเดตรหัสผ่านตาม email (สำหรับ forgot password)
+   */
+  public async updatePasswordByEmail(
+    email: string,
+    hashedPassword: string
+  ): Promise<void> {
+    await this.checkConnection();
+    
+    try {
+      const result = await this.usersRepository!.update(
+        { username: email },
+        { password: hashedPassword }
+      );
+      console.log("🔍 [AuthDao] Update password by email result:", result);
+    } catch (error) {
+      this.logDbError("updatePasswordByEmail", error);
+      throw error;
+    }
+  }
 }

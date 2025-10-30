@@ -5,6 +5,7 @@ import { Users } from "../entity/users.entity";
 import bcrypt from "bcryptjs";
 import redis from "../config/redis";
 import { ErrorHandledService } from "./error.handdled.service";
+import { sendForgotPasswordCode } from "../mailer/email";
 
 export class AuthService extends ErrorHandledService {
   // กำหนด default roleId (เช่น สถานะ Student)
@@ -204,6 +205,169 @@ export class AuthService extends ErrorHandledService {
       return {
         success: false,
         message: "เกิดข้อผิดพลาดในการอัปเดตรหัสผ่าน"
+      };
+    }
+  }
+
+  /**
+   * สร้างและส่งรหัส OTP 6 หลักไปยังอีเมล
+   */
+  public async sendForgotPasswordCode(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log("🔍 [AuthService] Starting sendForgotPasswordCode for email:", email);
+      
+      // ตรวจสอบว่าอีเมลลงท้ายด้วย @go.buu.ac.th
+      if (!email.endsWith('@go.buu.ac.th')) {
+        console.log("❌ [AuthService] Invalid email domain");
+        return {
+          success: false,
+          message: "กรุณาใช้อีเมล @go.buu.ac.th เท่านั้น"
+        };
+      }
+
+      // ตรวจสอบว่ามี user นี้ในระบบหรือไม่
+      const user = await this.authDao.getUserByEmail(email);
+      if (!user) {
+        console.log("❌ [AuthService] User not found");
+        return {
+          success: false,
+          message: "ไม่พบอีเมลนี้ในระบบ"
+        };
+      }
+
+      // สร้างรหัส 6 หลัก
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log("✅ [AuthService] Generated code:", code);
+
+      // เก็บรหัสใน Redis (หมดอายุใน 10 นาที)
+      const redisKey = `forgot-password:${email}`;
+      await redis.setex(redisKey, 600, code); // 600 วินาที = 10 นาที
+
+      // ส่งอีเมล
+      await sendForgotPasswordCode(email, code);
+      console.log("✅ [AuthService] Code sent to email successfully");
+
+      return {
+        success: true,
+        message: "ระบบได้ส่งรหัสยืนยันไปยังอีเมลของคุณแล้ว"
+      };
+    } catch (error) {
+      console.log("❌ [AuthService] Error in sendForgotPasswordCode:", error);
+      this.logError("❌ Error in sendForgotPasswordCode", error);
+      return {
+        success: false,
+        message: "เกิดข้อผิดพลาดในการส่งรหัสยืนยัน"
+      };
+    }
+  }
+
+  /**
+   * ตรวจสอบรหัส OTP เท่านั้น (ไม่รีเซตรหัสผ่าน)
+   */
+  public async verifyForgotPasswordCodeOnly(
+    email: string,
+    code: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log("🔍 [AuthService] Starting verifyForgotPasswordCodeOnly");
+      
+      // ดึงรหัสจาก Redis
+      const redisKey = `forgot-password:${email}`;
+      const storedCode = await redis.get(redisKey);
+      
+      if (!storedCode) {
+        console.log("❌ [AuthService] Code expired or not found");
+        return {
+          success: false,
+          message: "รหัสยืนยันหมดอายุหรือไม่ถูกต้อง"
+        };
+      }
+
+      // เปรียบเทียบรหัส
+      if (storedCode !== code) {
+        console.log("❌ [AuthService] Code mismatch");
+        return {
+          success: false,
+          message: "รหัสยืนยันไม่ถูกต้อง"
+        };
+      }
+
+      return {
+        success: true,
+        message: "รหัสยืนยันถูกต้อง"
+      };
+    } catch (error) {
+      console.log("❌ [AuthService] Error in verifyForgotPasswordCodeOnly:", error);
+      this.logError("❌ Error in verifyForgotPasswordCodeOnly", error);
+      return {
+        success: false,
+        message: "เกิดข้อผิดพลาดในการตรวจสอบรหัส"
+      };
+    }
+  }
+
+  /**
+   * ตรวจสอบรหัส OTP และรีเซตรหัสผ่าน
+   */
+  public async verifyForgotPasswordCode(
+    email: string,
+    code: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log("🔍 [AuthService] Starting verifyForgotPasswordCode");
+      
+      // ตรวจสอบความแข็งแกร่งของรหัสผ่าน
+      const validation = this.validatePasswordStrength(newPassword);
+      if (!validation.isValid) {
+        console.log("❌ [AuthService] Password validation failed:", validation.errors);
+        return {
+          success: false,
+          message: validation.errors.join(", ")
+        };
+      }
+
+      // ดึงรหัสจาก Redis
+      const redisKey = `forgot-password:${email}`;
+      const storedCode = await redis.get(redisKey);
+      
+      if (!storedCode) {
+        console.log("❌ [AuthService] Code expired or not found");
+        return {
+          success: false,
+          message: "รหัสยืนยันหมดอายุหรือไม่ถูกต้อง"
+        };
+      }
+
+      // เปรียบเทียบรหัส
+      if (storedCode !== code) {
+        console.log("❌ [AuthService] Code mismatch");
+        return {
+          success: false,
+          message: "รหัสยืนยันไม่ถูกต้อง"
+        };
+      }
+
+      // Hash รหัสผ่านใหม่
+      const hashedPassword = await this.hashPassword(newPassword);
+
+      // อัปเดตรหัสผ่านในฐานข้อมูล
+      await this.authDao.updatePasswordByEmail(email, hashedPassword);
+      console.log("✅ [AuthService] Password updated successfully");
+
+      // ลบรหัสจาก Redis
+      await redis.del(redisKey);
+
+      return {
+        success: true,
+        message: "รีเซตรหัสผ่านสำเร็จ"
+      };
+    } catch (error) {
+      console.log("❌ [AuthService] Error in verifyForgotPasswordCode:", error);
+      this.logError("❌ Error in verifyForgotPasswordCode", error);
+      return {
+        success: false,
+        message: "เกิดข้อผิดพลาดในการรีเซตรหัสผ่าน"
       };
     }
   }

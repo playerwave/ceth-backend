@@ -54,15 +54,43 @@ export const previewEmailTemplate = async (req: Request, res: Response): Promise
     // อ่านไฟล์ template
     const templateContent = fs.readFileSync(templatePath, "utf-8");
     
+    // ✅ เตรียมข้อมูลตัวอย่างสำหรับ template แต่ละประเภท
+    let previewData = data || {};
+    
+    // ✅ สำหรับ forgotPasswordTemplate ต้องมี code เสมอ
+    if (templateName === 'forgotPasswordTemplate') {
+      previewData = {
+        ...previewData,
+        code: previewData.code || '123456'
+      };
+    }
+    // หากไม่ได้ส่งข้อมูลมา ให้ใช้ข้อมูลตัวอย่างตาม template
+    else if (!data || Object.keys(data).length === 0) {
+      if (templateName.includes('Activity') || templateName.includes('Course')) {
+        previewData = {
+          name: 'ผู้ใช้ตัวอย่าง',
+          message: 'ข้อความตัวอย่าง',
+          recipientEmail: 'user@example.com',
+          activityName: 'กิจกรรมตัวอย่าง',
+          activityLink: 'https://example.com/activity',
+          contactEmail: 'contact@example.com',
+          activityImage: 'https://via.placeholder.com/600x300',
+          organizerName: 'คณะวิทยาการสารสนเทศ',
+          activityType: 'Hard Skill',
+          hoursEarned: '6'
+        };
+      }
+    }
+    
     // Render template ด้วยข้อมูลที่ส่งมา
-    const renderedHtml = ejs.render(templateContent, data || {});
+    const renderedHtml = ejs.render(templateContent, previewData);
     
     // ส่งกลับ HTML ที่ render แล้ว
     res.json({
       success: true,
       html: renderedHtml,
       templateName,
-      data,
+      data: previewData,
       templatePath: templatePath.replace(__dirname, '') // แสดง path ที่พบ
     });
 

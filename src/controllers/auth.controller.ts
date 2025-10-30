@@ -285,6 +285,125 @@ export class AuthController extends ErrorHandledController {
     }
   }
 
+  public async sendForgotPasswordCode(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔍 [AuthController] Starting sendForgotPasswordCode request");
+      const { email } = req.body;
+      
+      console.log("🔍 [AuthController] Email:", email);
+
+      if (!email) {
+        console.log("❌ [AuthController] No email provided");
+        res.status(400).json({
+          success: false,
+          message: "กรุณากรอกอีเมล"
+        });
+        return;
+      }
+
+      const result = await this.authService.sendForgotPasswordCode(email);
+      
+      console.log("🔍 [AuthController] Service result:", result);
+
+      if (result.success) {
+        console.log("✅ [AuthController] Code sent successfully");
+        res.status(200).json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log("❌ [AuthController] Failed to send code:", result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.log("❌ [AuthController] Error in sendForgotPasswordCode:", error);
+      this.handleError("AuthController.sendForgotPasswordCode", error, res);
+    }
+  }
+
+  public async verifyForgotPasswordCodeOnly(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔍 [AuthController] Starting verifyForgotPasswordCodeOnly request");
+      const { email, code } = req.body;
+      
+      console.log("🔍 [AuthController] Email:", email);
+      console.log("🔍 [AuthController] Code:", code ? "Code provided" : "No code");
+
+      if (!email || !code) {
+        console.log("❌ [AuthController] Missing required fields");
+        res.status(400).json({
+          success: false,
+          message: "กรุณากรอกข้อมูลให้ครบถ้วน"
+        });
+        return;
+      }
+
+      const result = await this.authService.verifyForgotPasswordCodeOnly(email, code);
+      
+      console.log("🔍 [AuthController] Service result:", result);
+
+      if (result.success) {
+        console.log("✅ [AuthController] Code verification successful");
+        res.status(200).json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log("❌ [AuthController] Code verification failed:", result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.log("❌ [AuthController] Error in verifyForgotPasswordCodeOnly:", error);
+      this.handleError("AuthController.verifyForgotPasswordCodeOnly", error, res);
+    }
+  }
+
+  public async verifyForgotPasswordCode(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔍 [AuthController] Starting verifyForgotPasswordCode request");
+      const { email, code, newPassword } = req.body;
+      
+      console.log("🔍 [AuthController] Email:", email);
+      console.log("🔍 [AuthController] Code:", code ? "Code provided" : "No code");
+
+      if (!email || !code || !newPassword) {
+        console.log("❌ [AuthController] Missing required fields");
+        res.status(400).json({
+          success: false,
+          message: "กรุณากรอกข้อมูลให้ครบถ้วน"
+        });
+        return;
+      }
+
+      const result = await this.authService.verifyForgotPasswordCode(email, code, newPassword);
+      
+      console.log("🔍 [AuthController] Service result:", result);
+
+      if (result.success) {
+        console.log("✅ [AuthController] Password reset successful");
+        res.status(200).json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log("❌ [AuthController] Password reset failed:", result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.log("❌ [AuthController] Error in verifyForgotPasswordCode:", error);
+      this.handleError("AuthController.verifyForgotPasswordCode", error, res);
+    }
+  }
+
   private parseUserPayload(body: any): {
     username: string;
     password: string;
@@ -306,4 +425,7 @@ export const authController = {
   login: controller.login.bind(controller),
   getMe: controller.getMe.bind(controller),
   updatePassword: controller.updatePassword.bind(controller),
+  sendForgotPasswordCode: controller.sendForgotPasswordCode.bind(controller),
+  verifyForgotPasswordCodeOnly: controller.verifyForgotPasswordCodeOnly.bind(controller),
+  verifyForgotPasswordCode: controller.verifyForgotPasswordCode.bind(controller),
 };
