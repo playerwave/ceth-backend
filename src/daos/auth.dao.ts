@@ -119,4 +119,33 @@ export class AuthDao extends ErrorHandledDao {
       [username.trim()]
     );
   }
+
+  /**
+   * อัปเดตรหัสผ่านใหม่
+   * @param userId รหัสผู้ใช้
+   * @param hashedPassword รหัสผ่านที่ผ่านการ hash แล้ว
+   */
+  public async updatePassword(
+    userId: number,
+    hashedPassword: string
+  ): Promise<void> {
+    console.log("🔍 [AuthDao] Starting password update for userId:", userId);
+    console.log("🔍 [AuthDao] Hashed password length:", hashedPassword.length);
+    
+    await this.checkConnection();
+    console.log("🔍 [AuthDao] Database connection verified");
+    
+    try {
+      console.log("🔍 [AuthDao] Executing database update...");
+      const result = await this.usersRepository!.update(
+        { users_id: userId },
+        { password: hashedPassword }
+      );
+      console.log("🔍 [AuthDao] Update result:", result);
+      console.log("✅ [AuthDao] Password updated successfully in database");
+    } catch (error) {
+      console.log("❌ [AuthDao] Error updating password:", error);
+      throw error;
+    }
+  }
 }

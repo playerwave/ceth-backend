@@ -223,6 +223,68 @@ export class AuthController extends ErrorHandledController {
     }
   }
 
+  public async updatePassword(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("🔍 [AuthController] Starting updatePassword request");
+      const { newPassword } = req.body;
+      const user = req.user;
+
+      console.log("🔍 [AuthController] Request body:", { newPassword: newPassword ? "Password provided" : "No password" });
+      console.log("🔍 [AuthController] User from token:", user);
+
+      if (!user) {
+        console.log("❌ [AuthController] No user found in request");
+        res.status(401).json({
+          success: false,
+          message: "ไม่พบข้อมูลผู้ใช้"
+        });
+        return;
+      }
+
+      if (!newPassword) {
+        console.log("❌ [AuthController] No new password provided");
+        res.status(400).json({
+          success: false,
+          message: "กรุณากรอกรหัสผ่านใหม่"
+        });
+        return;
+      }
+
+      const userId = (user as any).id;
+      console.log("🔍 [AuthController] Calling authService.updatePassword with userId:", userId);
+      const result = await this.authService.updatePassword(
+        userId,
+        newPassword
+      );
+
+      console.log("🔍 [AuthController] Service result:", result);
+
+      if (result.success) {
+        // Log username after successful update for debugging as requested
+        try {
+          const updatedUser = await this.authService.findById(userId);
+          console.log("👤 [AuthController] Password updated for username:", updatedUser?.username);
+        } catch (e) {
+          console.log("⚠️ [AuthController] Could not fetch username after update:", e);
+        }
+        console.log("✅ [AuthController] Password update successful");
+        res.status(200).json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log("❌ [AuthController] Password update failed:", result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.log("❌ [AuthController] Error in updatePassword:", error);
+      this.handleError("AuthController.updatePassword", error, res);
+    }
+  }
+
   private parseUserPayload(body: any): {
     username: string;
     password: string;
@@ -243,4 +305,5 @@ export const authController = {
   findById: controller.findById.bind(controller),
   login: controller.login.bind(controller),
   getMe: controller.getMe.bind(controller),
+  updatePassword: controller.updatePassword.bind(controller),
 };

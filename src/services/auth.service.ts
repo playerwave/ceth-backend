@@ -56,24 +56,6 @@ export class AuthService extends ErrorHandledService {
     return true;
   }
 
-  /**
-   * ตรวจสอบ credential
-   * คืน Users object ถ้าถูกต้อง, หรือ null ถ้าไม่ถูก
-   */
-  // public async validateUser(
-  //   username: string,
-  //   password: string
-  // ): Promise<Users | null> {
-  //   const rows = await this.authDao.getUsersByUsername(username);
-  //   if (!rows.length) return null;
-
-  //   const user = rows[0];
-  //   if (!user.password) return null;
-
-  //   const matched = await bcrypt.compare(password, user.password);
-  //   return matched ? user : null;
-  // }
-
   public async validateUser(
     username: string,
     password: string
@@ -98,13 +80,6 @@ export class AuthService extends ErrorHandledService {
     return matched ? user : null;
   }
 
-  /**
-   * ดึงข้อมูลผู้ใช้ตาม ID
-   */
-  // public async findById(userId: number): Promise<Users | null> {
-  //   const rows = await this.authDao.getUsersById(userId);
-  //   return rows.length ? rows[0] : null;
-  // }
 
   public async findById(userId: number): Promise<Users | null> {
     return await this.authDao.getUsersById(userId); // ✅ ไม่เปลี่ยนชื่อเหมือนเดิมเป๊ะ!
@@ -134,13 +109,6 @@ export class AuthService extends ErrorHandledService {
     }
   }
 
-  /*** helper functions ***/
-
-  // private async existsUsername(username: string): Promise<boolean> {
-  //   const rows = await this.authDao.getUsersByUsername(username);
-  //   return rows.length > 0;
-  // }
-
   private async existsUsername(username: string): Promise<boolean> {
     const user = await this.authDao.getUsersByUsername(username);
     return user !== null;
@@ -155,6 +123,89 @@ export class AuthService extends ErrorHandledService {
   private async hashPassword(password: string): Promise<string> {
     const saltRounds = 10;
     return bcrypt.hash(password, saltRounds);
+  }
+
+  /**
+   * ตรวจสอบความแข็งแกร่งของรหัสผ่าน
+   */
+  public validatePasswordStrength(password: string): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+    
+    if (password.length < 8) {
+      errors.push("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      errors.push("รหัสผ่านต้องมีตัวอักษรพิมพ์ใหญ่อย่างน้อย 1 ตัว");
+    }
+    
+    if (!/[a-z]/.test(password)) {
+      errors.push("รหัสผ่านต้องมีตัวอักษรพิมพ์เล็กอย่างน้อย 1 ตัว");
+    }
+    
+    if (!/\d/.test(password)) {
+      errors.push("รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว");
+    }
+    
+    if (!/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\|;':"\/.,<>?]/.test(password)) {
+      errors.push("รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว");
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * อัปเดตรหัสผ่านใหม่
+   */
+  public async updatePassword(
+    userId: number,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log("🔍 [AuthService] Starting password update for userId:", userId);
+      console.log("🔍 [AuthService] New password length:", newPassword.length);
+      
+      // ตรวจสอบความแข็งแกร่งของรหัสผ่าน
+      console.log("🔍 [AuthService] Validating password strength...");
+      const validation = this.validatePasswordStrength(newPassword);
+      console.log("🔍 [AuthService] Validation result:", validation);
+      
+      if (!validation.isValid) {
+        console.log("❌ [AuthService] Password validation failed:", validation.errors);
+        return {
+          success: false,
+          message: validation.errors.join(", ")
+        };
+      }
+
+      // Hash รหัสผ่านใหม่
+      console.log("🔍 [AuthService] Hashing new password...");
+      const hashedPassword = await this.hashPassword(newPassword);
+      console.log("🔍 [AuthService] Password hashed successfully, length:", hashedPassword.length);
+      
+      // อัปเดตในฐานข้อมูล
+      console.log("🔍 [AuthService] Updating password in database...");
+      await this.authDao.updatePassword(userId, hashedPassword);
+      console.log("✅ [AuthService] Password updated in database successfully");
+      
+      return {
+        success: true,
+        message: "อัปเดตรหัสผ่านสำเร็จ"
+      };
+    } catch (error) {
+      console.log("❌ [AuthService] Error in updatePassword:", error);
+      this.logError("❌ Error in updatePassword", error);
+      return {
+        success: false,
+        message: "เกิดข้อผิดพลาดในการอัปเดตรหัสผ่าน"
+      };
+    }
   }
 }
 

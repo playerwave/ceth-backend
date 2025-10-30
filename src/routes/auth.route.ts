@@ -4,23 +4,9 @@ import { AuthController } from "../controllers/auth.controller";
 import { AuthService } from "../services/auth.service";
 import { AuthDao } from "../daos/auth.dao";
 import { verifyToken } from "../middleware/verifyToken";
-import { Admin } from "../middleware/CheckRole";
-import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
-// import { ParamsDictionary } from "express-serve-static-core";
-// import { ParsedQs } from "qs";
 
 const router = Router();
 const authController = new AuthController(new AuthService(new AuthDao()));
-
-// interface AuthenticatedRequest
-//   extends Request<
-//     ParamsDictionary,
-//     unknown, // response body → ถ้าไม่ใช้ response body โดยตรง
-//     { username: string; password: string }, // request body → ตามที่คุณใช้ใน login
-//     ParsedQs // query params → default ของ Express
-//   > {
-//   userId: number;
-// }
 
 interface JwtUser {
   users_id: number;
@@ -82,6 +68,15 @@ router.get(
   verifyToken,
   wrapAsync(async (req, res) => {
     await authController.getMe(req, res);
+  })
+);
+
+// 🚀 PUT /api/auth/update-password → อัปเดตรหัสผ่านใหม่
+router.put(
+  "/update-password",
+  verifyToken,
+  wrapAsync(async (req, res) => {
+    await authController.updatePassword(req, res);
   })
 );
 
