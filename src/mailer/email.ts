@@ -98,3 +98,37 @@ export const sendMailUpdateActivity = async (
     console.error("❌ Error sending email:", error);
   }
 };
+
+export const sendForgotPasswordCode = async (
+  to: string,
+  code: string
+) => {
+  try {
+    const templatePath = path.join(
+      __dirname,
+      "../mailer/template/forgotPasswordTemplate.ejs"
+    );
+
+    if (!fs.existsSync(templatePath)) {
+      console.error("❌ EJS Template file not found at:", templatePath);
+      throw new Error("Email template not found");
+    }
+
+    const emailHtml = ejs.render(fs.readFileSync(templatePath, "utf-8"), {
+      code: code
+    });
+
+    await transporter.sendMail({
+      from: `"Burapha University" <${process.env.EMAIL_SENDER}>`,
+      to: to,
+      subject: "🔐 รหัสยืนยันลืมรหัสผ่าน - มหาวิทยาลัยบูรพา",
+      html: emailHtml
+    });
+
+    console.log("✅ Forgot password code sent successfully to", to);
+    return true;
+  } catch (error) {
+    console.error("❌ Error sending forgot password email:", error);
+    throw error;
+  }
+};
