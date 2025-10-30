@@ -33,13 +33,8 @@ export class ChoiceController extends ErrorHandledController {
         const id = Number(question_id);
         try {
             const choice = await this.choiceService.getChoiceByQuestionID(id)
-            if (choice.length > 0) {
-                res.status(200).json(choice);
-            } else {
-                res.status(404).json({
-                    message: "Not found Data"
-                })
-            }
+            // ✅ ส่ง 200 พร้อมอาร์เรย์ว่างเมื่อยังไม่มี choice สำหรับ question นี้
+            res.status(200).json(Array.isArray(choice) ? choice : []);
         } catch (error) {
             this.handleError("ChoiceController.getChoiceByQuestionID", error, res);
         }

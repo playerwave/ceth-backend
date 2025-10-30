@@ -152,7 +152,7 @@ export class QuestionDao extends ErrorHandledDao {
         await this.questionDao!.query(`
       SELECT setval(
         pg_get_serial_sequence('question','question_id'),
-        COALESCE((SELECT MAX(question_id) FROM question), 0)
+        COALESCE((SELECT MAX(question_id) FROM question), 1)
       )
     `);
 
@@ -231,16 +231,17 @@ export class QuestionDao extends ErrorHandledDao {
 
                 await this.questionDao!.query("COMMIT");
                 return rows[0];
-            } catch (err: any) {
+            } catch (err: unknown) {
                 await this.questionDao!.query("ROLLBACK");
 
                 // ถ้าเจอชน PK จาก sequence หลุด ให้ซ่อมแล้วลองใหม่ 1 ครั้ง
-                if (!retried && err?.code === "23505" && /question_id/i.test(err?.detail ?? "")) {
+                const pgErr = err as { code?: string; detail?: string };
+                if (!retried && pgErr?.code === "23505" && /question_id/i.test(pgErr?.detail ?? "")) {
                     retried = true;
                     await this.questionDao!.query(`
             SELECT setval(
               pg_get_serial_sequence('question','question_id'),
-              COALESCE((SELECT MAX(question_id) FROM question), 0)
+              COALESCE((SELECT MAX(question_id) FROM question), 1)
             )
           `);
                     continue;
