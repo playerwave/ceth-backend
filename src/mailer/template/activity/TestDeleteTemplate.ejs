@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Test Delete Template</title>
 </head>
-<body>
-    <h1>Test Delete Template</h1>
-    <p>Activity: <%= activityName || 'Test Activity' %></p>
-    <p>Recipient: <%= recipientEmail || 'test@example.com' %></p>
-    <p>This is a test template for delete activity.</p>
+<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 24px 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background-color: #ffffff; border: 1px solid #ddd;">
+        <h1>Test Delete Template</h1>
+        <p>Activity: <%= activityName || 'Test Activity' %></p>
+        <p>Recipient: <%= recipientEmail || 'test@example.com' %></p>
+        <p>This is a test template for delete activity.</p>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 0.9em; background-color: #F9FAFB; border-radius: 8px; padding: 20px;">
+            <p style="margin: 0 0 8px 0;">Email อัตโนมัติ กรุณาอย่าตอบกลับ</p>
+            <p style="margin: 0;">Burapha University Cooperative Education System</p>
+        </div>
+    </div>
 </body>
 </html>
