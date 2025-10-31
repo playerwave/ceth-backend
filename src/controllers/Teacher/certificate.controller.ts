@@ -482,6 +482,27 @@ export class CertificateController extends ErrorHandledController {
     }
   }
 
+  /**
+   * ดึง Certificate ที่ผ่านการตรวจสอบตาม activity_id
+   */
+  public async getPassedCertificatesByActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const activityId = this.parseId(req.params.activityId);
+      console.log("📥 [CertificateController] Getting passed certificates for activity:", activityId);
+      
+      const certificates = await this.certificateService.getPassedCertificatesByActivity(activityId);
+      
+      res.status(200).json({
+        success: true,
+        message: "Passed certificates retrieved successfully",
+        data: certificates,
+        count: certificates.length
+      });
+    } catch (error) {
+      this.handleError("CertificateController.getPassedCertificatesByActivity", error, res);
+    }
+  }
+
   // ==================== UTILITY METHODS ====================
 
   /**
@@ -541,6 +562,9 @@ export const certificateController = {
   // Analytics methods
   getCertificateVerificationStats: controller.getCertificateVerificationStats.bind(controller),
   getPendingCertificates: controller.getPendingCertificates.bind(controller),
+  
+  // Additional methods
+  getPassedCertificatesByActivity: controller.getPassedCertificatesByActivity.bind(controller),
 };
 
 

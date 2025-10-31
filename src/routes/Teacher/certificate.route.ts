@@ -143,6 +143,12 @@ router.get(
   wrapAsync(certificateController.getPendingCertificates)
 );
 
+// GET: ดึง Certificate ที่ผ่านการตรวจสอบตาม activity_id
+router.get(
+  "/activity/:activityId/passed-certificates",
+  wrapAsync(certificateController.getPassedCertificatesByActivity)
+);
+
 export default router;
 
 

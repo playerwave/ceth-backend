@@ -664,4 +664,55 @@ export class CertificateDao extends ErrorHandledDao {
       throw new Error("❌ Failed to retrieve pending certificates");
     }
   }
+
+  /**
+   * ดึง Certificate ที่ผ่านการตรวจสอบตาม activity_id
+   */
+  public async getPassedCertificatesByActivity(activityId: number): Promise<any[]> {
+    await this.checkConnection();
+    try {
+      console.log("📥 [CertificateDao] Getting passed certificates for activity:", activityId);
+      
+      const certificates = await this.dataSource!.query(
+        `
+        SELECT 
+          c.certificate_id,
+          c.students_id,
+          c.activity_id,
+          c.date,
+          c.hours,
+          c.img,
+          c.status,
+          c.certificate_type,
+          c.organize_name,
+          c.supervisor_name1,
+          c.original_filename,
+          c.uploaded_at,
+          c.updated_at,
+          s.first_name_eng,
+          s.last_name_eng,
+          s.first_name_tha,
+          s.last_name_tha,
+          s.email,
+          u.username
+        FROM certificate c
+        INNER JOIN students s ON c.students_id = s.students_id
+        INNER JOIN users u ON s.users_id = u.users_id
+        WHERE c.activity_id = $1 
+          AND c.status = 'Pass'
+        ORDER BY c.uploaded_at DESC
+        `,
+        [activityId]
+      );
+      
+      console.log("📥 [CertificateDao] Retrieved passed certificates for activity", { 
+        activityId, 
+        count: certificates.length 
+      });
+      return certificates;
+    } catch (error) {
+      this.logDbError("getPassedCertificatesByActivity", error);
+      throw new Error("❌ Failed to retrieve passed certificates by activity");
+    }
+  }
 }

@@ -120,7 +120,8 @@ if (shouldEnableCors) {
     exposedHeaders: [
       "Access-Control-Allow-Origin",
       "Access-Control-Allow-Credentials",
-      "Set-Cookie"
+      "Set-Cookie",
+      "Content-Disposition"
     ],
   });
 

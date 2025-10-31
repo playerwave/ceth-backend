@@ -1086,5 +1086,28 @@ export class CertificateService extends ErrorHandledService {
     console.log(`✅ No tampering detected`);
     return false;
   }
+
+  // ==================== ADDITIONAL METHODS ====================
+
+  /**
+   * ดึง Certificate ที่ผ่านการตรวจสอบตาม activity_id
+   */
+  public async getPassedCertificatesByActivity(activityId: number): Promise<any[]> {
+    try {
+      console.log("📥 [CertificateService] Getting passed certificates for activity:", activityId);
+      
+      const certificates = await this.certificateDao.getPassedCertificatesByActivity(activityId);
+      
+      this.logInfo("📥 [CertificateService] Retrieved passed certificates by activity", { 
+        activityId,
+        count: certificates.length 
+      });
+      
+      return certificates;
+    } catch (error) {
+      this.logError("❌ Error getting passed certificates by activity", error);
+      throw error;
+    }
+  }
 }
 
