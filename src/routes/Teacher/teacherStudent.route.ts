@@ -42,4 +42,10 @@ router.post(
   wrapAsync(teacherStudentController.bulkEnrollActivity)
 );
 
+// Export Students to Excel
+router.get(
+  "/export-students",
+  wrapAsync(teacherStudentController.exportStudentsToExcel)
+);
+
 export default router;

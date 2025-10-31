@@ -261,6 +261,86 @@ export class TeacherStudentDao extends ErrorHandledDao {
     }
   }
 
+  // ✅ ดึงข้อมูลนักเรียนทั้งหมดพร้อมจัดเรียงตามลำดับที่กำหนด
+  public async getAllStudentsForExport(): Promise<Array<{
+    tha_name: string;
+    eng_name: string;
+    code: string;
+    major: string;
+    softSkill: number;
+    hardSkill: number;
+    department_short_name: string;
+    grade_level: number | null;
+    grade_th_year: string | null;
+  }>> {
+    await this.checkConnection();
+    
+    try {
+      console.log("📥 Fetching all students for export...");
+      
+      const query = `
+        SELECT 
+          COALESCE(s.first_name_tha, '') || ' ' || COALESCE(s.last_name_tha, '') as tha_name,
+          COALESCE(s.first_name_eng, '') || ' ' || COALESCE(s.last_name_eng, '') as eng_name,
+          u.username as code,
+          d.department_name_tha as major,
+          COALESCE(s.soft_hours, 0) as softSkill,
+          COALESCE(s.hard_hours, 0) as hardSkill,
+          d.department_short_name,
+          g.level as grade_level,
+          g.th_year as grade_th_year
+        FROM students s
+        JOIN users u ON s.users_id = u.users_id
+        JOIN department d ON s.department_id = d.department_id
+        LEFT JOIN grade g ON s.grade_id = g.grade_id
+        ORDER BY 
+          CASE d.department_short_name
+            WHEN 'AAI' THEN 1
+            WHEN 'SE' THEN 2
+            WHEN 'CS' THEN 3
+            WHEN 'IT' THEN 4
+            ELSE 5
+          END,
+          COALESCE(g.level::text::integer, 99)
+      `;
+      
+      const result = await this.dataSource!.query(query);
+      
+      console.log(`✅ Retrieved ${result.length} students for export`);
+      
+      // Log sample data to debug
+      if (result.length > 0) {
+        console.log("🔍 Sample student data (first 2):", JSON.stringify(result.slice(0, 2), null, 2));
+      }
+      
+      return result;
+    } catch (error) {
+      this.logDbError("getAllStudentsForExport", error);
+      throw new Error("Failed to fetch students for export");
+    }
+  }
+
+  // ✅ ดึงข้อมูล th_year ของ grade_id = 1 สำหรับตั้งชื่อไฟล์
+  public async getCurrentYearForFilename(): Promise<string> {
+    await this.checkConnection();
+    
+    try {
+      const result = await this.dataSource!.query(
+        'SELECT th_year FROM grade WHERE grade_id = 1 LIMIT 1'
+      );
+      
+      if (result.length > 0 && result[0].th_year) {
+        return result[0].th_year;
+      }
+      
+      // Fallback to current year if not found
+      return new Date().getFullYear().toString().slice(-2);
+    } catch (error) {
+      this.logDbError("getCurrentYearForFilename", error);
+      return new Date().getFullYear().toString().slice(-2);
+    }
+  }
+
   // ✅ Reset ข้อมูลนิสิตทั้งหมดและ reset sequence
   public async resetAllStudents(): Promise<{ deletedCount: number }> {
     await this.checkConnection();

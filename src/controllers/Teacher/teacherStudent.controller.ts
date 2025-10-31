@@ -146,6 +146,26 @@ export class TeacherStudentController extends ErrorHandledController {
     }
   }
 
+  // ================= Export Students to Excel =================
+  public async exportStudentsToExcel(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("📤 Starting export students to Excel...");
+      
+      const result = await this.teacherStudentService.exportStudentsToExcel();
+      
+      // ✅ Set headers สำหรับ download file
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      
+      console.log(`✅ Export completed: ${result.filename}`);
+      
+      // ✅ Send buffer as response
+      res.send(result.buffer);
+    } catch (error) {
+      this.handleError("TeacherStudentController.exportStudentsToExcel", error, res);
+    }
+  }
+
   // ================= Private Helper Methods =================
   private parseId(value: string): number {
     console.log(`🔍 parseId: Received value: "${value}", type: ${typeof value}`);
@@ -185,4 +205,5 @@ export const teacherStudentController = {
   bulkCheckOut: controller.bulkCheckOut.bind(controller),
   bulkEnrollActivity: controller.bulkEnrollActivity.bind(controller),
   resetStudentTimes: controller.resetStudentTimes.bind(controller),
+  exportStudentsToExcel: controller.exportStudentsToExcel.bind(controller),
 };

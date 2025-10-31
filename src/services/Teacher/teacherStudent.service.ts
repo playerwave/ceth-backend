@@ -497,4 +497,84 @@ export class TeacherStudentService extends ErrorHandledService {
       throw error;
     }
   }
+
+  // ================= EXPORT STUDENTS TO EXCEL =================
+  public async exportStudentsToExcel(): Promise<{ buffer: Buffer; filename: string }> {
+    try {
+      console.log("📤 Starting export students to Excel...");
+      
+      // ✅ ดึงข้อมูลนักเรียนพร้อมจัดเรียงตามลำดับที่กำหนด
+      const students = await this.studentDao.getAllStudentsForExport();
+      
+      if (students.length === 0) {
+        throw new Error("No students found to export");
+      }
+      
+      console.log(`📊 Preparing to export ${students.length} students`);
+      
+      // Debug: Log first 2 students with hours data
+      if (students.length > 0) {
+        console.log("🔍 Sample students from DAO (first 2):", JSON.stringify(students.slice(0, 2).map(s => ({
+          code: s.code,
+          softSkill: s.softSkill,
+          hardSkill: s.hardSkill,
+          softSkillType: typeof s.softSkill,
+          hardSkillType: typeof s.hardSkill
+        })), null, 2));
+      }
+      
+      // ✅ ดึง th_year สำหรับตั้งชื่อไฟล์
+      const thYear = await this.studentDao.getCurrentYearForFilename();
+      const filename = `IF-STUDENT-BUU-${thYear}.xlsx`;
+      
+      // ✅ Map ข้อมูลให้ตรงกับ Excel format
+      const excelData = students.map((student) => ({
+        'tha-name': student.tha_name.trim(),
+        'eng-name': student.eng_name.trim(),
+        'code': student.code,
+        'major': student.major || '',
+        'softSkill': student.softSkill || 0,
+        'hardSkill': student.hardSkill || 0
+      }));
+      
+      // Debug: Log first 2 mapped data
+      if (excelData.length > 0) {
+        console.log("🔍 Sample excel data (first 2):", JSON.stringify(excelData.slice(0, 2), null, 2));
+      }
+      
+      // ✅ สร้าง Excel file ด้วย xlsx library
+      const XLSX = require('xlsx');
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      
+      // ✅ ตั้งค่า column widths
+      const columnWidths = [
+        { wch: 30 }, // tha-name
+        { wch: 30 }, // eng-name
+        { wch: 12 }, // code
+        { wch: 35 }, // major
+        { wch: 12 }, // softSkill
+        { wch: 12 }  // hardSkill
+      ];
+      worksheet['!cols'] = columnWidths;
+      
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+      
+      // ✅ Convert workbook เป็น buffer
+      const buffer = XLSX.write(workbook, { 
+        type: 'buffer', 
+        bookType: 'xlsx' 
+      });
+      
+      this.logInfo("✅ Export students to Excel completed successfully", { 
+        count: students.length,
+        filename 
+      });
+      
+      return { buffer, filename };
+    } catch (error) {
+      this.logError("❌ Error in exportStudentsToExcel", error);
+      throw error;
+    }
+  }
 }
