@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
     "test": "jest",
-    "build": "npx esbuild src/server.ts --bundle --platform=node --target=node22 --external:uuid --outfile=dist/server.js && cp .env.production dist/.env",
+    "build": "npx esbuild src/server.ts --bundle --platform=node --target=node22 --external:uuid --outfile=dist/server.js && cp .env.production dist/.env && cp -r src/mailer/template dist/mailer/",
     "deploy": "npm run build && ./deploy.sh"
   },
   "keywords": [],

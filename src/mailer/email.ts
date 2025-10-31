@@ -28,11 +28,11 @@ export const sendMailCreateActivity = async (
   msg: string
 ) => {
   try {
-    // ✅ ใช้ __dirname เพื่อหาพาธของไฟล์ EJS อย่างถูกต้อง
-    const templatePath = path.join(
-      __dirname,
-      "../mailer/template/createActivityTemplate.ejs"
-    );
+    // ✅ ปรับ path ให้รองรับทั้ง dev และ production
+    const isDev = __dirname.includes('/src/');
+    const templatePath = isDev 
+      ? path.join(__dirname, "template/createActivityTemplate.ejs")
+      : path.join(__dirname, "mailer/template/createActivityTemplate.ejs");
 
     // ✅ เช็คว่าไฟล์มีอยู่จริงก่อนอ่าน
     if (!fs.existsSync(templatePath)) {
@@ -67,11 +67,11 @@ export const sendMailUpdateActivity = async (
   msg: string
 ) => {
   try {
-    // ✅ ใช้ __dirname เพื่อหาพาธของไฟล์ EJS อย่างถูกต้อง
-    const templatePath = path.join(
-      __dirname,
-      "../mailer/template/updateActivityTemplate.ejs"
-    );
+    // ✅ ปรับ path ให้รองรับทั้ง dev และ production
+    const isDev = __dirname.includes('/src/');
+    const templatePath = isDev 
+      ? path.join(__dirname, "template/updateActivityTemplate.ejs")
+      : path.join(__dirname, "mailer/template/updateActivityTemplate.ejs");
 
     // ✅ เช็คว่าไฟล์มีอยู่จริงก่อนอ่าน
     if (!fs.existsSync(templatePath)) {
@@ -104,10 +104,11 @@ export const sendForgotPasswordCode = async (
   code: string
 ) => {
   try {
-    const templatePath = path.join(
-      __dirname,
-      "../mailer/template/forgotPasswordTemplate.ejs"
-    );
+    // ✅ ปรับ path ให้รองรับทั้ง dev และ production
+    const isDev = __dirname.includes('/src/');
+    const templatePath = isDev 
+      ? path.join(__dirname, "template/forgotPasswordTemplate.ejs")
+      : path.join(__dirname, "mailer/template/forgotPasswordTemplate.ejs");
 
     if (!fs.existsSync(templatePath)) {
       console.error("❌ EJS Template file not found at:", templatePath);

@@ -184,8 +184,24 @@ export class AuthDao extends ErrorHandledDao {
     await this.checkConnection();
     
     try {
+      // ✅ หา student ด้วย email ก่อน
+      const student = await this.dataSource!
+        .getRepository('Students')
+        .createQueryBuilder('s')
+        .select(['s.users_id'])
+        .where('s.email = :email', { email })
+        .getOne();
+
+      if (!student) {
+        console.log("❌ [AuthDao] Student not found for email:", email);
+        throw new Error("ไม่พบผู้ใช้ที่มีอีเมลนี้");
+      }
+
+      console.log("🔍 [AuthDao] Found student with users_id:", student.users_id);
+
+      // ✅ Update password ด้วย users_id
       const result = await this.usersRepository!.update(
-        { username: email },
+        { users_id: student.users_id },
         { password: hashedPassword }
       );
       console.log("🔍 [AuthDao] Update password by email result:", result);
