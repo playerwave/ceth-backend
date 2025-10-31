@@ -283,18 +283,18 @@ export class TeacherStudentDao extends ErrorHandledDao {
           COALESCE(s.first_name_tha, '') || ' ' || COALESCE(s.last_name_tha, '') as tha_name,
           COALESCE(s.first_name_eng, '') || ' ' || COALESCE(s.last_name_eng, '') as eng_name,
           u.username as code,
-          d.department_name_tha as major,
-          COALESCE(s.soft_hours, 0) as softSkill,
-          COALESCE(s.hard_hours, 0) as hardSkill,
-          d.department_short_name,
+          COALESCE(d.department_name_tha, '') as major,
+          COALESCE(s.soft_hours, 0) as "softSkill",
+          COALESCE(s.hard_hours, 0) as "hardSkill",
+          COALESCE(d.department_short_name, '') as department_short_name,
           g.level as grade_level,
           g.th_year as grade_th_year
         FROM students s
         JOIN users u ON s.users_id = u.users_id
-        JOIN department d ON s.department_id = d.department_id
+        LEFT JOIN department d ON s.department_id = d.department_id
         LEFT JOIN grade g ON s.grade_id = g.grade_id
         ORDER BY 
-          CASE d.department_short_name
+          CASE COALESCE(d.department_short_name, '')
             WHEN 'AAI' THEN 1
             WHEN 'SE' THEN 2
             WHEN 'CS' THEN 3
