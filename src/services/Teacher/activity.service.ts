@@ -58,7 +58,10 @@ export class ActivityService extends ErrorHandledService {
         // Set assessment dates from input (prioritize input over assessment data)
         start_assessment: input.start_assessment ?? null,
         end_assessment: input.end_assessment ?? null,
-        url: input.url || "ไม่ระบุ",
+        // ✅ ถ้าเป็น Onsite และไม่มี url ให้เป็น null แทน "ไม่ระบุ"
+        url: input.event_format === "Onsite" 
+          ? (input.url && input.url.trim() !== "" ? input.url : null)
+          : (input.url || "ไม่ระบุ"),
         room_id: input.room_id ?? undefined,
         create_activity_date: new Date(),
         last_update_activity_date: new Date(),
@@ -273,14 +276,21 @@ export class ActivityService extends ErrorHandledService {
         return JSON.parse(cached);
       }
 
-      // ✅ ดึงจาก DAO
+      // ✅ ดึงจาก DAO (DAO จะดึง activity_food มาด้วยแล้ว)
       const activity = await this.activityDao.findById(activity_id);
       if (!activity) {
         this.logInfo("Activity not found", { activity_id });
         return null;
       }
 
-      // ✅ Fetch certificate base if it exists
+      // ✅ Log activity foods จาก DAO
+      console.log("🍽️ [ActivityService] Activity foods from DAO:", {
+        activity_id,
+        activityFood: (activity as any).activityFood,
+        activityFoodCount: Array.isArray((activity as any).activityFood) ? (activity as any).activityFood.length : 0
+      });
+
+      // ✅ Fetch certificate base if it exists (DAO ดึงมาแล้ว แต่อาจจะต้อง fallback)
       console.log("🚀 [ActivityService] Fetching certificate base for activity_id:", activity_id);
       const connection = await connectDatabase();
       const certificateBaseRepo = connection.getRepository(CertificateBase);
@@ -294,8 +304,10 @@ export class ActivityService extends ErrorHandledService {
           template_image_url: certificateBase.template_image_url
         });
 
-        // Map the certificate base data to the activity object
-        Object.assign(activity, { certificateBase: certificateBase });
+        // Map the certificate base data to the activity object (ถ้ายังไม่มี)
+        if (!(activity as any).certificateBase) {
+          Object.assign(activity, { certificateBase: certificateBase });
+        }
         // For backward compatibility with old frontend fields
         Object.assign(activity, { certificate_template_url: certificateBase.template_image_url });
         Object.assign(activity, { certificate_ocr_data: certificateBase.ocr_data });
@@ -305,9 +317,20 @@ export class ActivityService extends ErrorHandledService {
         console.log("⚠️ [ActivityService] No certificate base found for activity:", activity_id);
       }
 
+      // ✅ Clear cache เก่าเมื่อดึงข้อมูลใหม่ (เพื่อให้ข้อมูลใหม่แสดงทันที)
+      try {
+        await redis.del(cacheKey);
+        console.log("🗑️ [ActivityService] Cleared cache for activity:", activity_id);
+      } catch (cacheError) {
+        console.warn("⚠️ [ActivityService] Failed to clear cache:", cacheError);
+      }
+
       // ✅ เก็บลง cache
       await redis.set(cacheKey, JSON.stringify(activity), "EX", 60);
-      this.logInfo("📤 Activity by ID retrieved and cached", { activity_id });
+      this.logInfo("📤 Activity by ID retrieved and cached", { 
+        activity_id,
+        activityFoodCount: Array.isArray((activity as any).activityFood) ? (activity as any).activityFood.length : 0
+      });
 
       return activity;
     } catch (error) {
@@ -563,8 +586,17 @@ export class ActivityService extends ErrorHandledService {
       await this.roomService.updateRoomFloor(input.room_id, input.floor.trim());
     }
 
+    // ✅ Clear cache ทั้ง activity:all และ activity:${activity_id}
     await redis.del("activity:all");
-    this.logInfo("🧹 Redis cache cleared", { key: "activity:all" });
+    await redis.del(`activity:${activity_id}`);
+    console.log("🧹 [ActivityService] Redis cache cleared", { 
+      activity_all: true,
+      activity_id: activity_id 
+    });
+    this.logInfo("🧹 Redis cache cleared", { 
+      key: "activity:all",
+      activity_id_key: `activity:${activity_id}`
+    });
 
     return updated;
   }
@@ -884,7 +916,10 @@ export class ActivityService extends ErrorHandledService {
         activity_status: activity.activity_status || "Private",
         activity_state: activity.activity_state || "Not Start",
         status: activity.status || "Active",
-        url: activity.url || "ไม่ระบุ",
+        // ✅ ถ้าเป็น Onsite และไม่มี url ให้เป็น null แทน "ไม่ระบุ"
+        url: activity.event_format === "Onsite" 
+          ? (activity.url && activity.url.trim() !== "" ? activity.url : null)
+          : (activity.url || "ไม่ระบุ"),
         room_id: activity.room_id ?? null,
         assessment_id: activity.assessment_id ?? null,
         create_activity_date: new Date(),

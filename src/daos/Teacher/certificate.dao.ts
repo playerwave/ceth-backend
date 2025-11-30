@@ -477,6 +477,43 @@ export class CertificateDao extends ErrorHandledDao {
   }
 
   /**
+   * ดึง Certificate ของนิสิตตาม status
+   */
+  public async getCertificatesByStatus(status: string, studentId?: number): Promise<Certificate[]> {
+    await this.checkConnection();
+    try {
+      console.log("📥 [CertificateDao] Getting certificates by status:", {
+        status,
+        studentId: studentId || 'all'
+      });
+      
+      const certificateRepository = this.dataSource!.getRepository(Certificate);
+      
+      // ✅ สร้าง where condition
+      const whereCondition: any = { status };
+      if (studentId) {
+        whereCondition.students_id = studentId;
+      }
+      
+      const certificates = await certificateRepository.find({
+        where: whereCondition,
+        order: { uploaded_at: "DESC" }
+      });
+      
+      console.log("📥 [CertificateDao] Retrieved certificates by status", { 
+        status,
+        studentId: studentId || 'all',
+        count: certificates.length 
+      });
+      
+      return certificates;
+    } catch (error) {
+      this.logDbError("getCertificatesByStatus", error);
+      throw new Error("❌ Failed to retrieve certificates by status");
+    }
+  }
+
+  /**
    * อัปเดต Certificate
    */
   public async updateCertificate(certificateId: number, data: Partial<Certificate>): Promise<Certificate | null> {
@@ -494,6 +531,75 @@ export class CertificateDao extends ErrorHandledDao {
     } catch (error) {
       this.logDbError("updateCertificate", error);
       throw new Error("❌ Failed to update certificate");
+    }
+  }
+
+  /**
+   * ลบ Certificate ตาม ID
+   */
+  public async deleteCertificate(certificateId: number): Promise<boolean> {
+    await this.checkConnection();
+    try {
+      console.log("🗑️ [CertificateDao] Deleting certificate:", certificateId);
+      
+      const certificateRepository = this.dataSource!.getRepository(Certificate);
+      const certificateAuditRepository = this.dataSource!.getRepository(CertificateAudit);
+      
+      // ✅ ตรวจสอบว่า certificate มีอยู่จริงหรือไม่
+      const certificate = await certificateRepository.findOne({
+        where: { certificate_id: certificateId }
+      });
+      
+      if (!certificate) {
+        console.log("⚠️ [CertificateDao] Certificate not found:", certificateId);
+        return false;
+      }
+      
+      // ✅ ลบ records ที่เกี่ยวข้องก่อน (เพื่อให้ foreign key constraint ผ่าน)
+      // ✅ 1. ลบ certificate_audit records
+      try {
+        const auditDeleteResult = await certificateAuditRepository.delete({
+          certificate_id: certificateId
+        });
+        console.log("🗑️ [CertificateDao] Deleted audit logs:", {
+          certificate_id: certificateId,
+          deleted_count: auditDeleteResult.affected || 0
+        });
+      } catch (auditError) {
+        console.warn("⚠️ [CertificateDao] Failed to delete audit logs (non-critical):", auditError);
+        // ✅ ยังคงดำเนินการลบ certificate ต่อไป
+      }
+      
+      // ✅ 2. ลบ certificate_verification records
+      try {
+        const verificationRepository = this.dataSource!.getRepository(CertificateVerification);
+        const verificationDeleteResult = await verificationRepository.delete({
+          certificate_id: certificateId
+        });
+        console.log("🗑️ [CertificateDao] Deleted verification records:", {
+          certificate_id: certificateId,
+          deleted_count: verificationDeleteResult.affected || 0
+        });
+      } catch (verificationError) {
+        console.warn("⚠️ [CertificateDao] Failed to delete verification records (non-critical):", verificationError);
+        // ✅ ยังคงดำเนินการลบ certificate ต่อไป
+      }
+      
+      // ✅ ลบ certificate
+      const deleteResult = await certificateRepository.delete(certificateId);
+      
+      const deleted = deleteResult.affected && deleteResult.affected > 0;
+      
+      if (deleted) {
+        console.log("✅ [CertificateDao] Certificate deleted successfully", { certificate_id: certificateId });
+      } else {
+        console.log("⚠️ [CertificateDao] Certificate deletion failed (no rows affected)", { certificate_id: certificateId });
+      }
+      
+      return deleted;
+    } catch (error) {
+      this.logDbError("deleteCertificate", error);
+      throw new Error("❌ Failed to delete certificate");
     }
   }
 

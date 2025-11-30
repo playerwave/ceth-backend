@@ -270,6 +270,53 @@ export class CertificateController extends ErrorHandledController {
   }
 
   /**
+   * ดึง Certificate ของนิสิตตาม status
+   */
+  public async getCertificatesByStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const status = req.query.status as string;
+      const studentId = req.query.studentId ? this.parseId(req.query.studentId as string) : undefined;
+      
+      console.log("📥 [CertificateController] Getting certificates by status:", {
+        status,
+        studentId
+      });
+      
+      // ตรวจสอบว่า status มีค่าหรือไม่
+      if (!status) {
+        res.status(400).json({
+          success: false,
+          message: "Status parameter is required"
+        });
+        return;
+      }
+      
+      // ตรวจสอบว่า status เป็นค่าที่ถูกต้องหรือไม่
+      const validStatuses = ['Pass', 'Pending'];
+      if (!validStatuses.includes(status)) {
+        res.status(400).json({
+          success: false,
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+        });
+        return;
+      }
+      
+      const certificates = await this.certificateService.getCertificatesByStatus(status, studentId);
+      
+      res.status(200).json({
+        success: true,
+        message: "Certificates retrieved successfully",
+        data: certificates,
+        count: certificates.length,
+        status,
+        studentId: studentId || 'all'
+      });
+    } catch (error) {
+      this.handleError("CertificateController.getCertificatesByStatus", error, res);
+    }
+  }
+
+  /**
    * อัปเดต Certificate
    */
   public async updateCertificate(req: Request, res: Response): Promise<void> {
@@ -295,6 +342,34 @@ export class CertificateController extends ErrorHandledController {
       });
     } catch (error) {
       this.handleError("CertificateController.updateCertificate", error, res);
+    }
+  }
+
+  /**
+   * ลบ Certificate ตาม ID
+   */
+  public async deleteCertificate(req: Request, res: Response): Promise<void> {
+    try {
+      const certificateId = this.parseId(req.params.id);
+      console.log("🗑️ [CertificateController] Deleting certificate:", certificateId);
+      
+      const deleted = await this.certificateService.deleteCertificate(certificateId);
+      
+      if (!deleted) {
+        res.status(404).json({
+          success: false,
+          message: "Certificate not found"
+        });
+        return;
+      }
+      
+      res.status(200).json({
+        success: true,
+        message: "Certificate deleted successfully",
+        data: { certificate_id: certificateId }
+      });
+    } catch (error) {
+      this.handleError("CertificateController.deleteCertificate", error, res);
     }
   }
 
@@ -548,7 +623,9 @@ export const certificateController = {
   createCertificate: controller.createCertificate.bind(controller),
   getCertificateById: controller.getCertificateById.bind(controller),
   getCertificatesByStudentId: controller.getCertificatesByStudentId.bind(controller),
+  getCertificatesByStatus: controller.getCertificatesByStatus.bind(controller),
   updateCertificate: controller.updateCertificate.bind(controller),
+  deleteCertificate: controller.deleteCertificate.bind(controller),
   verifyCertificate: controller.verifyCertificate.bind(controller),
   getVerificationsByCertificateId: controller.getVerificationsByCertificateId.bind(controller),
   

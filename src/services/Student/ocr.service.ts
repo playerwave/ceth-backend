@@ -97,8 +97,14 @@ async function callTyphoonOCRWithTimeout(
       filename: file.filename,
       size: file.buffer.length,
       mimetype: file.mimetype,
+      isPdf: file.mimetype === 'application/pdf', // ✅ แสดงว่าเป็น PDF หรือไม่
       timeout: `${timeoutMs}ms`
     });
+    
+    // ✅ Log สำหรับ PDF files
+    if (file.mimetype === 'application/pdf') {
+      console.log("📄 [OCR Service] Processing PDF file - Typhoon OCR should handle PDF conversion internally");
+    }
 
         const r = await fetch("https://api.opentyphoon.ai/v1/ocr", {
           method: "POST",

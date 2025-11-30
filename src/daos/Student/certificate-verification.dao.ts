@@ -273,6 +273,26 @@ export class CertificateVerificationDAO extends ErrorHandledDao {
     }
   }
 
+  // ✅ Update Certificate Status
+  public async updateCertificateStatus(certificateId: number, status: string): Promise<void> {
+    await this.checkConnection();
+    try {
+      console.log(`🔄 [CertificateVerificationDAO] Updating certificate status to ${status} for certificate_id: ${certificateId}`);
+      
+      const query = `
+        UPDATE certificate 
+        SET status = $1 
+        WHERE certificate_id = $2
+      `;
+      
+      await this.dataSource!.query(query, [status, certificateId]);
+      console.log(`✅ [CertificateVerificationDAO] Certificate status updated to ${status}`);
+    } catch (error) {
+      this.logDbError("updateCertificateStatus", error);
+      throw new Error("❌ Failed to update certificate status");
+    }
+  }
+
   // ✅ เพิ่ม soft hours
   public async addSoftHours(studentId: number, hours: number): Promise<void> {
     await this.checkConnection();

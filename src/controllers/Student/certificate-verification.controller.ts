@@ -39,12 +39,12 @@ export class CertificateVerificationController extends ErrorHandledController {
     try {
       console.log("🔗 [CertificateVerificationController] Upload link with verification");
       
-      const { activityId, linkData, studentId } = req.body;
+      const { activity_id, linkData, studentId } = req.body; // ✅ แก้เป็น snake_case
       const userId = req.user.id;
       
-      console.log("🔗 [CertificateVerificationController] Upload link with verification:", { activityId, linkData, userId, studentId });
+      console.log("🔗 [CertificateVerificationController] Upload link with verification:", { activity_id, linkData, userId, studentId });
       
-      if (!activityId || !linkData || !studentId) {
+      if (!activity_id || !linkData || !studentId) {
         res.status(400).json({ 
           success: false, 
           error: "ข้อมูลไม่ครบถ้วน" 
@@ -75,7 +75,7 @@ export class CertificateVerificationController extends ErrorHandledController {
         // ✅ สร้าง certificate record (ไม่เก็บ certificate_id)
         const certificateData = {
           students_id: studentId, // ✅ ใช้ studentId ที่ส่งมาจาก Frontend
-        activity_id: activityId,
+        activity_id: activity_id, // ✅ แก้เป็น snake_case
         certificate_type: linkData.certificateType || 'BUU_MOOC',
         certificate_name: ocrResult.courseName,
         certificate_id: null, // ✅ ไม่เก็บ certificate_id จากลิ้งก์
@@ -100,12 +100,12 @@ export class CertificateVerificationController extends ErrorHandledController {
         let hoursResult = null;
         try {
           // ✅ ดึงข้อมูล activity เพื่อดูชั่วโมง
-          const activityData = await this.certificateVerificationDAO.getActivityById(activityId);
+          const activityData = await this.certificateVerificationDAO.getActivityById(activity_id);
           console.log("🔍 [CertificateVerificationController] Activity data:", activityData);
           
           hoursResult = await this.certificateVerificationDAO.addHoursToStudent(
             studentId, // ✅ ใช้ studentId แทน userId
-            activityId
+            activity_id // ✅ แก้เป็น snake_case
           );
           console.log("🎉 [CertificateVerificationController] Hours added:", hoursResult);
         } catch (hoursError) {
@@ -119,7 +119,7 @@ export class CertificateVerificationController extends ErrorHandledController {
       // ✅ ดึงข้อมูล activity เพื่อส่งชั่วโมงไป Frontend
       let activityData = null;
       try {
-        activityData = await this.certificateVerificationDAO.getActivityData(activityId);
+        activityData = await this.certificateVerificationDAO.getActivityData(activity_id);
         console.log("🔍 [CertificateVerificationController] Activity for response:", activityData);
       } catch (activityError) {
         console.log("⚠️ [CertificateVerificationController] Could not fetch activity data:", activityError.message);
@@ -173,8 +173,8 @@ export class CertificateVerificationController extends ErrorHandledController {
         return;
       }
 
-      const { activityId } = req.body;
-      if (!activityId) {
+      const { activity_id } = req.body; // ✅ แก้เป็น snake_case
+      if (!activity_id) {
         res.status(400).json({ 
           success: false, 
           error: "Activity ID is required" 
@@ -185,21 +185,70 @@ export class CertificateVerificationController extends ErrorHandledController {
       console.log("📁 [CertificateVerificationController] File received:", {
         filename: req.file.originalname,
         mimetype: req.file.mimetype,
-        size: req.file.size,
-        activityId: parseInt(activityId)
+        activity_id: activity_id, // ✅ เพิ่ม log
+        size: req.file.size
       });
 
       // ✅ ทำ OCR
       console.log("🔍 [CertificateVerificationController] Performing OCR...");
+      let fileBufferForOcr = req.file.buffer;
+      let certificateTypeForOcr = "BUU MOOC"; // Default
+      
+      // ✅ ถ้าเป็น PDF ให้ตรวจสอบว่าเป็น THAI MOOC หรือไม่
+      if (req.file.mimetype === 'application/pdf') {
+        console.log("📄 [CertificateVerificationController] PDF detected, checking if THAI MOOC...");
+        
+        // ✅ ทำ OCR ครั้งแรกเพื่อ detect certificate type
+        const firstOcrResult = await callTyphoonOCR(
+          {
+            buffer: req.file.buffer,
+            filename: req.file.originalname,
+            mimetype: req.file.mimetype,
+          },
+          { 
+            model: "typhoon-ocr-preview",
+            certificateType: "BUU MOOC",
+            enableCorrection: true
+          }
+        );
+        
+        // ✅ Extract natural_text เพื่อตรวจสอบ certificate type
+        let naturalText = "";
+        if (firstOcrResult?.results?.[0]?.message?.choices?.[0]?.message?.content) {
+          const content = firstOcrResult.results[0].message.choices[0].message.content;
+          try {
+            const parsed = JSON.parse(content);
+            naturalText = parsed.natural_text || parsed.raw_text || content;
+          } catch {
+            naturalText = content;
+          }
+        }
+        
+        // ✅ Detect certificate type
+        // ✅ ใช้ detectCertificateType จาก naturalTextParser แทน
+        const { detectCertificateType: detectCertType } = require("../../utils/naturalTextParser");
+        const detectedType = detectCertType(naturalText);
+        console.log("🔍 [CertificateVerificationController] Detected certificate type:", detectedType);
+        
+        // ✅ ถ้าเป็น THAI MOOC และเป็น PDF ให้ extract หน้า 2
+        // ✅ detectCertificateType คืนค่า "THAI MOOC" (มีช่องว่าง)
+        if (detectedType === "THAI MOOC") {
+          console.log("📄 [CertificateVerificationController] THAI MOOC PDF detected, extracting page 2...");
+          const { extractPdfPage2 } = require("../../utils/pdfPageExtractor");
+          fileBufferForOcr = await extractPdfPage2(req.file.buffer);
+          certificateTypeForOcr = "THAI MOOC";
+        }
+      }
+      
       const rawOcrResult = await callTyphoonOCR(
         {
-          buffer: req.file.buffer,
+          buffer: fileBufferForOcr,
           filename: req.file.originalname,
           mimetype: req.file.mimetype,
         },
         { 
           model: "typhoon-ocr-preview",
-          certificateType: "BUU MOOC",
+          certificateType: certificateTypeForOcr,
           enableCorrection: true
         }
       );
@@ -214,7 +263,7 @@ export class CertificateVerificationController extends ErrorHandledController {
 
       // ✅ ดึง CertificateBase
       const certificateBase = await this.certificateVerificationService.getCertificateBaseByActivityId(
-        parseInt(activityId)
+        parseInt(activity_id)
       );
 
       if (!certificateBase) {
@@ -261,10 +310,156 @@ export class CertificateVerificationController extends ErrorHandledController {
 
       console.log("📊 [CertificateVerificationController] Name Verification Results:", nameVerificationResult);
 
+      // ✅ ตรวจสอบว่าผ่านเกณฑ์หรือไม่
+      // ✅ เกณฑ์: confidenceScore >= 70 และ nameValid = Pass
+      // ✅ confidenceScore < 60 = ไม่บันทึกลง database (ปฏิเสธ)
+      // ✅ 60 <= confidenceScore < 70 = Pending (บันทึกเป็น Pending)
+      const passedVerification = nameVerificationResult.isValid && verificationResult.confidenceScore >= 70;
+      const isRejected = verificationResult.confidenceScore < 60;
+      
+      console.log("🔍 [CertificateVerificationController] Passed verification:", passedVerification);
+      console.log("📊 [CertificateVerificationController] Verification result:", {
+        confidenceScore: verificationResult.confidenceScore,
+        isRejected,
+        passedVerification
+      });
+
+      // ✅ ถ้า confidence score < 60 ไม่ต้องบันทึกลง database
+      if (isRejected) {
+        console.log("❌ [CertificateVerificationController] Certificate rejected (confidence score < 60), not saving to database");
+        res.status(200).json({
+          success: false,
+          message: "ใบรับรองไม่ผ่านเกณฑ์การตรวจสอบ (คะแนนความเชื่อมั่นต่ำกว่า 60%)",
+          data: {
+            ocrResult: {
+              fullName: ocrResult.fullName,
+              courseName: ocrResult.courseName,
+              teacher: ocrResult.teacher,
+              certificateId: ocrResult.certificateId,
+              date: ocrResult.date,
+              rawText: ocrResult.rawText
+            },
+            nameVerification: {
+              isValid: nameVerificationResult.isValid,
+              certificateName: ocrResult.fullName,
+              studentName: nameVerificationResult.studentName,
+              studentId: nameVerificationResult.studentId
+            },
+            verificationResult: {
+              confidenceScore: verificationResult.confidenceScore,
+              isAuthentic: verificationResult.isAuthentic,
+              verificationDetails: verificationResult.verificationDetails,
+              matchedFeatures: verificationResult.matchedFeatures,
+              failedFeatures: verificationResult.failedFeatures,
+              recommendations: verificationResult.recommendations,
+              organize_name: verificationResult.organize_name
+            },
+            certificateType: certificateType,
+            passedVerification: false,
+            rejected: true,
+            reason: "Confidence score below 60%"
+          }
+        });
+        return;
+      }
+
+      // ✅ กำหนด status ตาม confidence score (เฉพาะ >= 60)
+      // ✅ confidenceScore >= 70 && nameValid = Pass
+      // ✅ 60 <= confidenceScore < 70 = Pending
+      const certificateStatus: 'Pass' | 'Pending' = passedVerification ? 'Pass' : 'Pending';
+      
+      console.log("💾 [CertificateVerificationController] Saving certificate to database (confidence score >= 60)...");
+      console.log("📊 [CertificateVerificationController] Certificate status:", certificateStatus);
+      
+      // ✅ ดึง studentId - ใช้จาก nameVerification ถ้ามี ไม่งั้นใช้จาก user service
+      let studentId = nameVerificationResult.studentId;
+      if (!studentId) {
+        console.log("⚠️ [CertificateVerificationController] No studentId from name verification, fetching from user service...");
+        studentId = await this.certificateService.getStudentIdFromUserId(req.user.id);
+        console.log("✅ [CertificateVerificationController] Retrieved studentId:", studentId);
+      }
+      
+      if (!studentId) {
+        res.status(400).json({
+          success: false,
+          error: "ไม่พบข้อมูลนิสิต"
+        });
+        return;
+      }
+      
+      // ✅ แปลง date ให้ถูกต้อง - ตรวจสอบว่าเป็น valid date string หรือไม่
+      let certificateDate: Date | null = null;
+      if (ocrResult.date && ocrResult.date !== "-" && ocrResult.date.trim() !== "") {
+        const parsedDate = new Date(ocrResult.date);
+        // ✅ ตรวจสอบว่าเป็น valid date หรือไม่
+        if (!isNaN(parsedDate.getTime())) {
+          certificateDate = parsedDate;
+        }
+      }
+      // ✅ ถ้าไม่มี valid date ให้ใช้ null (ไม่ใช้ new Date() เพราะจะใช้เวลาปัจจุบัน ซึ่งไม่ถูกต้อง)
+      
+      const savedCertificate = await this.certificateService.uploadCertificate({
+        students_id: studentId, // ✅ ใช้ studentId ที่ได้มา
+        activity_id: parseInt(activity_id),
+        hours: passedVerification ? 0 : 0, // ✅ hours จะถูกเพิ่มโดย system ภายหลัง
+        date: certificateDate, // ✅ ใช้ null ถ้าไม่มี valid date
+        file: req.file,
+        ocr_extracted_data: {
+          fullName: ocrResult.fullName,
+          courseName: ocrResult.courseName,
+          teacher: ocrResult.teacher,
+          certificateId: ocrResult.certificateId,
+          date: ocrResult.date,
+          organize_name: ocrResult.organize_name,
+          certificateType: certificateType,
+          confidenceScore: verificationResult.confidenceScore,
+          status: certificateStatus // ✅ ใช้ status ที่กำหนดตาม confidence score (Pass หรือ Pending)
+        }
+      });
+      
+      console.log("💾 [CertificateVerificationController] Certificate saved:", savedCertificate.certificate_id);
+      console.log("📊 [CertificateVerificationController] Initial certificate status:", certificateStatus);
+
+      // ✅ ถ้าผ่านเกณฑ์ (Pass) ให้ update status และเพิ่มชั่วโมง
+      // ✅ ถ้าเป็น Pending ไม่ต้องทำอะไรเพิ่ม (รอตรวจสอบภายหลัง)
+      let hoursAdded = null;
+      if (certificateStatus === 'Pass' && savedCertificate) {
+        // ✅ ดึงข้อมูล activity เพื่อรับ type และ hours
+        try {
+          const activity = await this.certificateVerificationDAO.getActivityData(parseInt(activity_id));
+          
+          if (activity && activity.recieve_hours > 0) {
+            // ✅ ตรวจสอบว่า status ยังเป็น Pass หรือไม่ (อาจถูก update แล้ว)
+            // ✅ Update certificate status เป็น Pass เพื่อให้แน่ใจ
+            await this.certificateVerificationDAO.updateCertificateStatus(
+              savedCertificate.certificate_id,
+              'Pass'
+            );
+            console.log("✅ [CertificateVerificationController] Certificate status confirmed as Pass");
+            
+            // ✅ เพิ่มชั่วโมงให้นิสิต
+            if (activity.type === 'Soft') {
+              await this.certificateVerificationDAO.addSoftHours(studentId, activity.recieve_hours);
+            } else if (activity.type === 'Hard') {
+              await this.certificateVerificationDAO.addHardHours(studentId, activity.recieve_hours);
+            }
+            
+            hoursAdded = {
+              type: activity.type || 'Soft',
+              hours: activity.recieve_hours || 0
+            };
+            console.log("✅ [CertificateVerificationController] Hours added to student:", hoursAdded);
+          }
+        } catch (activityError) {
+          console.warn("⚠️ [CertificateVerificationController] Could not add hours:", activityError);
+        }
+      }
+
       // ✅ ส่ง response 200 พร้อมข้อมูลการตรวจสอบ
       res.status(200).json({
         success: true,
         message: "การตรวจสอบใบรับรองเสร็จสิ้น",
+        hoursAdded: hoursAdded, // ✅ เพิ่ม hoursAdded
         data: {
           ocrResult: {
             fullName: ocrResult.fullName,
@@ -290,7 +485,7 @@ export class CertificateVerificationController extends ErrorHandledController {
             organize_name: verificationResult.organize_name
           },
           certificateType: certificateType,
-          passedVerification: nameVerificationResult.isValid && verificationResult.confidenceScore >= 70
+          passedVerification: passedVerification
         }
       });
       return;
@@ -372,7 +567,7 @@ export class CertificateVerificationController extends ErrorHandledController {
       // ✅ Normalize student name (ตัด MR./MISS. ออก แล้วเปลี่ยนเป็นพิมพ์ใหญ่)
       const normalizeStudentName = (name: string) => {
         return name
-          .replace(/^(MR\.|MISS\.|MRS\.|DR\.|PROF\.)\s*/i, '') // ✅ ตัดคำนำหน้าชื่อออก
+          .replace(/^(MR\.?|MISS\.?|MRS\.?|MS\.?|DR\.?|PROF\.?)(?:\s+|(?=[A-Z]))/i, '') // ✅ รองรับทั้งมีจุด/ไม่มีจุด และติดชื่อเลย
           .toUpperCase()
           .trim()
           .replace(/\s+/g, ' ') // ✅ แปลง multiple spaces เป็น single space
@@ -581,15 +776,19 @@ export class CertificateVerificationController extends ErrorHandledController {
     return 'UNKNOWN';
   };
 
-  // ✅ ประมวลผล OCR result
+  // ✅ ประมวลผล OCR result - ใช้ parseThaiMoocData และ parseBuuMoocData เหมือนกับอาจารย์
   private processOcrResult = (rawData: unknown): {
     fullName: string;
     courseName: string;
     teacher: string;
     certificateId: string;
     date: string;
+    organize_name?: string; // ✅ เพิ่ม organization name
     rawText: string;
   } => {
+    // ✅ Import parse functions
+    const { parseThaiMoocData } = require("../../utils/naturalTextParser");
+    const { parseBuuMoocData } = require("../../utils/naturalTextParser");
       console.log("🔄 [CertificateVerificationController] Processing OCR result...");
       console.log("🔍 [CertificateVerificationController] Raw OCR data structure:", {
         hasResults: rawData && typeof rawData === 'object' && 'results' in rawData,
@@ -638,6 +837,15 @@ export class CertificateVerificationController extends ErrorHandledController {
           const structuredData = JSON.parse(rawContent);
           console.log("✅ [CertificateVerificationController] Received structured JSON response");
           
+          // ✅ ถ้ามี natural_text ให้ใช้แทน rawContent สำหรับ regex parsing
+          if (structuredData.natural_text) {
+            rawContent = structuredData.natural_text;
+            console.log("✅ [CertificateVerificationController] Extracted natural_text from JSON:", {
+              length: rawContent.length,
+              preview: rawContent.substring(0, 200)
+            });
+          }
+          
           // ✅ ตรวจสอบว่ามีข้อมูลที่จำเป็นหรือไม่
           const hasValidData = structuredData.student_name && 
                               structuredData.student_name !== "-" && 
@@ -657,385 +865,182 @@ export class CertificateVerificationController extends ErrorHandledController {
               rawText: structuredData.raw_text || rawContent
             };
           } else {
-            console.log("⚠️ [CertificateVerificationController] Structured data incomplete, falling back to regex parsing");
+            console.log("⚠️ [CertificateVerificationController] Structured data incomplete, falling back to parseThaiMoocData/parseBuuMoocData");
           }
         } catch (e) {
-          console.log("⚠️ [CertificateVerificationController] Failed to parse JSON content, falling back to regex parsing");
+          console.log("⚠️ [CertificateVerificationController] Failed to parse JSON content, falling back to parseThaiMoocData/parseBuuMoocData");
         }
       }
 
-      // ✅ Simple text processing - ปรับปรุงการ clean text
-      const cleanContent = rawContent
-        .replace(/\\n/g, '\n')  // ✅ แปลง \\n เป็น \n
-        .replace(/\n+/g, ' ')   // ✅ แปลง line breaks เป็น spaces
-        .replace(/\s+/g, ' ')    // ✅ แปลง multiple spaces เป็น single space
-        .trim();
+      // ✅ ใช้ parseThaiMoocData และ parseBuuMoocData เหมือนกับอาจารย์
+      console.log("🔍 [CertificateVerificationController] Using parseThaiMoocData/parseBuuMoocData for extraction...");
+      console.log("📄 [CertificateVerificationController] Raw content length:", rawContent.length);
+      console.log("📄 [CertificateVerificationController] Raw content preview:", rawContent.substring(0, 500));
       
-      // ✅ เพิ่ม debug logging สำหรับ raw content
-      console.log("🔍 [CertificateVerificationController] Raw OCR Content (first 1000 chars):", rawContent.substring(0, 1000));
-      console.log("🔍 [CertificateVerificationController] Raw OCR Content (last 1000 chars):", rawContent.substring(Math.max(0, rawContent.length - 1000)));
-      console.log("🔍 [CertificateVerificationController] Cleaned content:", cleanContent.substring(0, 200) + "...");
-      console.log("🔍 [CertificateVerificationController] Cleaned content (last 500 chars):", cleanContent.substring(Math.max(0, cleanContent.length - 500)));
+      // ✅ Detect certificate type จาก rawContent
+      const { detectCertificateType: detectCertType } = require("../../utils/naturalTextParser");
+      const detectedCertType = detectCertType(rawContent);
+      console.log("🔍 [CertificateVerificationController] Detected certificate type:", detectedCertType);
       
-      // ✅ ตรวจสอบประเภท Certificate
-      const certificateType = this.detectCertificateType(cleanContent);
-      console.log("🔍 [CertificateVerificationController] Certificate type:", certificateType);
-      
-      // ✅ ตรวจสอบว่าเป็น BUU MOOC หรือไม่
-      const isBuuMooc = cleanContent.includes('BUU MOOC') || cleanContent.includes('CERTIFICATE OF BUU MOOC');
-      console.log("🔍 [CertificateVerificationController] Is BUU MOOC detected:", isBuuMooc);
-      
-      // ✅ ใช้ BUU_MOOC ถ้าตรวจพบ
-      const finalCertificateType = isBuuMooc ? 'BUU_MOOC' : certificateType;
-      console.log("🔍 [CertificateVerificationController] Final certificate type:", finalCertificateType);
-      
-      const lines = cleanContent
-        .split(/\s/)
-        .map((l: string) => l.trim())
-        .filter(Boolean);
-
-      // ✅ Extract information using conditional patterns based on certificate type
+      // ✅ Extract fields ตาม certificate type
       let fullName = "-";
       let courseName = "-";
       let teacher = "-";
       let date = "-";
       let certificateId = "-";
+      let organize_name = "-";
       
-      // ✅ เพิ่ม debug logging สำหรับการติดตามปัญหา
-      console.log("🔍 [CertificateVerificationController] Starting regex pattern matching...");
-      console.log("🔍 [CertificateVerificationController] Raw content length:", rawContent.length);
-      console.log("🔍 [CertificateVerificationController] Raw content preview:", rawContent.substring(0, 300) + "...");
-
-      // ✅ Find full name - Conditional patterns based on certificate type
-      let namePatterns: RegExp[] = [];
-      
-      if (certificateType === 'THAI_MOOC') {
-        // ✅ Thai MOOC specific patterns - Smart extraction
-        namePatterns = [
-          /THIS CERTIFICATE IS AWARDED TO\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for)/i, // ✅ Capture เฉพาะชื่อ
-          /THIS CERTIFICATE IS AWARDED TO\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for the)/i, // ✅ Capture เฉพาะชื่อ
-          /THIS CERTIFICATE IS AWARDED TO\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for the completion)/i, // ✅ Capture เฉพาะชื่อ
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for the completion)/i, // ✅ Fallback pattern
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for the fulfillment)/i // ✅ Fallback pattern
-        ];
-      } else if (certificateType === 'BUU_MOOC') {
-        // ✅ BUU MOOC specific patterns - Smart extraction
-        namePatterns = [
-          /is presented to\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+has)/i, // ✅ Capture เฉพาะชื่อ
-          /presented to\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+has)/i, // ✅ Capture เฉพาะชื่อ
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+has successfully)/i, // ✅ Fallback pattern
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+has completed)/i // ✅ Fallback pattern
-        ];
-      } else {
-        // ✅ Fallback generic patterns - Smart extraction
-        namePatterns = [
-          /THIS CERTIFICATE IS AWARDED TO\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for)/i,
-          /PRESENTED TO\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for)/i,
-          /is presented to\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+has)/i,
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+for the completion)/i,
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+has successfully)/i
-        ];
-      }
-      
-      for (const pattern of namePatterns) {
-        const match = cleanContent.match(pattern);
-        if (match && match[1]) {
-          const candidate = match[1].trim();
-          console.log("🔍 [CertificateVerificationController] Name pattern match:", {
-            pattern: pattern.toString(),
-            candidate: candidate,
-            length: candidate.length
-          });
-          
-          // ✅ Smart filtering - ตรวจสอบว่า candidate เป็นชื่อจริงหรือไม่
-          if (this.isValidName(candidate, certificateType)) {
-            fullName = candidate;
-            console.log("✅ [CertificateVerificationController] Name found:", fullName);
-            break;
-          }
-        }
-      }
-
-      // ✅ Find course name - Conditional patterns based on certificate type
-      let coursePatterns: RegExp[] = [];
-      
-      if (finalCertificateType === 'THAI_MOOC') {
-        // ✅ Thai MOOC specific patterns - capture ทั้งหมดรวม (10 Hours)
-        coursePatterns = [
-          /for the completion and fulfillment of the online course\s*([^(]+(?:\([^)]+\))?)/i,
-          /completion and fulfillment of the online course\s*([^(]+(?:\([^)]+\))?)/i,
-          /online course\s*([^(]+(?:\([^)]+\))?)/i,
-          /for the completion of\s*([^(]+(?:\([^)]+\))?)/i,
-          /completion of\s*([^(]+(?:\([^)]+\))?)/i
-        ];
-      } else if (finalCertificateType === 'BUU_MOOC') {
-        // ✅ BUU MOOC specific patterns - แก้ไข pattern ให้จับชื่อหลักสูตรได้ถูกต้อง
-        coursePatterns = [
-          // ✅ Pattern หลัก - จับทุกอย่างหลัง "Open Online Course" จนถึง "On"
-          /has successfully completed the Open Online Course\s*([^O]+?)(?:\s*On\s+[A-Z][a-z]+\s+\d{1,2},?\s*\d{4})/i,
-          /Open Online Course\s*([^O]+?)(?:\s*On\s+[A-Z][a-z]+\s+\d{1,2},?\s*\d{4})/i,
-          // ✅ Pattern สำรอง - จับทุกอย่างหลัง "Open Online Course" จนถึง "("
-          /has successfully completed the Open Online Course\s*([^(]+?)(?:\s*\([^)]+\))/i,
-          /Open Online Course\s*([^(]+?)(?:\s*\([^)]+\))/i,
-          // ✅ Pattern สำรอง - จับทุกอย่างหลัง "Open Online Course" จนถึง "หัวหน้า"
-          /has successfully completed the Open Online Course\s*([^ห]+?)(?:\s*หัวหน้า)/i,
-          /Open Online Course\s*([^ห]+?)(?:\s*หัวหน้า)/i,
-          // ✅ Pattern สำรอง - จับทุกอย่างหลัง "Open Online Course" จนถึง "สำนัก"
-          /has successfully completed the Open Online Course\s*([^ส]+?)(?:\s*สำนัก)/i,
-          /Open Online Course\s*([^ส]+?)(?:\s*สำนัก)/i
-        ];
-      } else {
-        // ✅ Fallback generic patterns
-        coursePatterns = [
-          /for the completion and fulfillment of the online course\s*([^(]+)/i,
-          /has successfully completed the (.+)/i,
-          /for the completion of\s*([^(]+)/i,
-          /completion of\s*([^(]+)/i
-        ];
-      }
-      
-      for (const pattern of coursePatterns) {
-        const match = cleanContent.match(pattern);
-        if (match && match[1]) {
-          const candidate = match[1].trim();
-          console.log("🔍 [CertificateVerificationController] Course pattern match:", {
-            pattern: pattern.toString(),
-            candidate: candidate,
-            length: candidate.length,
-            fullMatch: match[0]
-          });
-          if (!candidate.includes('THIS CERTIFICATE') && 
-              !candidate.includes('AWARDED') && 
-              !candidate.includes('COMPLETION') &&
-              !candidate.includes('On ') && // ✅ เพิ่มการกรองวันที่
-              candidate.length > 3) {
-            courseName = candidate;
-            console.log("✅ [CertificateVerificationController] Course found:", courseName);
-            break;
+      if (detectedCertType === "THAI MOOC") {
+        // ✅ ใช้ parseThaiMoocData สำหรับ THAI MOOC
+        console.log("📄 [CertificateVerificationController] Parsing THAI MOOC data using parseThaiMoocData...");
+        const parsedData = parseThaiMoocData(rawContent);
+        console.log("✅ [CertificateVerificationController] Parsed THAI MOOC data:", parsedData);
+        
+        // ✅ Map parsed data ไปยัง fields ที่ต้องการ
+        fullName = parsedData.firstName && parsedData.lastName 
+          ? `${parsedData.firstName} ${parsedData.lastName}`.trim()
+          : "-";
+        courseName = parsedData.certificate_name || "-";
+        teacher = parsedData.supervisor_name1 || "-";
+        organize_name = parsedData.organize_base_name || "-";
+        
+        // ✅ Format date
+        if (parsedData.get_certificate_date) {
+          const dateObj = parsedData.get_certificate_date;
+          if (dateObj instanceof Date) {
+            // ✅ Format: "29 June 2025"
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+            date = `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
           } else {
-            console.log("❌ [CertificateVerificationController] Course candidate rejected:", {
-              candidate,
-              reason: candidate.includes('THIS CERTIFICATE') ? 'Contains THIS CERTIFICATE' :
-                     candidate.includes('AWARDED') ? 'Contains AWARDED' :
-                     candidate.includes('COMPLETION') ? 'Contains COMPLETION' :
-                     candidate.includes('On ') ? 'Contains date' :
-                     'Too short'
-            });
+            date = String(dateObj);
           }
         } else {
-          console.log("🔍 [CertificateVerificationController] Course pattern no match:", {
-            pattern: pattern.toString(),
-            cleanContent: cleanContent.substring(0, 200) + '...'
-          });
-        }
-      }
-
-      // ✅ Find teacher - Conditional patterns based on certificate type
-      let teacherPatterns: RegExp[] = [];
-      
-      if (finalCertificateType === 'THAI_MOOC') {
-        // ✅ Thai MOOC specific patterns - หาชื่ออาจารย์จากบรรทัดสุดท้าย
-        teacherPatterns = [
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:,\s*Ph\.D\.|Director)/i,
-          /Associate Professor\s+([A-Z][a-z]+ [A-Z][a-z]+)/i,
-          /Director of ([^,]+)/i,
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:,\s*Ph\.D\.)/i,
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:Director)/i
-        ];
-      } else if (finalCertificateType === 'BUU_MOOC') {
-        // ✅ BUU MOOC specific patterns - หาชื่ออาจารย์จากในวงเล็บและรองรับ newline
-        teacherPatterns = [
-          /\(([^)]+)\)\s*\n?\s*หัวหน้าฝ่าย/i, // ✅ (ชื่ออาจารย์) หัวหน้าฝ่าย
-          /\(([^)]+)\)\s*\n?\s*หัวหน้า/i, // ✅ (ชื่ออาจารย์) หัวหน้า
-          /\(([^)]+)\)\s*\n?\s*Director/i, // ✅ (ชื่ออาจารย์) Director
-          /\(([^)]+)\)\s*\n?\s*Dr\./i, // ✅ (ชื่ออาจารย์) Dr.
-          /\(([^)]+)\)\s*\n?\s*Prof\./i, // ✅ (ชื่ออาจารย์) Prof.
-          /\(([^)]+)\)\s*\n?\s*Assoc\./i, // ✅ (ชื่ออาจารย์) Assoc.
-          /\(([^)]+)\)/i, // ✅ (ชื่ออาจารย์) ทั่วไป
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*\n?\s*หัวหน้าฝ่าย/i, // ✅ ชื่ออาจารย์ หัวหน้าฝ่าย
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*\n?\s*หัวหน้า/i, // ✅ ชื่ออาจารย์ หัวหน้า
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*\n?\s*Director/i, // ✅ ชื่ออาจารย์ Director
-          // ✅ เพิ่ม pattern สำหรับชื่อไทยในวงเล็บ
-          /\(([^)]+)\)\s*\n?\s*หัวหน้าฝ่ายวัฒกรรมการเรียนการสอน/i, // ✅ (ชื่ออาจารย์) หัวหน้าฝ่ายวัฒกรรมการเรียนการสอน
-          /\(([^)]+)\)\s*\n?\s*หัวหน้าฝ่ายวัฒกรรม/i, // ✅ (ชื่ออาจารย์) หัวหน้าฝ่ายวัฒกรรม
-          /\(([^)]+)\)\s*\n?\s*หัวหน้าฝ่ายวัฒ/i // ✅ (ชื่ออาจารย์) หัวหน้าฝ่ายวัฒ
-        ];
-      } else {
-        // ✅ Fallback generic patterns
-        teacherPatterns = [
-          /Awarded by\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+University/i,
-          /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+Institute/i,
-          /Director of ([^,]+)/i,
-          /([A-Z][a-z]+ [A-Z][a-z]+),\s*Ph\.D\./i
-        ];
-      }
-      
-      for (const pattern of teacherPatterns) {
-        const match = cleanContent.match(pattern);
-        if (match && match[1]) {
-          const candidate = match[1].trim();
-          console.log("🔍 [CertificateVerificationController] Teacher pattern match:", {
-            pattern: pattern.toString(),
-            candidate: candidate,
-            length: candidate.length
-          });
-          if (!candidate.includes('Certificate') && 
-              !candidate.includes('Basic') &&
-              !candidate.includes('Communicative') &&
-              !candidate.includes('English') &&
-              !candidate.includes('Work') &&
-              !candidate.includes('Course') &&
-              !candidate.includes('Open') &&
-              !candidate.includes('Online') &&
-              !candidate.includes('Hours') &&
-              !candidate.includes('10') &&
-              candidate.length > 2 && 
-              candidate.length < 50) {
-            teacher = candidate;
-            console.log("✅ [CertificateVerificationController] Teacher found:", teacher);
-            break;
-          }
-        }
-      }
-
-      // ✅ Find date - Generic patterns ที่รองรับทุกรูปแบบวันที่
-      const datePatterns = [
-        /On\s+([A-Z][a-z]+\s+\d{1,2},\s+\d{4})/i, // ✅ Pattern สำหรับ "On June 29, 2025"
-        /วันที่[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        /Date[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        /on\s*(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Pattern สำหรับ "on DD Month YYYY"
-        /(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i, // ✅ Pattern สำหรับ "DD Month YYYY"
-        /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i // ✅ Pattern สำหรับ "DD/MM/YYYY" or "DD-MM-YYYY"
-      ];
-      
-      for (const pattern of datePatterns) {
-        const match = cleanContent.match(pattern);
-        if (match && match[1]) {
-          console.log("🔍 [CertificateVerificationController] Date pattern match:", {
-            pattern: pattern.toString(),
-            candidate: match[1],
-            length: match[1].length
-          });
-          date = match[1];
-          console.log("✅ [CertificateVerificationController] Date found:", date);
-          break;
-        }
-      }
-
-      // ✅ Find Certificate ID - Conditional patterns based on certificate type
-      console.log("🔍 [CertificateVerificationController] Searching for Certificate ID...");
-      console.log("📊 [CertificateVerificationController] Certificate Type:", finalCertificateType);
-      console.log("📊 [CertificateVerificationController] Clean Content (last 500 chars):", cleanContent.slice(-500));
-      
-      if (finalCertificateType === 'BUU_MOOC') {
-        // ✅ BUU MOOC requires Certificate ID - เพิ่ม pattern มากขึ้น
-        const certificateIdPatterns = [
-          /Certificate ID Number\s*:\s*([a-f0-9]+)/i,
-          /Certificate ID\s*:\s*([a-f0-9]+)/i,
-          /ID Number\s*:\s*([a-f0-9]+)/i,
-          /Certificate\s*ID\s*Number\s*:\s*([a-f0-9]+)/i, // ✅ เพิ่ม pattern ที่รองรับ space มากขึ้น
-          /Certificate\s*ID\s*:\s*([a-f0-9]+)/i, // ✅ เพิ่ม pattern ที่รองรับ space มากขึ้น
-          /ID\s*Number\s*:\s*([a-f0-9]+)/i, // ✅ เพิ่ม pattern ที่รองรับ space มากขึ้น
-          /([a-f0-9]{32,})/i, // ✅ Generic pattern for long hex strings
-          /https:\/\/mooc\.buu\.ac\.th\/certificates\/([a-f0-9]+)/i,
-          // ✅ เพิ่ม pattern สำหรับกรณีที่มี newline หรือ whitespace มาก
-          /Certificate\s+ID\s+Number\s*:\s*([a-f0-9]+)/i,
-          /Certificate\s+ID\s*:\s*([a-f0-9]+)/i,
-          /ID\s+Number\s*:\s*([a-f0-9]+)/i
-        ];
-        
-        for (let i = 0; i < certificateIdPatterns.length; i++) {
-          const pattern = certificateIdPatterns[i];
-          const match = cleanContent.match(pattern);
-          console.log(`🔍 [CertificateVerificationController] Pattern ${i + 1}/${certificateIdPatterns.length}:`, {
-            pattern: pattern.toString(),
-            hasMatch: !!match,
-            match: match ? match[0] : null,
-            candidate: match ? match[1] : null
-          });
-          
-          if (match && match[1]) {
-            console.log("✅ [CertificateVerificationController] Certificate ID pattern match:", {
-              pattern: pattern.toString(),
-              candidate: match[1],
-              length: match[1].length,
-              fullMatch: match[0]
-            });
-            certificateId = match[1];
-            console.log("✅ [CertificateVerificationController] Certificate ID found:", certificateId);
-            break;
-          }
+          date = "-";
         }
         
-        // ✅ ถ้ายังหาไม่เจอ ให้ลองหา pattern ที่ไม่เจาะจง
-        if (certificateId === "-") {
-          console.log("🔍 [CertificateVerificationController] Trying fallback patterns...");
-          const fallbackPatterns = [
-            /([a-f0-9]{32})/g, // ✅ หา hex string 32 ตัวอักษร
-            /([a-f0-9]{30,40})/g, // ✅ หา hex string 30-40 ตัวอักษร
-            /([a-f0-9]{20,50})/g // ✅ หา hex string 20-50 ตัวอักษร
-          ];
-          
-          for (const pattern of fallbackPatterns) {
-            const matches = [...cleanContent.matchAll(pattern)];
-            console.log("🔍 [CertificateVerificationController] Fallback pattern matches:", {
-              pattern: pattern.toString(),
-              matches: matches.map(m => ({ match: m[0], length: m[0].length }))
-            });
-            
-            // หา match ที่ยาวที่สุดและดูสมเหตุสมผล
-            const validMatches = matches.filter(m => m[0].length >= 30);
-            if (validMatches.length > 0) {
-              const bestMatch = validMatches.reduce((a, b) => a[0].length > b[0].length ? a : b);
-              certificateId = bestMatch[0];
-              console.log("✅ [CertificateVerificationController] Certificate ID found via fallback:", certificateId);
-              break;
-            }
+        console.log("✅ [CertificateVerificationController] Mapped THAI MOOC fields:", {
+          fullName,
+          courseName,
+          teacher,
+          date,
+          organize_name
+        });
+      } else if (detectedCertType === "BUU MOOC") {
+        // ✅ ใช้ parseBuuMoocData สำหรับ BUU MOOC
+        console.log("📄 [CertificateVerificationController] Parsing BUU MOOC data using parseBuuMoocData...");
+        const parsedData = parseBuuMoocData(rawContent);
+        console.log("✅ [CertificateVerificationController] Parsed BUU MOOC data:", parsedData);
+        
+        // ✅ Map parsed data ไปยัง fields ที่ต้องการ
+        fullName = parsedData.firstName && parsedData.lastName 
+          ? `${parsedData.firstName} ${parsedData.lastName}`.trim()
+          : "-";
+        courseName = parsedData.certificate_name || "-";
+        teacher = parsedData.supervisor_name1 || "-";
+        organize_name = parsedData.organize_base_name || "-";
+        
+        // ✅ Format date
+        if (parsedData.get_certificate_date) {
+          const dateObj = parsedData.get_certificate_date;
+          if (dateObj instanceof Date) {
+            // ✅ Format: "June 30, 2025"
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+            date = `${months[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
+          } else {
+            date = String(dateObj);
           }
+        } else {
+          date = "-";
         }
-      } else if (finalCertificateType === 'THAI_MOOC') {
-        // ✅ Thai MOOC doesn't require Certificate ID, but try to find if exists
+        
+        // ✅ Extract certificate ID สำหรับ BUU MOOC
         const certificateIdPatterns = [
-          /Certificate ID Number\s*:\s*([a-f0-9]+)/i,
-          /Certificate ID\s*:\s*([a-f0-9]+)/i,
-          /ID Number\s*:\s*([a-f0-9]+)/i,
-          /([a-f0-9]{32,})/i
+          /Certificate ID Number\s*:\s*([A-Z0-9a-f]+)/i,
+          /Certificate ID\s*:\s*([A-Z0-9a-f]+)/i,
+          /ID\s*:\s*([A-Z0-9a-f]+)/i
         ];
         
         for (const pattern of certificateIdPatterns) {
-          const match = cleanContent.match(pattern);
+          const match = rawContent.match(pattern);
           if (match && match[1]) {
-            console.log("🔍 [CertificateVerificationController] Certificate ID pattern match:", {
-              pattern: pattern.toString(),
-              candidate: match[1],
-              length: match[1].length
-            });
-            certificateId = match[1];
+            certificateId = match[1].trim();
             console.log("✅ [CertificateVerificationController] Certificate ID found:", certificateId);
             break;
           }
         }
+        
+        console.log("✅ [CertificateVerificationController] Mapped BUU MOOC fields:", {
+          fullName,
+          courseName,
+          teacher,
+          date,
+          certificateId,
+          organize_name
+        });
+      } else {
+        // ✅ Fallback: ใช้ regex patterns แบบเดิมถ้าไม่ใช่ THAI MOOC หรือ BUU MOOC
+        console.log("⚠️ [CertificateVerificationController] Unknown certificate type, using fallback regex patterns");
+        
+        // ✅ Simple text processing - ปรับปรุงการ clean text (รองรับ Markdown)
+        const cleanContent = rawContent
+          .replace(/\\n/g, '\n')  // ✅ แปลง \\n เป็น \n
+          .replace(/^#+\s+/gm, '') // ✅ ลบ markdown headers (#, ##)
+          .replace(/^-\s+/gm, '')  // ✅ ลบ bullet points (-)
+          .replace(/\|[^|]+\|/g, '') // ✅ ลบ markdown tables
+          .replace(/\n+/g, ' ')   // ✅ แปลง line breaks เป็น spaces
+          .replace(/\s+/g, ' ')    // ✅ แปลง multiple spaces เป็น single space
+          .trim();
+        
+        // ✅ ใช้ regex patterns แบบเดิม (fallback)
+        // ✅ Extract name (fallback)
+        const nameMatch = rawContent.match(/####\s+([^\n]+)/) || 
+                         rawContent.match(/THIS CERTIFICATE IS AWARDED TO[^\n]*\n+[^\n]*\n+([^\n]+)/i);
+        if (nameMatch && nameMatch[1]) {
+          fullName = nameMatch[1].trim();
+        }
+        
+        // ✅ Extract course name (fallback)
+        const courseMatch = rawContent.match(/\*\*([^*]+?)\*\*/);
+        if (courseMatch && courseMatch[1]) {
+          courseName = courseMatch[1].trim().replace(/\s*\([^)]*Hours?[^)]*\)\s*/i, '');
+        }
+        
+        // ✅ Extract date (fallback)
+        const dateMatch = rawContent.match(/on\s+(\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i);
+        if (dateMatch && dateMatch[1]) {
+          date = dateMatch[1].trim();
+        }
+        
+        // ✅ Extract teacher (fallback)
+        const afterSeparator = rawContent.split('---');
+        if (afterSeparator.length > 1) {
+          const supervisorLines = afterSeparator[afterSeparator.length - 1].split('\n').filter(l => l.trim());
+          if (supervisorLines.length > 0) {
+            teacher = supervisorLines[0].trim();
+          }
+        }
+        
+        // ✅ Extract organize_name (fallback)
+        const awardedByMatch = rawContent.match(/Awarded by\s+(.+?)\s+on/i);
+        if (awardedByMatch && awardedByMatch[1]) {
+          organize_name = awardedByMatch[1].trim();
+        }
       }
-      // ✅ For UNKNOWN type, don't look for Certificate ID
-
-      // ✅ เพิ่ม debug logging สำหรับผลลัพธ์สุดท้าย
-      console.log("✅ [CertificateVerificationController] Final extraction results:", {
+      
+      // ✅ Skip old regex pattern matching - ใช้ parse functions แทนแล้ว
+      // ✅ เพิ่ม debug logging สำหรับการติดตามปัญหา
+      console.log("🔍 [CertificateVerificationController] Final extraction results:", {
         fullName,
         courseName,
         teacher,
         certificateId,
         date,
-        certificateType: finalCertificateType,
-        rawTextLength: rawContent.length
+        organize_name
       });
-      
-      // ✅ ตรวจสอบ Certificate ID สำหรับ BUU MOOC
-      if (finalCertificateType === 'BUU_MOOC' && certificateId === '-') {
-        console.warn("⚠️ [CertificateVerificationController] WARNING: BUU MOOC certificate missing Certificate ID!");
-        console.warn("⚠️ [CertificateVerificationController] This will result in verification failure.");
-        console.warn("⚠️ [CertificateVerificationController] Raw content for debugging:", rawContent);
-      }
+
+      // ✅ Skip old regex pattern matching - ใช้ parse functions แทนแล้ว (ดูโค้ดด้านบน)
       
       return {
         fullName,
@@ -1043,7 +1048,8 @@ export class CertificateVerificationController extends ErrorHandledController {
         teacher,
         certificateId,
         date,
-        rawText: cleanContent
+        organize_name,
+        rawText: rawContent
       };
     } catch (error) {
       console.error("❌ [CertificateVerificationController] Error processing OCR result:", error);
@@ -1053,6 +1059,7 @@ export class CertificateVerificationController extends ErrorHandledController {
         teacher: "-",
         certificateId: "-",
         date: "-",
+        organize_name: "-",
         rawText: rawData?.toString() || ""
       };
     }

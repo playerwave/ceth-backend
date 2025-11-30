@@ -79,7 +79,8 @@ export class ActivityDao extends ErrorHandledDao {
     }
 
     if (input instanceof Date) {
-      // ✅ สำหรับ Date object ให้ใช้ local time components เพื่อไม่ให้ shift timezone
+      // ✅ สำหรับ Date object ให้ใช้ local time components เพื่อเก็บเป็น local time
+      // ✅ เพราะ PostgreSQL เก็บ timestamp without timezone (local time)
       const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
       return `${input.getFullYear()}-${pad(input.getMonth() + 1)}-${pad(input.getDate())} ${pad(input.getHours())}:${pad(input.getMinutes())}:${pad(input.getSeconds())}`;
     }
@@ -175,7 +176,10 @@ export class ActivityDao extends ErrorHandledDao {
           data.activity_status || "Private",
           data.activity_state || "Not Start",
           data.status || "Active",
-          data.url || "ไม่ระบุ",
+          // ✅ ถ้าเป็น Onsite และไม่มี url ให้เป็น null แทน "ไม่ระบุ"
+          data.event_format === "Onsite" 
+            ? (data.url && data.url.trim() !== "" ? data.url : null)
+            : (data.url || "ไม่ระบุ"),
           data.room_id ?? null,
           data.assessment_id ?? null,
           new Date(), // last_update_activity_date
@@ -507,19 +511,19 @@ export class ActivityDao extends ErrorHandledDao {
           a.seat,
           a.recieve_hours,
           a.event_format,
-          to_char(a.create_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as create_activity_date,
-          to_char(a.special_start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as special_start_register_date,
-          to_char(a.start_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_register_date,
-          to_char(a.end_register_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_register_date,
-          to_char(a.start_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_activity_date,
-          to_char(a.end_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_activity_date,
-          to_char(a.start_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as start_assessment,
-          to_char(a.end_assessment, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as end_assessment,
+          to_char(a.create_activity_date, 'YYYY-MM-DD HH24:MI:SS') as create_activity_date,
+          to_char(a.special_start_register_date, 'YYYY-MM-DD HH24:MI:SS') as special_start_register_date,
+          to_char(a.start_register_date, 'YYYY-MM-DD HH24:MI:SS') as start_register_date,
+          to_char(a.end_register_date, 'YYYY-MM-DD HH24:MI:SS') as end_register_date,
+          to_char(a.start_activity_date, 'YYYY-MM-DD HH24:MI:SS') as start_activity_date,
+          to_char(a.end_activity_date, 'YYYY-MM-DD HH24:MI:SS') as end_activity_date,
+          to_char(a.start_assessment, 'YYYY-MM-DD HH24:MI:SS') as start_assessment,
+          to_char(a.end_assessment, 'YYYY-MM-DD HH24:MI:SS') as end_assessment,
           a.image_url,
           a.activity_status,
           a.activity_state,
           a.status,
-          to_char(a.last_update_activity_date, 'YYYY-MM-DD"T"HH24:MI:SS.000"Z"') as last_update_activity_date,
+          to_char(a.last_update_activity_date, 'YYYY-MM-DD HH24:MI:SS') as last_update_activity_date,
           a.url,
           a.room_id,
           a.assessment_id,
@@ -570,25 +574,77 @@ export class ActivityDao extends ErrorHandledDao {
       console.log("⚠️ [ActivityDAO] No certificate base found for activity:", row.activity_id);
     }
 
-    // ✅ สร้าง certificateBase object
-    const certificateBase = row.certificate_base_id ? {
-      certificate_base_id: row.certificate_base_id,
-      activity_id: row.activity_id,
-      certificate_name: `Certificate for ${row.activity_name}`,
-      certificate_source: "Course Activity",
-      template_image_url: row.certificate_template_url,
-      ocr_data: row.certificate_ocr_data,
-      image_analysis: row.certificate_image_analysis,
-      description: row.upload_certificate_description,
-      is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-    } : null;
+    // ✅ ดึง certificateBase จาก database แทนการสร้าง object ใหม่
+    let certificateBase = null;
+    if (row.certificate_base_id) {
+      try {
+        const certificateBaseData = await this.dataSource!.query(
+          `SELECT * FROM certificate_base WHERE certificate_base_id = $1`,
+          [row.certificate_base_id]
+        );
+        
+        if (certificateBaseData && certificateBaseData.length > 0) {
+          certificateBase = certificateBaseData[0];
+          console.log("✅ [ActivityDAO] Retrieved certificateBase from database:", {
+            certificate_base_id: certificateBase.certificate_base_id,
+            certificate_name: certificateBase.certificate_name,
+            certificate_type: certificateBase.certificate_type,
+            organize_base_name: certificateBase.organize_base_name,
+            supervisor_name1: certificateBase.supervisor_name1,
+            get_certificate_date: certificateBase.get_certificate_date
+          });
+        }
+      } catch (error) {
+        console.error("❌ [ActivityDAO] Error retrieving certificateBase:", error);
+        // ✅ Fallback: สร้าง object ถ้าดึงไม่ได้
+        certificateBase = {
+          certificate_base_id: row.certificate_base_id,
+          activity_id: row.activity_id,
+          certificate_name: `Certificate for ${row.activity_name}`,
+          certificate_source: "Course Activity",
+          template_image_url: row.certificate_template_url,
+          ocr_data: row.certificate_ocr_data,
+          image_analysis: row.certificate_image_analysis,
+          description: row.upload_certificate_description,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        };
+      }
+    }
 
-    console.log("🔍 [ActivityDAO] Constructed certificateBase object:", certificateBase);
+    console.log("🔍 [ActivityDAO] Final certificateBase object:", certificateBase ? {
+      certificate_base_id: certificateBase.certificate_base_id,
+      certificate_name: certificateBase.certificate_name
+    } : null);
+
+    // ✅ ดึงข้อมูลอาหารจาก activity_food แยก query
+    let activityFood: any[] = [];
+    try {
+      const foodRows = await this.dataSource!.query(
+        `SELECT activity_food_id, activity_id, food_id 
+         FROM activity_food 
+         WHERE activity_id = $1`,
+        [id]
+      );
+      
+      if (foodRows && foodRows.length > 0) {
+        activityFood = foodRows;
+        console.log("🍽️ [ActivityDAO] Activity foods found:", {
+          activity_id: id,
+          foods_count: activityFood.length,
+          foods: activityFood.map((af: any) => ({ activity_food_id: af.activity_food_id, food_id: af.food_id }))
+        });
+      } else {
+        console.log("🍽️ [ActivityDAO] No activity foods found for activity:", id);
+      }
+    } catch (error) {
+      console.error("❌ [ActivityDAO] Error fetching activity foods:", error);
+      activityFood = [];
+    }
 
     // เติม field ที่ frontend คาดหวัง
-    (row as any).activityFood = (row as any).activityFood ?? [];
+    (row as any).activityFood = activityFood;
     (row as any).certificateBase = certificateBase;
 
     return row as unknown as Activity;
@@ -2310,7 +2366,10 @@ export class ActivityDao extends ErrorHandledDao {
               data.activity_status || "Private",
               data.activity_state || "Not Start",
               data.status || "Active",
-              data.url || "ไม่ระบุ",
+              // ✅ ถ้าเป็น Onsite และไม่มี url ให้เป็น null แทน "ไม่ระบุ"
+              data.event_format === "Onsite" 
+                ? (data.url && data.url.trim() !== "" ? data.url : null)
+                : (data.url || "ไม่ระบุ"),
               data.room_id ?? null,
               data.assessment_id ?? null,
               new Date(),

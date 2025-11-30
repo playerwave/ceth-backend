@@ -1,0 +1,4 @@
+name = "ceth-backend"           # เปลี่ยนเป็นชื่อที่ต้องการ
+main = "src/worker.js"               # หรือ src/index.js แล้วแต่คุณสร้าง
+compatibility_date = "2025-11-29"
+compatibility_flags = [ "nodejs_compat" ]

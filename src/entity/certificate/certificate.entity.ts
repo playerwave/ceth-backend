@@ -41,7 +41,7 @@ export class Certificate {
   @Column({ type: "int" })
   activity_id?: number;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", nullable: true })
   @Transform(({ value }) =>
     value
       ? format(parseISO(value), "yyyy-MM-dd HH:mm:ss", {
@@ -49,7 +49,7 @@ export class Certificate {
         })
       : null
   )
-  date?: Date;
+  date?: Date | null;
 
   @Column({ type: "int" })
   hours?: number;
@@ -71,10 +71,10 @@ export class Certificate {
 
   @Column({
     type: "enum",
-    enum: ["Pending", "Pass", "Fail"],
+    enum: ["Pending", "Pass"],
     default: "Pending",
   })
-  status?: "Pending" | "Pass" | "Fail";
+  status!: "Pending" | "Pass";
 
   // ✅ เพิ่มฟิลด์ใหม่สำหรับระบบตรวจสอบ
   @Column({ type: "varchar", length: 500, nullable: true })

@@ -45,7 +45,7 @@ export class ActivityReportDao extends ErrorHandledDao {
         INNER JOIN activity_detail ad ON j.activity_detail_id = ad.activity_detail_id
         INNER JOIN students s ON j.students_id = s.students_id
         INNER JOIN department d ON s.department_id = d.department_id
-        INNER JOIN grade g ON s.grade_id = g.grade_id
+        LEFT JOIN grade g ON s.grade_id = g.grade_id
         WHERE ad.activity_id = $1
         GROUP BY d.department_short_name, g.level, g.description, d.department_id, g.grade_id
         ORDER BY d.department_short_name, g.level
@@ -59,8 +59,11 @@ export class ActivityReportDao extends ErrorHandledDao {
 
       result.forEach((row: any) => {
         const departmentShortName = row.department_short_name;
-        const gradeLevel = row.grade_level; // ใช้ level แทน grade_name
-        const studentCount = parseInt(row.student_count);
+        const rawGradeLevel = row.grade_level;
+        const levelNum = rawGradeLevel !== null && rawGradeLevel !== undefined
+          ? Number(rawGradeLevel)
+          : null;
+        const studentCount = Number(row.student_count) || 0;
         
         totalStudents += studentCount;
 
@@ -77,15 +80,24 @@ export class ActivityReportDao extends ErrorHandledDao {
 
         const department = departmentMap.get(departmentShortName);
         
-        // แปลง grade_level เป็น year (level เป็น 1, 2, 3, 4)
-        if (gradeLevel === 1) {
+        // ✅ แปลง grade_level เป็น year (level เป็น 1, 2, 3, 4)
+        // ✅ รองรับทั้ง number และ string
+        if (levelNum === 1) {
           department.year1 += studentCount;
-        } else if (gradeLevel === 2) {
+        } else if (levelNum === 2) {
           department.year2 += studentCount;
-        } else if (gradeLevel === 3) {
+        } else if (levelNum === 3) {
           department.year3 += studentCount;
-        } else if (gradeLevel === 4) {
+        } else if (levelNum === 4) {
           department.year4 += studentCount;
+        } else {
+          // ✅ ถ้า gradeLevel เป็น null, undefined, หรือ 0 ให้ log warning
+          console.warn("⚠️ [ActivityReportDAO] Unknown or null grade level:", {
+            department: departmentShortName,
+            gradeLevel: rawGradeLevel,
+            studentCount
+          });
+          // ✅ ไม่เพิ่มเข้าไปใน year ใดๆ ถ้าไม่มี grade_level (แต่ total จะถูกนับแล้ว)
         }
         
         department.total += studentCount;

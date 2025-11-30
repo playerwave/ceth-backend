@@ -255,6 +255,31 @@ export class CertificateService extends ErrorHandledService {
   }
 
   /**
+   * ดึง Certificate ของนิสิตตาม status
+   */
+  public async getCertificatesByStatus(status: string, studentId?: number): Promise<Certificate[]> {
+    try {
+      console.log("📥 [CertificateService] Getting certificates by status:", {
+        status,
+        studentId: studentId || 'all'
+      });
+      
+      const certificates = await this.certificateDao.getCertificatesByStatus(status, studentId);
+      
+      this.logInfo("📥 [CertificateService] Retrieved certificates by status", { 
+        status,
+        studentId: studentId || 'all',
+        count: certificates.length 
+      });
+      
+      return certificates;
+    } catch (error) {
+      this.logError("❌ Error getting certificates by status", error);
+      throw error;
+    }
+  }
+
+  /**
    * อัปเดต Certificate
    */
   public async updateCertificate(certificateId: number, data: Partial<Certificate>): Promise<Certificate | null> {
@@ -278,6 +303,46 @@ export class CertificateService extends ErrorHandledService {
       return updatedCertificate;
     } catch (error) {
       this.logError("❌ Error updating certificate", error);
+      throw error;
+    }
+  }
+
+  /**
+   * ลบ Certificate ตาม ID
+   */
+  public async deleteCertificate(certificateId: number): Promise<boolean> {
+    try {
+      console.log("🗑️ [CertificateService] Deleting certificate:", certificateId);
+      
+      // ✅ ตรวจสอบว่า certificate มีอยู่จริงหรือไม่
+      const certificate = await this.certificateDao.getCertificateById(certificateId);
+      if (!certificate) {
+        this.logInfo("⚠️ [CertificateService] Certificate not found", { certificate_id: certificateId });
+        return false;
+      }
+
+      // ✅ สร้าง Audit Log ก่อนลบ certificate (เพื่อให้ foreign key constraint ผ่าน)
+      try {
+        await this.createAuditLog(certificateId, "DELETE", certificate, null, "system");
+        console.log("✅ [CertificateService] Audit log created before deletion");
+      } catch (auditError) {
+        // ✅ ถ้าสร้าง audit log ไม่ได้ ให้ log warning แต่ยังลบ certificate ต่อไป
+        console.warn("⚠️ [CertificateService] Failed to create audit log, continuing with deletion:", auditError);
+        this.logError("⚠️ Failed to create audit log for certificate deletion", auditError);
+      }
+
+      // ✅ ลบ certificate หลังจากสร้าง audit log แล้ว
+      const deleted = await this.certificateDao.deleteCertificate(certificateId);
+      
+      if (deleted) {
+        this.logInfo("✅ [CertificateService] Certificate deleted", { 
+          certificate_id: certificateId 
+        });
+      }
+      
+      return deleted;
+    } catch (error) {
+      this.logError("❌ Error deleting certificate", error);
       throw error;
     }
   }
@@ -351,7 +416,7 @@ export class CertificateService extends ErrorHandledService {
       const verification = await this.certificateDao.createCertificateVerification(verificationData);
       
       // 5. อัปเดต Certificate status
-      const newStatus = confidenceScore >= 70 ? "Pass" : "Fail";
+      const newStatus = confidenceScore >= 70 ? "Pass" : "Pending";
       await this.certificateDao.updateCertificate(certificateId, {
         status: newStatus,
         verification_metadata: {

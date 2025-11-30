@@ -60,12 +60,37 @@ export class CertificateDAO {
 
   //--------------------- Create Certificate -------------------------
   async createCertificate(data: Partial<Certificate>): Promise<Certificate> {
-    console.log("📝 [Certificate DAO] Creating certificate:", data);
+    console.log("📝 [Certificate DAO] Creating certificate:", {
+      ...data,
+      date: data.date ? (data.date instanceof Date ? data.date.toISOString() : data.date) : null,
+      dateType: data.date ? typeof data.date : 'null'
+    });
     
     try {
       const certificateRepository = this.getCertificateRepository();
       
-      const certificate = certificateRepository.create(data);
+      // ✅ ตรวจสอบและ sanitize date ก่อนสร้าง entity
+      const sanitizedData = { ...data };
+      
+      // ✅ ถ้า date เป็น Invalid Date หรือ null ให้เป็น null
+      if (sanitizedData.date) {
+        if (sanitizedData.date instanceof Date) {
+          if (isNaN(sanitizedData.date.getTime())) {
+            console.warn("⚠️ [Certificate DAO] Invalid date detected, setting to null");
+            sanitizedData.date = null;
+          }
+        } else if (typeof sanitizedData.date === 'string') {
+          const parsed = new Date(sanitizedData.date);
+          if (isNaN(parsed.getTime())) {
+            console.warn("⚠️ [Certificate DAO] Invalid date string detected, setting to null");
+            sanitizedData.date = null;
+          } else {
+            sanitizedData.date = parsed;
+          }
+        }
+      }
+      
+      const certificate = certificateRepository.create(sanitizedData);
       const savedCertificate = await certificateRepository.save(certificate);
 
       console.log("✅ [Certificate DAO] Certificate created:", savedCertificate.certificate_id);

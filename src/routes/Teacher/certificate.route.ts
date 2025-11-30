@@ -106,6 +106,18 @@ router.get(
   wrapAsync(certificateController.getCertificatesByStudentId)
 );
 
+// GET: ดึง Certificate ของนิสิตตาม status
+router.get(
+  "/get-certificate-byStatus",
+  wrapAsync(certificateController.getCertificatesByStatus)
+);
+
+// DELETE: ลบ Certificate ตาม ID
+router.delete(
+  "/delete-certificate/:id",
+  wrapAsync(certificateController.deleteCertificate)
+);
+
 // ==================== CERTIFICATE AUDIT ROUTES ====================
 
 // GET: ดึง Certificate Audit โดย Certificate ID

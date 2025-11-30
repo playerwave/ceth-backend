@@ -137,16 +137,21 @@ export class FoodDao extends ErrorHandledDao {
     }
 
     try {
-      const result = await this.dataSource!.query(
-        `
-        INSERT INTO food (
-          food_name, status, faculty_id
-        ) VALUES ($1, $2, $3)
-        RETURNING *`,
-        [trimmedName, trimmedStatus, faculty_id]
-      );
-
-      return result[0]; // ✅ return object เดียว
+      // ✅ ใช้ TypeORM Repository แทน raw query (TypeORM จะจัดการ sequence ให้อัตโนมัติ)
+      const foodRepository = this.dataSource!.getRepository(Food);
+      
+      // สร้าง entity object
+      const newFood = foodRepository.create({
+        food_name: trimmedName,
+        status: trimmedStatus as "Active" | "Inactive",
+        faculty_id: faculty_id
+      });
+      
+      // บันทึก (TypeORM จะจัดการ sequence ให้อัตโนมัติ)
+      const savedFood = await foodRepository.save(newFood);
+      
+      console.log(`✅ [addFood] Food created successfully with food_id: ${savedFood.food_id}`);
+      return savedFood;
     } catch (error) {
       this.logDbError("addFood", error);
       throw error;

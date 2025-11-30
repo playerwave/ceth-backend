@@ -18,7 +18,7 @@ export class CertificateService {
     students_id: number;
     activity_id: number;
     hours?: number;
-    date?: Date;
+    date?: Date | string | null;
     file: Express.Multer.File;
     ocr_extracted_data?: any;
   }): Promise<any> {
@@ -41,18 +41,43 @@ export class CertificateService {
       fs.writeFileSync(filepath, data.file.buffer);
       console.log("💾 [Certificate Service] File saved:", filepath);
 
+      // ✅ ตรวจสอบและแปลง date ให้ถูกต้อง
+      let certificateDate: Date | null = null;
+      if (data.date) {
+        // ✅ ถ้าเป็น Date object ให้ตรวจสอบว่า valid หรือไม่
+        if (data.date instanceof Date) {
+          if (!isNaN(data.date.getTime())) {
+            certificateDate = data.date;
+          }
+        } else if (typeof data.date === 'string') {
+          const dateStr = data.date.trim();
+          if (dateStr !== "" && dateStr !== "-") {
+            // ✅ ถ้าเป็น string ให้แปลงเป็น Date
+            const parsedDate = new Date(dateStr);
+            if (!isNaN(parsedDate.getTime())) {
+              certificateDate = parsedDate;
+            }
+          }
+        }
+      }
+      // ✅ ถ้าไม่มี valid date ให้เป็น null
+      
+      // ✅ กำหนด status จาก ocr_extracted_data ถ้ามี (Pass/Pending)
+      // ✅ ถ้าไม่มีให้ใช้ "Pending" เป็น default
+      const certificateStatus = (data.ocr_extracted_data?.status as 'Pass' | 'Pending') || "Pending";
+      
       // สร้าง certificate record
       const certificate = await this.certificateDAO.createCertificate({
         students_id: data.students_id,
         activity_id: data.activity_id,
         hours: data.hours,
-        date: data.date,
+        date: certificateDate, // ✅ ใช้ null ถ้าไม่มี valid date
         img: `/uploads/certificates/${filename}`,
         original_filename: data.file.originalname,
         file_type: data.file.mimetype,
         file_size: data.file.size,
         ocr_extracted_data: data.ocr_extracted_data,
-        status: "Pending"
+        status: certificateStatus // ✅ ใช้ status ที่กำหนด (Pass หรือ Pending)
       });
 
       console.log("✅ [Certificate Service] Certificate created:", certificate.certificate_id);

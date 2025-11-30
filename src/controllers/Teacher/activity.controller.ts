@@ -293,7 +293,10 @@ export class ActivityController extends ErrorHandledController {
       activity_state: body.activity_state || "Not Start", // ENUM
       status: body.status || "Active", // ENUM default
       last_update_activity_date: new Date(),
-      url: body.url || "ไม่ระบุ",
+      // ✅ ถ้าเป็น Onsite และไม่มี url ให้เป็น null หรือ empty string แทน "ไม่ระบุ"
+      url: body.event_format === "Onsite" 
+        ? (body.url && body.url.trim() !== "" ? body.url : null)
+        : (body.url || "ไม่ระบุ"),
       assessment_id: this.parseOptionalInt(body.assessment_id, null),
       room_id: this.parseOptionalInt(body.room_id, null),
       // ✅ เพิ่ม certificate fields
@@ -328,7 +331,10 @@ export class ActivityController extends ErrorHandledController {
       activity_state: body.activity_state || "Not Start", // ENUM
       status: body.status || "Active", // ENUM default
       last_update_activity_date: new Date(),
-      url: body.url || "ไม่ระบุ",
+      // ✅ ถ้าเป็น Onsite และไม่มี url ให้เป็น null หรือ empty string แทน "ไม่ระบุ"
+      url: body.event_format === "Onsite" 
+        ? (body.url && body.url.trim() !== "" ? body.url : null)
+        : (body.url || "ไม่ระบุ"),
       assessment_id: this.parseOptionalInt(body.assessment_id, null),
       room_id: this.parseOptionalInt(body.room_id, null),
       // ✅ เพิ่ม certificate fields สำหรับ update
@@ -352,7 +358,8 @@ export class ActivityController extends ErrorHandledController {
         console.log(`📅 UTC format detected, using as is: ${date.toISOString()}`);
         return date;
       } else {
-        // เป็น Local Time format ต้องแปลงเป็น UTC
+        // ✅ เป็น Local Time format (เช่น "2025-11-20 07:45:00")
+        // ✅ ต้องแปลงเป็น UTC โดยลบ 7 ชั่วโมง
         const cleanDateString = dateString.replace('T', ' ').split('.')[0];
         const parts = cleanDateString.split(" ");
         
@@ -365,24 +372,24 @@ export class ActivityController extends ErrorHandledController {
         const [year, month, day] = datePart.split("-");
         const [hours, minutes, seconds] = timePart.split(":");
 
-        // สร้าง Date object ใน Local Time แล้วลบ 7 ชั่วโมงเพื่อแปลงเป็น UTC
-        const localDate = new Date();
-        localDate.setFullYear(parseInt(year));
-        localDate.setMonth(parseInt(month) - 1);
-        localDate.setDate(parseInt(day));
-        localDate.setHours(parseInt(hours));
-        localDate.setMinutes(parseInt(minutes));
-        localDate.setSeconds(parseInt(seconds || "0"));
-        localDate.setMilliseconds(0);
-
-        // แปลงเป็น UTC (-7 ชั่วโมง)
-        const utcDate = new Date(localDate.getTime() - (7 * 60 * 60 * 1000));
+        // ✅ สร้าง Date object โดยใช้เวลาเดิม (ไม่แปลง timezone)
+        // ✅ PostgreSQL เก็บ timestamp without timezone ดังนั้นไม่ต้องแปลง
+        // ✅ ใช้ local time components โดยตรง
+        const date = new Date(
+          parseInt(year),
+          parseInt(month) - 1, // month is 0-indexed
+          parseInt(day),
+          parseInt(hours),
+          parseInt(minutes),
+          parseInt(seconds || "0"),
+          0
+        );
         
         console.log(`📅 Local format detected: ${dateString}`);
-        console.log(`📅 Local time: ${localDate.toISOString()}`);
-        console.log(`📅 Converted to UTC: ${utcDate.toISOString()}`);
+        console.log(`📅 Date object created: ${date.toISOString()}`);
+        console.log(`📅 Local hours: ${date.getHours()}, UTC hours: ${date.getUTCHours()}`);
         
-        return utcDate;
+        return date;
       }
     } catch (error) {
       console.error("❌ Error parsing date:", dateString, error);

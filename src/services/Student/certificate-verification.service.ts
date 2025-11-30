@@ -267,10 +267,20 @@ export class CertificateVerificationService extends ErrorHandledService {
       templateLength: templateCourseName.length
     });
     
-    const courseNameMatch = this.calculateStringSimilarity(
-      ocrResult.courseName,
-      templateCourseName
-    );
+    // ✅ สำหรับ BUU MOOC PDF: ถ้าชื่อหลักสูตรจาก OCR เป็นส่วนหนึ่งของ template ให้ถือว่าตรง
+    let courseNameMatch = 0;
+    if (certificateBase.certificate_type === 'BUU MOOC' && 
+        templateCourseName.includes(ocrResult.courseName) && 
+        ocrResult.courseName.length > 10) {
+      // ✅ ถ้าชื่อจาก OCR เป็น substring ของ template (เช่น ไม่มีส่วนภาษาอังกฤษ) ให้ 95%
+      courseNameMatch = 95;
+      console.log("✅ [CertificateVerificationService] Course Name is substring of template (BUU MOOC PDF): 95%");
+    } else {
+      courseNameMatch = this.calculateStringSimilarity(
+        ocrResult.courseName,
+        templateCourseName
+      );
+    }
     
     console.log("✅ [CertificateVerificationService] Course Name Match Score:", courseNameMatch);
     
@@ -307,10 +317,22 @@ export class CertificateVerificationService extends ErrorHandledService {
       templateLength: templateOrganizationName.length
     });
     
-    const organizationMatch = this.calculateStringSimilarity(
-      ocrResult.organize_name || "-",
-      templateOrganizationName
-    );
+    // ✅ สำหรับ BUU MOOC PDF: ถ้า OCR organization เป็น substring ของ template ให้ 95%
+    let organizationMatch = 0;
+    if (certificateBase.certificate_type === 'BUU MOOC' && 
+        ocrResult.organize_name && 
+        ocrResult.organize_name !== '-' &&
+        (templateOrganizationName.includes(ocrResult.organize_name) || 
+         ocrResult.organize_name.includes(templateOrganizationName)) && 
+        ocrResult.organize_name.length > 5) {
+      organizationMatch = 95;
+      console.log("✅ [CertificateVerificationService] Organization substring match (BUU MOOC PDF): 95%");
+    } else {
+      organizationMatch = this.calculateStringSimilarity(
+        ocrResult.organize_name || "-",
+        templateOrganizationName
+      );
+    }
     
     console.log("✅ [CertificateVerificationService] Organization Name Match Score:", organizationMatch);
     
@@ -514,7 +536,11 @@ export class CertificateVerificationService extends ErrorHandledService {
     ocrResult: OcrResult,
     imageAnalysis: CertificateBase['image_analysis']
   ): number {
-    if (!imageAnalysis) return 50; // ถ้าไม่มีข้อมูล template ให้คะแนนกลาง
+    // ✅ ถ้าเป็น PDF (ไม่มี image analysis) ให้คะแนน 80% เพื่อไม่ให้ถูกลดคะแนนมาก
+    if (!imageAnalysis || (imageAnalysis as any).note === "Image analysis skipped for PDF files") {
+      console.log("ℹ️ [CertificateVerificationService] PDF file detected - giving 80% for visual match (no analysis available)");
+      return 80; // ✅ ให้คะแนนสูงสำหรับ PDF เพราะไม่สามารถวิเคราะห์ได้
+    }
     
     // ✅ ตรวจสอบ dominant colors
     const colorMatch = this.compareColors(imageAnalysis.dominantColors);
@@ -625,13 +651,12 @@ export class CertificateVerificationService extends ErrorHandledService {
         console.log("ℹ️ [CertificateVerificationService] Thai MOOC with Certificate ID (no bonus)");
       }
     } else if (certificateType === 'BUU_MOOC') {
-      // ✅ BUU MOOC: Certificate ID is required
-      if (!hasCertificateId) {
-        baseScore -= 20; // ✅ Penalty for BUU MOOC without ID
-        console.log("⚠️ [CertificateVerificationService] BUU MOOC penalty applied (-20)");
+      // ✅ BUU MOOC: Certificate ID ไม่จำเป็นสำหรับ PDF (ไม่ตัดคะแนน)
+      if (hasCertificateId) {
+        baseScore += 5; // ✅ เพิ่มคะแนนเล็กน้อยถ้ามี ID
+        console.log("✅ [CertificateVerificationService] BUU MOOC with ID bonus applied (+5)");
       } else {
-        baseScore += 15; // ✅ Bonus for BUU MOOC with ID
-        console.log("✅ [CertificateVerificationService] BUU MOOC bonus applied (+15)");
+        console.log("ℹ️ [CertificateVerificationService] BUU MOOC without ID (no penalty for PDF)");
       }
     } else {
       console.log("ℹ️ [CertificateVerificationService] Unknown certificate type (no adjustments)");

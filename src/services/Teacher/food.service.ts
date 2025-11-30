@@ -91,7 +91,6 @@ export class FoodService extends ErrorHandledService {
     status: string,
     faculty_id: number
   ): Promise<Food | null> {
-    const cacheKey = "food:all";
     try {
       const exists = await this.foodDao.getFoodByName(food_name);
       if (exists.length > 0) {
@@ -100,7 +99,18 @@ export class FoodService extends ErrorHandledService {
       }
 
       const created = await this.foodDao.addFood(food_name, status, faculty_id);
-      await redis.del(cacheKey);
+      
+      // ✅ Clear all food cache keys (pattern matching)
+      try {
+        const keys = await redis.keys("food:all*");
+        if (keys.length > 0) {
+          await redis.del(...keys);
+          this.logInfo("🗑️ Food cache cleared", { keys: keys.length });
+        }
+      } catch (cacheError) {
+        this.logInfo("⚠️ Cache clear error (non-critical)", { error: cacheError });
+      }
+      
       this.logInfo("🆕 Food created", { food_id: created.food_id });
 
       return created;
@@ -116,7 +126,6 @@ export class FoodService extends ErrorHandledService {
     status: string,
     faculty_id: number
   ): Promise<Food | null> {
-    const cacheKey = "food:all";
     try {
       const found = await this.foodDao.getFoodByID(food_id);
       if (!found.length) {
@@ -143,7 +152,17 @@ export class FoodService extends ErrorHandledService {
         );
       }
 
-      await redis.del(cacheKey);
+      // ✅ Clear all food cache keys (pattern matching)
+      try {
+        const keys = await redis.keys("food:all*");
+        if (keys.length > 0) {
+          await redis.del(...keys);
+          this.logInfo("🗑️ Food cache cleared", { keys: keys.length });
+        }
+      } catch (cacheError) {
+        this.logInfo("⚠️ Cache clear error (non-critical)", { error: cacheError });
+      }
+
       const [result] = await this.foodDao.getFoodByID(food_id);
       this.logInfo("✏️ Food updated", { food_id });
       return result || null;
@@ -154,10 +173,19 @@ export class FoodService extends ErrorHandledService {
   }
 
   public async deletedFood(food_id: number): Promise<Food | null> {
-    const cacheKey = "food:all";
     try {
       const deleted = await this.foodDao.deletedFood(food_id);
-      await redis.del(cacheKey);
+
+      // ✅ Clear all food cache keys (pattern matching)
+      try {
+        const keys = await redis.keys("food:all*");
+        if (keys.length > 0) {
+          await redis.del(...keys);
+          this.logInfo("🗑️ Food cache cleared", { keys: keys.length });
+        }
+      } catch (cacheError) {
+        this.logInfo("⚠️ Cache clear error (non-critical)", { error: cacheError });
+      }
 
       if (!deleted) {
         this.logInfo("❌ No food deleted", { food_id });

@@ -166,10 +166,21 @@ export class AuthController extends ErrorHandledController {
       }
 
       console.log("✅ [getMe] User found:", user);
-      const result = await this.authService.findById(user.users_id);
+      
+      // ✅ ใช้ user.id แทน user.users_id เพราะ verifyToken set เป็น id
+      const userId = (user as any).users_id || (user as any).id;
+      console.log("🔍 [getMe] User ID to fetch:", userId);
+      
+      if (!userId) {
+        console.log("❌ [getMe] No user ID found in req.user");
+        res.status(400).json({ message: "Invalid user data" });
+        return;
+      }
+      
+      const result = await this.authService.findById(userId);
 
       if (!result) {
-        console.log("❌ [getMe] User not found in database");
+        console.log("❌ [getMe] User not found in database for ID:", userId);
         res.status(404).json({ message: "User not found" });
         return;
       }
@@ -181,7 +192,7 @@ export class AuthController extends ErrorHandledController {
       if (result.roles.roles_name === "Student") {
         console.log("👨‍🎓 [getMe] Fetching student data...");
         const studentData = await this.authService.getStudentData(
-          user.users_id
+          userId
         );
 
         if (studentData) {
@@ -199,7 +210,7 @@ export class AuthController extends ErrorHandledController {
       if (result.roles.roles_name === "Teacher") {
         console.log("👨‍🏫 [getMe] Fetching teacher data...");
         const teacherData = await this.authService.getTeacherData(
-          user.users_id
+          userId
         );
 
         if (teacherData) {
